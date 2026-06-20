@@ -1,0 +1,507 @@
+<?php
+
+namespace App\Services\Accounting;
+
+use App\DTOs\ParsedTreatmentItemDto;
+use App\Models\DailyWorkRow;
+use App\Models\Treatment;
+use App\Models\WorkItem;
+use Illuminate\Support\Collection;
+
+/**
+ * Rule-based parser for treatment_text fields from daily work rows.
+ * Parses each patient segment separately (split on " | ").
+ *
+ * Clinic notation for fillings (CF, RCF, SxP):
+ * - CFx2 / CF x3        → explicit quantity
+ * - CF 45 / CF 876      → tooth digits → quantity (2 and 3)
+ * - CF 2|5 |4           → teeth 2,5,4 → quantity 3
+ * - RCF 321|12          → teeth 3,2,1 + 1,2 → quantity 5
+ * - RCF |6 / CF |7      → single tooth → quantity 1
+ * - SxP + CF 876        → SxP x1 + CF x3
+ */
+class TreatmentParserService
+{
+    private const MAX_QUANTITY = 50;
+
+    /** @var array<int, string> */
+    private const FILLING_CODES = ['SXP', 'RCF', 'CF', 'AF'];
+
+    /** @var array<string, string> */
+    private const CODE_ALIASES = [
+        'ZIR CR' => 'ZIR',
+        'ZIRCR' => 'ZIR',
+        'ZIR BR' => 'ZIR',
+        'IMPL CR' => 'IMPL-CR',
+        'IMPL-CR' => 'IMPL-CR',
+        'IMPL-ZIR' => 'IMPL-ZIR',
+        'IMPL ZIR' => 'IMPL-ZIR',
+        'IMP' => 'IMPL',
+        'REPEAR' => 'REPAIR',
+        'RE-PEAR' => 'REPAIR',
+        'RERCT' => 'RE-RCT',
+        'RE-RCT' => 'RE-RCT',
+        'SXP' => 'SXP',
+        'ABB' => 'ABT',
+        'ABBT' => 'ABT',
+        'VENEER' => 'VENEER',
+        'BLEACHING' => 'BLEACHING',
+        'BLEACH' => 'BLEACHING',
+        'EXO' => 'EXO',
+        'APICO' => 'APICO',
+        'APICECTOMY' => 'APICO',
+    ];
+
+    /** @var array<int, string> */
+    private const CROWN_PIPE_QUANTITY_CODES = ['MC', 'ZIR', 'POST', 'ABT', 'IMPL-CR', 'IMPL-ZIR'];
+
+    /** @var Collection<string, Treatment>|null */
+    private ?Collection $treatmentCodes = null;
+
+    /**
+     * @return array<int, ParsedTreatmentItemDto>
+     */
+    public function parse(string $treatmentText): array
+    {
+        if (trim($treatmentText) === '') {
+            return [];
+        }
+
+        $segments = preg_split('/\s\|\s/', $treatmentText) ?: [$treatmentText];
+        $segments = $this->mergeToothContinuationSegments($segments);
+        $parsedItems = [];
+
+        foreach ($segments as $segment) {
+            $segment = trim($segment);
+
+            if ($segment === '') {
+                continue;
+            }
+
+            $parsedItems = array_merge(
+                $parsedItems,
+                $this->parseSegment($segment),
+            );
+        }
+
+        return $this->mergeParsedItemsByCode($parsedItems);
+    }
+
+    public function parseAndPersist(DailyWorkRow $dailyWorkRow): void
+    {
+        $dailyWorkRow->workItems()->delete();
+
+        if (blank($dailyWorkRow->treatment_text)) {
+            return;
+        }
+
+        $parsedItems = $this->parse($dailyWorkRow->treatment_text);
+        $treatmentsByCode = $this->getKnownTreatmentCodes();
+
+        foreach ($parsedItems as $parsedItem) {
+            $treatment = $treatmentsByCode->get($parsedItem->treatmentCode);
+
+            if ($treatment === null || ! $treatment->has_lab_cost) {
+                continue;
+            }
+
+            WorkItem::query()->create([
+                'daily_work_row_id' => $dailyWorkRow->id,
+                'treatment_id' => $treatment->id,
+                'quantity' => $parsedItem->quantity,
+                'confidence' => $parsedItem->confidence,
+                'warning_message' => $parsedItem->warningMessage,
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<int, string>  $segments
+     * @return array<int, string>
+     */
+    private function mergeToothContinuationSegments(array $segments): array
+    {
+        $merged = [];
+
+        foreach ($segments as $segment) {
+            $trimmed = trim($segment);
+
+            if (preg_match('/^\d+$/', $trimmed) && $merged !== []) {
+                $merged[count($merged) - 1] .= '|'.$trimmed;
+
+                continue;
+            }
+
+            $merged[] = $segment;
+        }
+
+        return $merged;
+    }
+
+    /**
+     * @return array<int, ParsedTreatmentItemDto>
+     */
+    private function parseSegment(string $segment): array
+    {
+        $normalizedSegment = $this->normalizeTreatmentText($segment);
+        $parts = preg_split('/\s*\+\s*/', $normalizedSegment) ?: [$normalizedSegment];
+        $parsedItems = [];
+
+        foreach ($parts as $part) {
+            $part = trim($part);
+
+            if ($part === '') {
+                continue;
+            }
+
+            $parsedItems = array_merge(
+                $parsedItems,
+                $this->parseFillingPart($part),
+                $this->parseNonFillingPart($part),
+            );
+        }
+
+        return $parsedItems;
+    }
+
+    /**
+     * @return array<int, ParsedTreatmentItemDto>
+     */
+    private function parseFillingPart(string $part): array
+    {
+        $part = preg_replace('/\s*\|\s*/', '|', $part) ?? $part;
+        $parsedItems = [];
+
+        foreach (self::FILLING_CODES as $code) {
+            if (! $this->getKnownTreatmentCodes()->has($code)) {
+                continue;
+            }
+
+            $item = $this->matchFillingCode($code, $part);
+
+            if ($item !== null) {
+                $parsedItems[] = $item;
+            }
+        }
+
+        return $parsedItems;
+    }
+
+    private function matchFillingCode(string $code, string $part): ?ParsedTreatmentItemDto
+    {
+        $codePattern = preg_quote($code, '/');
+
+        if (preg_match('/\b'.$codePattern.'\b\s*[xX×]\s*(\d+)/', $part, $matches) === 1) {
+            return $this->fillingItem($code, (int) $matches[1], 100);
+        }
+
+        if (preg_match('/\b'.$codePattern.'[xX×](\d+)/', $part, $matches) === 1) {
+            return $this->fillingItem($code, (int) $matches[1], 100);
+        }
+
+        if (preg_match('/\b'.$codePattern.'\b\s*\|\s*(\d+)/', $part, $matches) === 1) {
+            return $this->fillingItem($code, $this->interpretPipeDigits($matches[1]), 85);
+        }
+
+        if (preg_match('/\b'.$codePattern.'\s*\|\s*(\d+)/', $part, $matches) === 1) {
+            return $this->fillingItem($code, $this->interpretPipeDigits($matches[1]), 85);
+        }
+
+        if (preg_match('/\b'.$codePattern.'\b\s+([\d|]+)/', $part, $matches) === 1) {
+            $quantity = $this->countTeethFromPipeGroups($matches[1]);
+
+            return $this->fillingItem($code, $quantity, 85);
+        }
+
+        if (preg_match('/\b'.$codePattern.'\b(?!\s*[xX×0-9|\s])/i', $part) === 1
+            && preg_match('/\b'.$codePattern.'\b/', $part) === 1) {
+            return $this->fillingItem($code, 1, 85);
+        }
+
+        return null;
+    }
+
+    private function fillingItem(string $code, int $quantity, int $confidence): ParsedTreatmentItemDto
+    {
+        return new ParsedTreatmentItemDto(
+            treatmentCode: $code,
+            quantity: max(1, min(self::MAX_QUANTITY, $quantity)),
+            confidence: $confidence,
+            warningMessage: $confidence < 100 ? "Treatment {$code} quantity inferred from clinic tooth notation." : null,
+        );
+    }
+
+    /**
+     * @return array<int, ParsedTreatmentItemDto>
+     */
+    private function parseNonFillingPart(string $part): array
+    {
+        $knownCodes = $this->getKnownTreatmentCodes();
+        $sortedCodes = $knownCodes->keys()
+            ->reject(fn (string $code) => in_array($code, self::FILLING_CODES, true))
+            ->sortByDesc(fn (string $code) => strlen($code))
+            ->values();
+
+        $parsedItems = [];
+        $matchedRanges = [];
+
+        foreach ($sortedCodes as $code) {
+            $pattern = '/\b'.preg_quote($code, '/').'\b(?:\s*[xX×]\s*(\d+)|\s*\((\d+)\)|\s+(\d{1,2})(?!\d)(?!\s*\|)(?!\|))?/';
+
+            if (! preg_match_all($pattern, $part, $matches, PREG_OFFSET_CAPTURE)) {
+                continue;
+            }
+
+            foreach ($matches[0] as $index => $match) {
+                $matchText = $match[0];
+                $matchOffset = $match[1];
+                $matchEnd = $matchOffset + strlen($matchText);
+
+                if ($this->overlapsExistingMatch($matchOffset, $matchEnd, $matchedRanges)) {
+                    continue;
+                }
+
+                $quantity = $this->resolveQuantityFromMatch(
+                    $code,
+                    $part,
+                    $matchText,
+                    $matches,
+                    $index,
+                );
+
+                $confidence = 100;
+                $warningMessage = null;
+
+                if ($quantity === 1 && ! str_contains($matchText, 'X') && ! str_contains($matchText, '×') && ! preg_match('/\(\d+\)/', $matchText)) {
+                    $confidence = 85;
+                    $warningMessage = "Treatment {$code} detected; quantity inferred from clinic notation.";
+                }
+
+                $parsedItems[] = new ParsedTreatmentItemDto(
+                    treatmentCode: $code,
+                    quantity: $quantity,
+                    confidence: $confidence,
+                    warningMessage: $warningMessage,
+                );
+
+                $matchedRanges[] = [$matchOffset, $matchEnd];
+            }
+        }
+
+        return $parsedItems;
+    }
+
+    /**
+     * @param  array<int, array<int, array{0: string, 1: int}>>  $matches
+     */
+    private function resolveQuantityFromMatch(
+        string $code,
+        string $normalizedSegment,
+        string $matchText,
+        array $matches,
+        int $index,
+    ): int {
+        foreach ([1, 2, 3] as $groupIndex) {
+            $quantityString = $matches[$groupIndex][$index][0] ?? '';
+
+            if ($quantityString !== '' && is_numeric($quantityString)) {
+                return max(1, min(self::MAX_QUANTITY, (int) $quantityString));
+            }
+        }
+
+        $pipeQuantity = $this->resolvePipeNotationQuantity($code, $normalizedSegment);
+
+        if ($pipeQuantity !== null) {
+            return $pipeQuantity;
+        }
+
+        return 1;
+    }
+
+    private function resolvePipeNotationQuantity(string $code, string $normalizedSegment): ?int
+    {
+        $codePattern = preg_quote($code, '/');
+
+        if (preg_match('/\b'.$codePattern.'\b[^|]*(\d+)\|(\d+)(?:\s|$|\+)/', $normalizedSegment, $toothQuantityMatch) === 1) {
+            $quantityCandidate = (int) $toothQuantityMatch[2];
+
+            if ($quantityCandidate >= 1 && $quantityCandidate <= self::MAX_QUANTITY) {
+                return $quantityCandidate;
+            }
+        }
+
+        if (preg_match('/\b'.$codePattern.'\b[^|]*(\d+)\|\s*(?:\s+\+|$)/', $normalizedSegment, $trailingToothMatch) === 1) {
+            return $this->interpretTrailingPipeQuantity($code, $trailingToothMatch[1]);
+        }
+
+        if (preg_match('/\b'.$codePattern.'\b\s*\|\s*(\d+)(?:\s|$|\+)/', $normalizedSegment, $directPipeMatch) === 1) {
+            return $this->interpretDirectPipeQuantity($code, $directPipeMatch[1]);
+        }
+
+        if (preg_match('/\b'.$codePattern.'\b[^|]+\|\s*(\d+)(?:\s|$|\+)/', $normalizedSegment, $pipeMatch) === 1) {
+            return $this->interpretPipeDigits($pipeMatch[1]);
+        }
+
+        return null;
+    }
+
+    private function countTeethFromPipeGroups(string $toothGroups): int
+    {
+        $groups = preg_split('/\|/', $toothGroups) ?: [$toothGroups];
+        $total = 0;
+
+        foreach ($groups as $group) {
+            $digits = preg_replace('/\D/', '', $group) ?? '';
+
+            if ($digits === '') {
+                continue;
+            }
+
+            $total += $this->countToothDigits($digits);
+        }
+
+        return max(1, min(self::MAX_QUANTITY, $total));
+    }
+
+    private function countToothDigits(string $digits): int
+    {
+        $digits = trim($digits);
+
+        if ($digits === '') {
+            return 1;
+        }
+
+        if (preg_match('/^[1-8]+$/', $digits) === 1) {
+            return strlen($digits);
+        }
+
+        return $this->interpretPipeDigits($digits);
+    }
+
+    private function interpretDirectPipeQuantity(string $code, string $digits): int
+    {
+        if (in_array($code, self::CROWN_PIPE_QUANTITY_CODES, true) && strlen($digits) === 1) {
+            return max(1, min(self::MAX_QUANTITY, (int) $digits));
+        }
+
+        return $this->interpretPipeDigits($digits);
+    }
+
+    private function interpretTrailingPipeQuantity(string $code, string $digits): int
+    {
+        if (in_array($code, self::CROWN_PIPE_QUANTITY_CODES, true)) {
+            $quantityCandidate = (int) $digits;
+
+            if ($quantityCandidate >= 1 && $quantityCandidate <= self::MAX_QUANTITY) {
+                return $quantityCandidate;
+            }
+        }
+
+        return $this->countToothDigits($digits);
+    }
+
+    private function interpretPipeDigits(string $digits): int
+    {
+        $digits = trim($digits);
+
+        if ($digits === '') {
+            return 1;
+        }
+
+        if (strlen($digits) === 1) {
+            return 1;
+        }
+
+        if (strlen($digits) === 2) {
+            $toothNumber = (int) $digits;
+
+            if ($toothNumber >= 11 && $toothNumber <= 48) {
+                return 1;
+            }
+
+            if ($digits[0] >= '1' && $digits[0] <= '8' && $digits[1] >= '1' && $digits[1] <= '8') {
+                return 2;
+            }
+        }
+
+        if (preg_match('/^[1-8]+$/', $digits) === 1) {
+            return strlen($digits);
+        }
+
+        return 1;
+    }
+
+    private function normalizeTreatmentText(string $treatmentText): string
+    {
+        $normalized = strtoupper($treatmentText);
+        $normalized = str_replace(['×'], 'X', $normalized);
+
+        $normalized = preg_replace('/\bDEEP\s+SXP\b/', 'SXP', $normalized) ?? $normalized;
+
+        foreach (self::CODE_ALIASES as $alias => $canonicalCode) {
+            $normalized = preg_replace(
+                '/\b'.preg_quote($alias, '/').'\b/i',
+                $canonicalCode,
+                $normalized,
+            ) ?? $normalized;
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param  array<int, ParsedTreatmentItemDto>  $parsedItems
+     * @return array<int, ParsedTreatmentItemDto>
+     */
+    private function mergeParsedItemsByCode(array $parsedItems): array
+    {
+        $merged = [];
+
+        foreach ($parsedItems as $parsedItem) {
+            if (! array_key_exists($parsedItem->treatmentCode, $merged)) {
+                $merged[$parsedItem->treatmentCode] = $parsedItem;
+
+                continue;
+            }
+
+            $existing = $merged[$parsedItem->treatmentCode];
+            $merged[$parsedItem->treatmentCode] = new ParsedTreatmentItemDto(
+                treatmentCode: $parsedItem->treatmentCode,
+                quantity: min(self::MAX_QUANTITY, $existing->quantity + $parsedItem->quantity),
+                confidence: min($existing->confidence, $parsedItem->confidence),
+                warningMessage: $existing->warningMessage,
+            );
+        }
+
+        return array_values($merged);
+    }
+
+    /**
+     * @return Collection<string, Treatment>
+     */
+    private function getKnownTreatmentCodes(): Collection
+    {
+        if ($this->treatmentCodes === null) {
+            $this->treatmentCodes = Treatment::query()
+                ->where('is_active', true)
+                ->get()
+                ->keyBy('code');
+        }
+
+        return $this->treatmentCodes;
+    }
+
+    /**
+     * @param  array<int, array{0: int, 1: int}>  $matchedRanges
+     */
+    private function overlapsExistingMatch(int $offset, int $end, array $matchedRanges): bool
+    {
+        foreach ($matchedRanges as [$existingOffset, $existingEnd]) {
+            if ($offset < $existingEnd && $end > $existingOffset) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+HOST="${SERVER_HOST:-127.0.0.1}"
+PORT="${SERVER_PORT:-8000}"
+
+cd "$ROOT/public"
+
+UPLOAD_LIMIT="$(php -c "$ROOT/php.ini" -r 'echo ini_get("upload_max_filesize");')"
+POST_LIMIT="$(php -c "$ROOT/php.ini" -r 'echo ini_get("post_max_size");')"
+
+echo "Clinic 111 — http://${HOST}:${PORT}"
+echo "  upload_max_filesize=${UPLOAD_LIMIT}  post_max_size=${POST_LIMIT}"
+echo "  Import extraction logs appear below after POST /imports"
+echo "  Press Ctrl+C to stop."
+echo ""
+
+exec php -c "$ROOT/php.ini" -S "${HOST}:${PORT}" "$ROOT/server.php"

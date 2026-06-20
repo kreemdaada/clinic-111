@@ -1,0 +1,41 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Enums\UserRole;
+use App\Models\User;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+
+class UserSeeder extends Seeder
+{
+    public function run(): void
+    {
+        User::query()->updateOrCreate(
+            ['email' => 'admin@clinic.test'],
+            [
+                'name' => 'Admin User',
+                'password' => Hash::make('password'),
+                'role' => UserRole::Admin,
+            ],
+        );
+
+        User::query()->updateOrCreate(
+            ['email' => 'accountant@clinic.test'],
+            [
+                'name' => 'Accountant User',
+                'password' => Hash::make('password'),
+                'role' => UserRole::Accountant,
+            ],
+        );
+
+        User::query()->updateOrCreate(
+            ['email' => 'viewer@clinic.test'],
+            [
+                'name' => 'Viewer User',
+                'password' => Hash::make('password'),
+                'role' => UserRole::Viewer,
+            ],
+        );
+    }
+}

@@ -1,0 +1,684 @@
+<?php
+
+namespace App\Services\Export;
+
+use App\Enums\CommissionType;
+use App\Models\DailyReport;
+use App\Models\DailyWorkRow;
+use App\Models\Doctor;
+use App\Services\Accounting\IncomeReconciliationService;
+use App\Support\DoctorLabelNormalizer;
+use App\Support\LabCostTreatmentCatalog;
+use App\Support\MoneyCalculator;
+use App\Support\ReportMonthResolver;
+use Carbon\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Shared\Date;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use RuntimeException;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+
+/**
+ * Fills the Original Income Excel template (daily subtotals, JOB/lab costs, doctor sheets).
+ */
+class DoctorsIncomeExcelExportService
+{
+    private const TEMPLATE_PATH = 'templates/original_income_template.xlsx';
+
+    /** @var array<string, array<string, mixed>> Doctor code → export profile (DB code is the key, not Excel tab name). */
+    private const DOCTOR_EXPORT_PROFILES = [
+        'JACK' => [
+            'sheet_name' => 'Dr.Jack',
+            'layout' => 'standard',
+            'first_day_row' => 2,
+            'write_payment_headers' => true,
+            'summary_shows_net_total' => false,
+            'payment_columns' => ['dhs' => 'B', 'usd' => 'C', 'usd_to_aed' => 'D', 'visa' => 'E', 'total' => 'F', 'job' => 'G'],
+            'treatment_columns' => [
+                'MC' => 'H', 'ZIR' => 'I', 'IMPL-CR' => 'J', 'IMPL-ZIR' => 'K', 'VENEER' => 'L',
+                'IMPL' => 'N', 'POST' => 'P', 'ABT' => 'Q', 'REMOV' => 'R',
+            ],
+        ],
+        'RIYAD' => [
+            'sheet_name' => 'Dr.Riyadh',
+            'layout' => 'standard',
+            'first_day_row' => 3,
+            'write_payment_headers' => false,
+            'summary_shows_net_total' => true,
+            'payment_columns' => ['dhs' => 'B', 'usd' => 'C', 'usd_to_aed' => 'D', 'visa' => 'E', 'total' => 'F', 'job' => 'G'],
+            'treatment_columns' => [
+                'MC' => 'H', 'ZIR' => 'I', 'IMPL-CR' => 'J', 'IMPL-ZIR' => 'K', 'VENEER' => 'L',
+                'IMPL' => 'M', 'POST' => 'N', 'ABT' => 'O', 'REMOV' => 'P',
+            ],
+        ],
+        'PURIYA' => [
+            'sheet_name' => 'Dr Pouria',
+            'layout' => 'standard',
+            'first_day_row' => 3,
+            'write_payment_headers' => false,
+            'summary_shows_net_total' => true,
+            'payments_only' => true,
+            'payment_columns' => ['dhs' => 'B', 'usd' => 'C', 'usd_to_aed' => 'D', 'visa' => 'E', 'total' => 'F', 'job' => 'G'],
+            'treatment_columns' => [],
+        ],
+        'WA' => [
+            'sheet_name' => 'wael',
+            'layout' => 'wael',
+        ],
+    ];
+
+    public function __construct(
+        private readonly IncomeReconciliationService $incomeReconciliationService,
+        private readonly string $defaultUsdExchangeRate = '3.65',
+    ) {}
+
+    public function exportForReport(DailyReport $dailyReport): string
+    {
+        $reconciliationIssues = $this->incomeReconciliationService->validateReport($dailyReport);
+
+        if ($this->incomeReconciliationService->hasErrors($reconciliationIssues)) {
+            throw new RuntimeException(
+                'Income export blocked: database reconciliation failed. Check import logs for details.',
+            );
+        }
+
+        $monthStart = ReportMonthResolver::requireFromFilename($dailyReport->source_file_name);
+        $monthEnd = $monthStart->copy()->endOfMonth();
+
+        return $this->exportForMonth($monthStart, $monthEnd, $dailyReport);
+    }
+
+    public function exportForMonth(Carbon $monthStart, ?Carbon $monthEnd = null, ?DailyReport $dailyReport = null): string
+    {
+        if ($monthEnd === null) {
+            $monthEnd = $monthStart->copy()->endOfMonth();
+        }
+
+        $templatePath = resource_path(self::TEMPLATE_PATH);
+
+        if (! is_file($templatePath)) {
+            throw new RuntimeException('Income Excel template not found at '.self::TEMPLATE_PATH);
+        }
+
+        $spreadsheet = IOFactory::load($templatePath);
+
+        $workRowsQuery = DailyWorkRow::query()
+            ->with(['doctor', 'workItems.treatment', 'workItems.labJob']);
+
+        if ($dailyReport !== null) {
+            $workRowsQuery->where('daily_report_id', $dailyReport->id);
+        } else {
+            $workRowsQuery->whereBetween('work_date', [$monthStart->toDateString(), $monthEnd->toDateString()]);
+        }
+
+        $workRows = $workRowsQuery->get();
+
+        $rowsByDoctor = $workRows->groupBy('doctor_id');
+
+        foreach (Doctor::query()->where('is_active', true)->get() as $doctor) {
+            $profile = $this->resolveExportProfile($doctor);
+
+            if ($profile === null) {
+                continue;
+            }
+
+            $sheetName = $profile['sheet_name'];
+            $sheet = $spreadsheet->getSheetByName($sheetName);
+
+            if ($sheet === null) {
+                continue;
+            }
+
+            $doctorRows = $rowsByDoctor->get($doctor->id, collect());
+
+            if ($profile['layout'] === 'wael') {
+                $this->fillWaelSheet($sheet, $doctor, $doctorRows, $monthStart, $monthEnd);
+            } else {
+                $this->fillStandardDoctorSheet($sheet, $profile, $doctor, $doctorRows, $monthStart, $monthEnd);
+            }
+        }
+
+        $fileName = $this->buildFileName($monthStart);
+        $relativePath = 'exports/'.$fileName;
+        $absolutePath = Storage::path($relativePath);
+
+        if (! is_dir(dirname($absolutePath))) {
+            mkdir(dirname($absolutePath), 0755, true);
+        }
+
+        (new Xlsx($spreadsheet))->save($absolutePath);
+
+        return $absolutePath;
+    }
+
+    public function downloadResponse(DailyReport $dailyReport): BinaryFileResponse
+    {
+        $absolutePath = $this->exportForReport($dailyReport);
+        $downloadName = basename($absolutePath);
+
+        return response()->download($absolutePath, $downloadName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(false);
+    }
+
+    /**
+     * @param  array<string, mixed>  $profile
+     */
+    private function fillStandardDoctorSheet(
+        Worksheet $sheet,
+        array $profile,
+        Doctor $doctor,
+        Collection $doctorRows,
+        Carbon $monthStart,
+        Carbon $monthEnd,
+    ): void {
+        $daysInMonth = (int) $monthStart->daysInMonth;
+        $firstDayRow = (int) $profile['first_day_row'];
+        $lastDayRow = $firstDayRow + $daysInMonth - 1;
+        $totalRow = $lastDayRow + 1;
+
+        $this->clearDataArea($sheet, $firstDayRow, $totalRow + 12, 'T');
+        $this->clearNonLabIncomeColumns($sheet, $firstDayRow, $totalRow);
+        $this->writeStandardHeaders($sheet, $profile);
+
+        $paymentsOnly = (bool) ($profile['payments_only'] ?? false);
+        $dailyData = $this->aggregateStandardDailyData($doctorRows, $monthStart, $paymentsOnly);
+        /** @var array<string, string> $paymentColumns */
+        $paymentColumns = $profile['payment_columns'];
+        /** @var array<string, string> $treatmentColumns */
+        $treatmentColumns = $profile['treatment_columns'];
+
+        $columnTotals = [
+            'dhs' => '0.00',
+            'usd' => '0.00',
+            'usd_to_aed' => '0.00',
+            'visa' => '0.00',
+            'total' => '0.00',
+        ];
+
+        /** @var array<string, int> $treatmentTotals */
+        $treatmentTotals = [];
+        $labCostTotal = '0.00';
+
+        for ($day = 1; $day <= $daysInMonth; $day++) {
+            $row = $firstDayRow + $day - 1;
+            $date = $monthStart->copy()->day($day);
+            $dateKey = $date->toDateString();
+
+            $sheet->setCellValue('A'.$row, Date::PHPToExcel($date));
+
+            if (! array_key_exists($dateKey, $dailyData)) {
+                $sheet->setCellValue($paymentColumns['usd_to_aed'].$row, 0);
+                $sheet->setCellValue($paymentColumns['total'].$row, 0);
+
+                continue;
+            }
+
+            $dayData = $dailyData[$dateKey];
+
+            $this->setNumericCell($sheet, $paymentColumns['dhs'].$row, $dayData['dhs']);
+            $this->setNumericCell($sheet, $paymentColumns['usd'].$row, $dayData['usd']);
+            $this->setNumericCell($sheet, $paymentColumns['usd_to_aed'].$row, $dayData['usd_to_aed']);
+            $this->setNumericCell($sheet, $paymentColumns['visa'].$row, $dayData['visa']);
+            $this->setNumericCell($sheet, $paymentColumns['total'].$row, $dayData['total']);
+
+            if (! $paymentsOnly) {
+                $this->setNumericCell($sheet, $paymentColumns['job'].$row, $dayData['job']);
+                $labCostTotal = MoneyCalculator::add($labCostTotal, $dayData['job']);
+
+                foreach ($dayData['treatments'] as $code => $quantity) {
+                    if (! LabCostTreatmentCatalog::isLabCostCode($code)) {
+                        continue;
+                    }
+
+                    if (! array_key_exists($code, $treatmentColumns)) {
+                        continue;
+                    }
+
+                    $column = $treatmentColumns[$code];
+                    $sheet->setCellValue($column.$row, $quantity);
+
+                    if (! array_key_exists($code, $treatmentTotals)) {
+                        $treatmentTotals[$code] = 0;
+                    }
+
+                    $treatmentTotals[$code] += $quantity;
+                }
+            }
+
+            foreach ($columnTotals as $key => $value) {
+                $columnTotals[$key] = MoneyCalculator::add($value, $dayData[$key]);
+            }
+        }
+
+        $sheet->setCellValue('A'.$totalRow, 'TOTAL');
+        $this->setNumericCell($sheet, $paymentColumns['dhs'].$totalRow, $columnTotals['dhs']);
+        $this->setNumericCell($sheet, $paymentColumns['usd'].$totalRow, $columnTotals['usd']);
+        $this->setNumericCell($sheet, $paymentColumns['usd_to_aed'].$totalRow, $columnTotals['usd_to_aed']);
+        $this->setNumericCell($sheet, $paymentColumns['visa'].$totalRow, $columnTotals['visa']);
+        $this->setNumericCell($sheet, $paymentColumns['total'].$totalRow, $columnTotals['total']);
+
+        if (! $paymentsOnly) {
+            $this->setNumericCell($sheet, $paymentColumns['job'].$totalRow, $labCostTotal);
+
+            foreach ($treatmentTotals as $code => $quantity) {
+                if (! LabCostTreatmentCatalog::isLabCostCode($code)) {
+                    continue;
+                }
+
+                if (! array_key_exists($code, $treatmentColumns)) {
+                    continue;
+                }
+
+                $sheet->setCellValue($treatmentColumns[$code].$totalRow, $quantity);
+            }
+        }
+
+        $summaryStart = $totalRow + 2;
+        $this->writeOriginalIncomeSummaryBlock(
+            $sheet,
+            $profile,
+            $summaryStart,
+            $columnTotals,
+            $labCostTotal,
+            $doctor,
+        );
+    }
+
+    /**
+     * Writes the bottom summary block (DHS, USD, VISA, INURANCE, TOTAL, LAB COST-, commission).
+     *
+     * @param  array<string, mixed>  $profile
+     * @param  array{dhs: string, usd: string, usd_to_aed: string, visa: string, total: string}  $columnTotals
+     */
+    private function writeOriginalIncomeSummaryBlock(
+        Worksheet $sheet,
+        array $profile,
+        int $summaryStart,
+        array $columnTotals,
+        string $labCostTotal,
+        Doctor $doctor,
+    ): void {
+        $summaryRows = [
+            ['label' => 'DHS', 'value' => $columnTotals['dhs']],
+            ['label' => 'USD', 'value' => $columnTotals['usd_to_aed']],
+            ['label' => 'VISA', 'value' => $columnTotals['visa']],
+            ['label' => 'INURANCE', 'value' => null],
+            ['label' => 'TOTAL', 'value' => $columnTotals['total']],
+            ['label' => 'LAB COST-', 'value' => $labCostTotal],
+        ];
+
+        foreach ($summaryRows as $index => $summaryRow) {
+            $rowNumber = $summaryStart + $index;
+            $sheet->setCellValue('A'.$rowNumber, $summaryRow['label']);
+
+            if ($summaryRow['value'] === null) {
+                $sheet->setCellValue('B'.$rowNumber, null);
+
+                continue;
+            }
+
+            $this->setNumericCell($sheet, 'B'.$rowNumber, $summaryRow['value']);
+        }
+
+        if ($doctor->commission_type !== CommissionType::Percentage) {
+            return;
+        }
+
+        $commissionPercentage = '0';
+        if ($doctor->commission_percentage !== null) {
+            $commissionPercentage = (string) $doctor->commission_percentage;
+        }
+
+        $netTotal = MoneyCalculator::subtract($columnTotals['total'], $labCostTotal);
+        $doctorIncome = MoneyCalculator::percentage($netTotal, $commissionPercentage);
+        $commissionLabel = bcdiv($commissionPercentage, '100', 2);
+
+        if ($profile['summary_shows_net_total']) {
+            $sheet->setCellValue('A'.($summaryStart + 6), 'NET TOTAL');
+            $this->setNumericCell($sheet, 'B'.($summaryStart + 6), $netTotal);
+            $sheet->setCellValue('A'.($summaryStart + 7), $commissionLabel);
+            $this->setNumericCell($sheet, 'B'.($summaryStart + 7), $doctorIncome);
+
+            return;
+        }
+
+        $this->setNumericCell($sheet, 'B'.($summaryStart + 7), $doctorIncome);
+    }
+
+    private function fillWaelSheet(
+        Worksheet $sheet,
+        Doctor $doctor,
+        Collection $doctorRows,
+        Carbon $monthStart,
+        Carbon $monthEnd,
+    ): void {
+        $daysInMonth = (int) $monthStart->daysInMonth;
+        $firstDayRow = 5;
+        $lastDayRow = 4 + $daysInMonth;
+        $totalRow = $lastDayRow + 1;
+
+        $this->clearDataArea($sheet, $firstDayRow, $totalRow + 15, 'S');
+
+        $doctor->loadMissing('doctorFixedFees.treatment');
+        $fixedFeesByCode = [];
+
+        foreach ($doctor->doctorFixedFees as $fixedFee) {
+            $fixedFeesByCode[$fixedFee->treatment->code] = $fixedFee;
+        }
+
+        $dailyData = $this->aggregateWaelDailyData($doctorRows, $fixedFeesByCode, $monthStart);
+
+        $totals = [
+            'aed' => '0.00',
+            'usd' => '0.00',
+            'usd_to_aed' => '0.00',
+            'visa' => '0.00',
+            'daily_total' => '0.00',
+            'impl' => '0.00',
+            'bg' => '0.00',
+            'sinus' => '0.00',
+            'surg_cash' => '0.00',
+        ];
+
+        for ($day = 1; $day <= $daysInMonth; $day++) {
+            $row = $firstDayRow + $day - 1;
+            $date = $monthStart->copy()->day($day);
+            $dateKey = $date->toDateString();
+
+            $sheet->setCellValue('M'.$row, Date::PHPToExcel($date));
+
+            if (! array_key_exists($dateKey, $dailyData)) {
+                $sheet->setCellValue('D'.$row, 0);
+                $sheet->setCellValue('G'.$row, 0);
+
+                continue;
+            }
+
+            $dayData = $dailyData[$dateKey];
+
+            $this->setNumericCell($sheet, 'B'.$row, $dayData['aed']);
+            $this->setNumericCell($sheet, 'C'.$row, $dayData['usd']);
+            $this->setNumericCell($sheet, 'D'.$row, $dayData['usd_to_aed']);
+            $this->setNumericCell($sheet, 'F'.$row, $dayData['visa']);
+            $this->setNumericCell($sheet, 'G'.$row, $dayData['daily_total']);
+            $this->setNumericCell($sheet, 'N'.$row, $dayData['surg_cash']);
+            $this->setNumericCell($sheet, 'P'.$row, $dayData['impl']);
+            $this->setNumericCell($sheet, 'Q'.$row, $dayData['bg']);
+            $this->setNumericCell($sheet, 'R'.$row, $dayData['sinus']);
+
+            foreach ($totals as $key => $value) {
+                $totals[$key] = MoneyCalculator::add($value, $dayData[$key]);
+            }
+        }
+
+        $sheet->setCellValue('A'.$totalRow, 'TOTAL');
+        $this->setNumericCell($sheet, 'B'.$totalRow, $totals['aed']);
+        $this->setNumericCell($sheet, 'C'.$totalRow, $totals['usd']);
+        $this->setNumericCell($sheet, 'D'.$totalRow, $totals['usd_to_aed']);
+        $this->setNumericCell($sheet, 'F'.$totalRow, $totals['visa']);
+        $this->setNumericCell($sheet, 'G'.$totalRow, $totals['daily_total']);
+        $this->setNumericCell($sheet, 'H'.$totalRow, 0);
+        $this->setNumericCell($sheet, 'N'.$totalRow, $totals['surg_cash']);
+        $this->setNumericCell($sheet, 'P'.$totalRow, $totals['impl']);
+        $this->setNumericCell($sheet, 'Q'.$totalRow, $totals['bg']);
+        $this->setNumericCell($sheet, 'R'.$totalRow, $totals['sinus']);
+
+        $summaryBase = $totalRow + 2;
+        $this->setNumericCell($sheet, 'B'.$summaryBase, $totals['aed']);
+        $this->setNumericCell($sheet, 'B'.($summaryBase + 1), $totals['usd_to_aed']);
+        $this->setNumericCell($sheet, 'B'.($summaryBase + 2), $totals['visa']);
+        $this->setNumericCell($sheet, 'B'.($summaryBase + 3), $totals['daily_total']);
+        $this->setNumericCell($sheet, 'B'.($summaryBase + 4), 0);
+        $this->setNumericCell($sheet, 'B'.($summaryBase + 5), $totals['daily_total']);
+        $this->setNumericCell($sheet, 'B'.($summaryBase + 8), $totals['surg_cash']);
+        $this->setNumericCell($sheet, 'B'.($summaryBase + 10), $totals['surg_cash']);
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function aggregateStandardDailyData(Collection $doctorRows, Carbon $monthStart, bool $paymentsOnly = false): array
+    {
+        /** @var array<string, array<string, mixed>> $daily */
+        $daily = [];
+
+        foreach ($doctorRows as $workRow) {
+            $sheetDay = null;
+            if (is_array($workRow->raw_data_json) && array_key_exists('sheet_day', $workRow->raw_data_json)) {
+                $sheetDay = $workRow->raw_data_json['sheet_day'];
+            }
+
+            $dateKey = ReportMonthResolver::resolveWorkDateForRow(
+                $monthStart,
+                $workRow->work_date,
+                $sheetDay,
+            );
+
+            if (! array_key_exists($dateKey, $daily)) {
+                $daily[$dateKey] = [
+                    'dhs' => '0.00',
+                    'usd' => '0.00',
+                    'usd_to_aed' => '0.00',
+                    'visa' => '0.00',
+                    'total' => '0.00',
+                    'job' => '0.00',
+                    'treatments' => [],
+                ];
+            }
+
+            $daily[$dateKey]['dhs'] = MoneyCalculator::add($daily[$dateKey]['dhs'], (string) $workRow->dhs_amount);
+            $daily[$dateKey]['usd'] = MoneyCalculator::add($daily[$dateKey]['usd'], (string) $workRow->usd_amount);
+            $daily[$dateKey]['usd_to_aed'] = MoneyCalculator::add($daily[$dateKey]['usd_to_aed'], (string) $workRow->usd_to_aed_amount);
+            $daily[$dateKey]['visa'] = MoneyCalculator::add($daily[$dateKey]['visa'], (string) $workRow->visa_amount);
+            $daily[$dateKey]['total'] = MoneyCalculator::add($daily[$dateKey]['total'], (string) $workRow->paid_total_aed);
+
+            if ($paymentsOnly) {
+                continue;
+            }
+
+            foreach ($workRow->workItems as $workItem) {
+                $treatment = $workItem->treatment;
+
+                if (! $treatment->has_lab_cost) {
+                    continue;
+                }
+
+                $code = $treatment->code;
+
+                if (! LabCostTreatmentCatalog::isLabCostCode($code)) {
+                    continue;
+                }
+
+                if (! array_key_exists($code, $daily[$dateKey]['treatments'])) {
+                    $daily[$dateKey]['treatments'][$code] = 0;
+                }
+
+                $daily[$dateKey]['treatments'][$code] += (int) $workItem->quantity;
+
+                if ($workItem->labJob !== null) {
+                    $daily[$dateKey]['job'] = MoneyCalculator::add(
+                        $daily[$dateKey]['job'],
+                        (string) $workItem->labJob->total_cost_aed,
+                    );
+                }
+            }
+        }
+
+        return $daily;
+    }
+
+    /**
+     * @param  array<string, mixed>  $fixedFeesByCode
+     * @return array<string, array<string, string>>
+     */
+    private function aggregateWaelDailyData(Collection $doctorRows, array $fixedFeesByCode, Carbon $monthStart): array
+    {
+        /** @var array<string, array<string, string>> $daily */
+        $daily = [];
+
+        foreach ($doctorRows as $workRow) {
+            $sheetDay = null;
+            if (is_array($workRow->raw_data_json) && array_key_exists('sheet_day', $workRow->raw_data_json)) {
+                $sheetDay = $workRow->raw_data_json['sheet_day'];
+            }
+
+            $dateKey = ReportMonthResolver::resolveWorkDateForRow(
+                $monthStart,
+                $workRow->work_date,
+                $sheetDay,
+            );
+
+            if (! array_key_exists($dateKey, $daily)) {
+                $daily[$dateKey] = [
+                    'aed' => '0.00',
+                    'usd' => '0.00',
+                    'usd_to_aed' => '0.00',
+                    'visa' => '0.00',
+                    'daily_total' => '0.00',
+                    'impl' => '0.00',
+                    'bg' => '0.00',
+                    'sinus' => '0.00',
+                    'surg_cash' => '0.00',
+                ];
+            }
+
+            $daily[$dateKey]['aed'] = MoneyCalculator::add($daily[$dateKey]['aed'], (string) $workRow->dhs_amount);
+            $daily[$dateKey]['usd'] = MoneyCalculator::add($daily[$dateKey]['usd'], (string) $workRow->usd_amount);
+            $daily[$dateKey]['usd_to_aed'] = MoneyCalculator::add($daily[$dateKey]['usd_to_aed'], (string) $workRow->usd_to_aed_amount);
+            $daily[$dateKey]['visa'] = MoneyCalculator::add($daily[$dateKey]['visa'], (string) $workRow->visa_amount);
+            $daily[$dateKey]['daily_total'] = MoneyCalculator::add($daily[$dateKey]['daily_total'], (string) $workRow->paid_total_aed);
+
+            foreach ($workRow->workItems as $workItem) {
+                $code = $workItem->treatment->code;
+                $fixedFee = null;
+
+                if (array_key_exists($code, $fixedFeesByCode)) {
+                    $fixedFee = $fixedFeesByCode[$code];
+                }
+
+                if ($fixedFee === null) {
+                    continue;
+                }
+
+                $feeAed = MoneyCalculator::convertToAed(
+                    (string) $fixedFee->fee_amount,
+                    $fixedFee->currency,
+                    $this->defaultUsdExchangeRate,
+                );
+
+                $lineTotal = MoneyCalculator::multiply($feeAed, $workItem->quantity);
+                $daily[$dateKey]['surg_cash'] = MoneyCalculator::add($daily[$dateKey]['surg_cash'], $lineTotal);
+
+                if ($code === 'IMPL') {
+                    $daily[$dateKey]['impl'] = MoneyCalculator::add($daily[$dateKey]['impl'], $lineTotal);
+                }
+
+                if ($code === 'BG') {
+                    $daily[$dateKey]['bg'] = MoneyCalculator::add(
+                        $daily[$dateKey]['bg'],
+                        MoneyCalculator::multiply((string) $fixedFee->fee_amount, $workItem->quantity),
+                    );
+                }
+
+                if ($code === 'SINUS') {
+                    $daily[$dateKey]['sinus'] = MoneyCalculator::add(
+                        $daily[$dateKey]['sinus'],
+                        MoneyCalculator::multiply((string) $fixedFee->fee_amount, $workItem->quantity),
+                    );
+                }
+            }
+        }
+
+        return $daily;
+    }
+
+    /**
+     * @param  array<string, mixed>  $profile
+     */
+    private function writeStandardHeaders(Worksheet $sheet, array $profile): void
+    {
+        if (! ($profile['write_payment_headers'] ?? false)) {
+            return;
+        }
+
+        $sheet->setCellValue('B1', 'DHS');
+        $sheet->setCellValue('C1', 'USD');
+        $sheet->setCellValue('D1', 'to AED');
+        $sheet->setCellValue('E1', 'VISA');
+        $sheet->setCellValue('F1', 'DAILY TOTAL');
+        $sheet->setCellValue('G1', 'JOB');
+        $sheet->setCellValue('H1', 'M/C-CR');
+        $sheet->setCellValue('I1', 'ZIR-CR');
+        $sheet->setCellValue('J1', 'IMPL-CR');
+        $sheet->setCellValue('K1', 'IMPL-ZIR');
+        $sheet->setCellValue('L1', 'VENEER');
+        $sheet->setCellValue('M1', 'REIMPL');
+        $sheet->setCellValue('N1', 'IMPL');
+        $sheet->setCellValue('O1', 'REPEAR');
+        $sheet->setCellValue('P1', 'POST');
+        $sheet->setCellValue('Q1', 'ABT');
+        $sheet->setCellValue('R1', 'REMOVABLE');
+        $sheet->setCellValue('S1', 'PARTIAL');
+        $sheet->setCellValue('T1', 'BLEACHING');
+    }
+
+    private function clearNonLabIncomeColumns(Worksheet $sheet, int $startRow, int $endRow): void
+    {
+        foreach (['Q', 'R', 'S', 'T'] as $column) {
+            for ($row = $startRow; $row <= $endRow; $row++) {
+                $sheet->setCellValue($column.$row, null);
+            }
+        }
+    }
+
+    private function clearDataArea(Worksheet $sheet, int $startRow, int $endRow, string $lastColumn): void
+    {
+        for ($row = $startRow; $row <= $endRow; $row++) {
+            for ($columnIndex = 1; $columnIndex <= \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($lastColumn); $columnIndex++) {
+                $column = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($columnIndex);
+                $sheet->setCellValue($column.$row, null);
+            }
+        }
+    }
+
+    private function setNumericCell(Worksheet $sheet, string $cellAddress, string|int|float $value): void
+    {
+        if ($value === '' || $value === '0.00' || $value === 0 || $value === '0') {
+            $sheet->setCellValue($cellAddress, 0);
+
+            return;
+        }
+
+        $sheet->setCellValue($cellAddress, (float) $value);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function resolveExportProfile(Doctor $doctor): ?array
+    {
+        $doctorCode = $this->normalizeDoctorCode($doctor->code);
+
+        if (! array_key_exists($doctorCode, self::DOCTOR_EXPORT_PROFILES)) {
+            return null;
+        }
+
+        return self::DOCTOR_EXPORT_PROFILES[$doctorCode];
+    }
+
+    private function normalizeDoctorCode(string $doctorCode): string
+    {
+        return DoctorLabelNormalizer::extractCodeGuess($doctorCode);
+    }
+
+    private function buildFileName(Carbon $monthStart): string
+    {
+        $monthLabel = $monthStart->format('F Y');
+
+        return "Server Income {$monthLabel}.xlsx";
+    }
+}
