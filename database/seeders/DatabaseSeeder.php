@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             TreatmentSeeder::class,
             LabPriceSeeder::class,
             DoctorFixedFeeSeeder::class,
+            DoctorIncomeExportProfileSeeder::class,
             UserSeeder::class,
         ]);
     }

@@ -7,8 +7,6 @@ use App\Models\DailyReport;
 use App\Models\DailyWorkRow;
 use App\Models\Doctor;
 use App\Services\Accounting\IncomeReconciliationService;
-use App\Support\DoctorLabelNormalizer;
-use App\Support\LabCostTreatmentCatalog;
 use App\Support\MoneyCalculator;
 use App\Support\ReportMonthResolver;
 use Carbon\Carbon;
@@ -23,59 +21,22 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * Fills the Original Income Excel template (daily subtotals, JOB/lab costs, doctor sheets).
+ *
+ * Export layout per doctor comes from {@see DoctorIncomeExportProfileService} (database).
+ * JOB amounts come from {@see \App\Services\Accounting\LabJobCalculationService} + lab_prices.
  */
 class DoctorsIncomeExcelExportService
 {
     private const TEMPLATE_PATH = 'templates/original_income_template.xlsx';
 
-    /** @var array<string, array<string, mixed>> Doctor code → export profile (DB code is the key, not Excel tab name). */
-    private const DOCTOR_EXPORT_PROFILES = [
-        'JACK' => [
-            'sheet_name' => 'Dr.Jack',
-            'layout' => 'standard',
-            'first_day_row' => 2,
-            'write_payment_headers' => true,
-            'summary_shows_net_total' => false,
-            'payment_columns' => ['dhs' => 'B', 'usd' => 'C', 'usd_to_aed' => 'D', 'visa' => 'E', 'total' => 'F', 'job' => 'G'],
-            'treatment_columns' => [
-                'MC' => 'H', 'ZIR' => 'I', 'IMPL-CR' => 'J', 'IMPL-ZIR' => 'K', 'VENEER' => 'L',
-                'IMPL' => 'N', 'POST' => 'P', 'ABT' => 'Q', 'REMOV' => 'R',
-            ],
-        ],
-        'RIYAD' => [
-            'sheet_name' => 'Dr.Riyadh',
-            'layout' => 'standard',
-            'first_day_row' => 3,
-            'write_payment_headers' => false,
-            'summary_shows_net_total' => true,
-            'payment_columns' => ['dhs' => 'B', 'usd' => 'C', 'usd_to_aed' => 'D', 'visa' => 'E', 'total' => 'F', 'job' => 'G'],
-            'treatment_columns' => [
-                'MC' => 'H', 'ZIR' => 'I', 'IMPL-CR' => 'J', 'IMPL-ZIR' => 'K', 'VENEER' => 'L',
-                'IMPL' => 'M', 'POST' => 'N', 'ABT' => 'O', 'REMOV' => 'P',
-            ],
-        ],
-        'PURIYA' => [
-            'sheet_name' => 'Dr Pouria',
-            'layout' => 'standard',
-            'first_day_row' => 3,
-            'write_payment_headers' => false,
-            'summary_shows_net_total' => true,
-            'payments_only' => true,
-            'payment_columns' => ['dhs' => 'B', 'usd' => 'C', 'usd_to_aed' => 'D', 'visa' => 'E', 'total' => 'F', 'job' => 'G'],
-            'treatment_columns' => [],
-        ],
-        'WA' => [
-            'sheet_name' => 'wael',
-            'layout' => 'wael',
-        ],
-    ];
-
     /**
      * @param  IncomeReconciliationService  $incomeReconciliationService  Pre-export validation.
+     * @param  DoctorIncomeExportProfileService  $exportProfileService  DB-driven sheet/column layout.
      * @param  string  $defaultUsdExchangeRate  USD→AED rate for Wael fixed-fee conversion.
      */
     public function __construct(
         private readonly IncomeReconciliationService $incomeReconciliationService,
+        private readonly DoctorIncomeExportProfileService $exportProfileService,
         private readonly string $defaultUsdExchangeRate = '3.65',
     ) {}
 
@@ -223,12 +184,17 @@ class DoctorsIncomeExcelExportService
         $this->clearNonLabIncomeColumns($sheet, $firstDayRow, $totalRow);
         $this->writeStandardHeaders($sheet, $profile);
 
-        $paymentsOnly = (bool) ($profile['payments_only'] ?? false);
-        $dailyData = $this->aggregateStandardDailyData($doctorRows, $monthStart, $paymentsOnly);
+        $paymentsOnly = ($profile['treatment_columns'] ?? []) === [];
+        /** @var array<string, string> $treatmentColumns */
+        $treatmentColumns = $profile['treatment_columns'] ?? [];
+        $dailyData = $this->aggregateStandardDailyData(
+            $doctorRows,
+            $monthStart,
+            $paymentsOnly,
+            array_keys($treatmentColumns),
+        );
         /** @var array<string, string> $paymentColumns */
         $paymentColumns = $profile['payment_columns'];
-        /** @var array<string, string> $treatmentColumns */
-        $treatmentColumns = $profile['treatment_columns'];
 
         $columnTotals = [
             'dhs' => '0.00',
@@ -269,10 +235,6 @@ class DoctorsIncomeExcelExportService
                 $labCostTotal = MoneyCalculator::add($labCostTotal, $dayData['job']);
 
                 foreach ($dayData['treatments'] as $code => $quantity) {
-                    if (! LabCostTreatmentCatalog::isLabCostCode($code)) {
-                        continue;
-                    }
-
                     if (! array_key_exists($code, $treatmentColumns)) {
                         continue;
                     }
@@ -304,10 +266,6 @@ class DoctorsIncomeExcelExportService
             $this->setNumericCell($sheet, $paymentColumns['job'].$totalRow, $labCostTotal);
 
             foreach ($treatmentTotals as $code => $quantity) {
-                if (! LabCostTreatmentCatalog::isLabCostCode($code)) {
-                    continue;
-                }
-
                 if (! array_key_exists($code, $treatmentColumns)) {
                     continue;
                 }
@@ -492,10 +450,15 @@ class DoctorsIncomeExcelExportService
      * @param  Collection<int, DailyWorkRow>  $doctorRows  Work rows for one doctor.
      * @param  Carbon  $monthStart  Month anchor for sheet-day date resolution.
      * @param  bool  $paymentsOnly  When true, skip treatment and JOB aggregation.
+     * @param  array<int, string>  $treatmentColumnCodes  Treatment codes mapped to Income Excel columns.
      * @return array<string, array<string, mixed>> Date string (Y-m-d) → daily totals.
      */
-    private function aggregateStandardDailyData(Collection $doctorRows, Carbon $monthStart, bool $paymentsOnly = false): array
-    {
+    private function aggregateStandardDailyData(
+        Collection $doctorRows,
+        Carbon $monthStart,
+        bool $paymentsOnly = false,
+        array $treatmentColumnCodes = [],
+    ): array {
         /** @var array<string, array<string, mixed>> $daily */
         $daily = [];
 
@@ -534,23 +497,15 @@ class DoctorsIncomeExcelExportService
             }
 
             foreach ($workRow->workItems as $workItem) {
-                $treatment = $workItem->treatment;
+                $code = $workItem->treatment->code;
 
-                if (! $treatment->has_lab_cost) {
-                    continue;
+                if (in_array($code, $treatmentColumnCodes, true)) {
+                    if (! array_key_exists($code, $daily[$dateKey]['treatments'])) {
+                        $daily[$dateKey]['treatments'][$code] = 0;
+                    }
+
+                    $daily[$dateKey]['treatments'][$code] += (int) $workItem->quantity;
                 }
-
-                $code = $treatment->code;
-
-                if (! LabCostTreatmentCatalog::isLabCostCode($code)) {
-                    continue;
-                }
-
-                if (! array_key_exists($code, $daily[$dateKey]['treatments'])) {
-                    $daily[$dateKey]['treatments'][$code] = 0;
-                }
-
-                $daily[$dateKey]['treatments'][$code] += (int) $workItem->quantity;
 
                 if ($workItem->labJob !== null) {
                     $daily[$dateKey]['job'] = MoneyCalculator::add(
@@ -748,24 +703,7 @@ class DoctorsIncomeExcelExportService
      */
     private function resolveExportProfile(Doctor $doctor): ?array
     {
-        $doctorCode = $this->normalizeDoctorCode($doctor->code);
-
-        if (! array_key_exists($doctorCode, self::DOCTOR_EXPORT_PROFILES)) {
-            return null;
-        }
-
-        return self::DOCTOR_EXPORT_PROFILES[$doctorCode];
-    }
-
-    /**
-     * Normalize a doctor code for profile lookup using label extraction rules.
-     *
-     * @param  string  $doctorCode  Raw doctor code from the database.
-     * @return string Normalized uppercase code guess.
-     */
-    private function normalizeDoctorCode(string $doctorCode): string
-    {
-        return DoctorLabelNormalizer::extractCodeGuess($doctorCode);
+        return $this->exportProfileService->resolveForDoctor($doctor);
     }
 
     /**

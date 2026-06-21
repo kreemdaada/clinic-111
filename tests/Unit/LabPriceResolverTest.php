@@ -58,4 +58,42 @@ class LabPriceResolverTest extends TestCase
         $this->assertSame('360.00', number_format((float) $labPrice->unit_cost, 2, '.', ''));
         $this->assertNull($labPrice->doctor_id);
     }
+
+    public function test_impl_zir_for_dr_riyad_uses_500_aed(): void
+    {
+        $doctorRiyad = Doctor::query()->where('code', 'RIYAD')->firstOrFail();
+        $treatment = Treatment::query()->where('code', 'IMPL-ZIR')->firstOrFail();
+        $riyadhLab = Lab::query()->where('code', 'RIYADH_LAB')->firstOrFail();
+
+        $labPrice = $this->labPriceResolver->resolve($doctorRiyad, $treatment, $riyadhLab);
+
+        $this->assertNotNull($labPrice);
+        $this->assertSame('500.00', number_format((float) $labPrice->unit_cost, 2, '.', ''));
+        $this->assertSame($doctorRiyad->id, $labPrice->doctor_id);
+    }
+
+    public function test_impl_zir_for_other_doctors_uses_460_aed(): void
+    {
+        $doctorJack = Doctor::query()->where('code', 'JACK')->firstOrFail();
+        $treatment = Treatment::query()->where('code', 'IMPL-ZIR')->firstOrFail();
+        $mainLab = Lab::query()->where('code', 'MAIN_LAB')->firstOrFail();
+
+        $labPrice = $this->labPriceResolver->resolve($doctorJack, $treatment, $mainLab);
+
+        $this->assertNotNull($labPrice);
+        $this->assertSame('460.00', number_format((float) $labPrice->unit_cost, 2, '.', ''));
+        $this->assertNull($labPrice->doctor_id);
+    }
+
+    public function test_remov_lab_cost_is_100_aed(): void
+    {
+        $doctorPuriya = Doctor::query()->where('code', 'PURIYA')->firstOrFail();
+        $treatment = Treatment::query()->where('code', 'REMOV')->firstOrFail();
+        $mainLab = Lab::query()->where('code', 'MAIN_LAB')->firstOrFail();
+
+        $labPrice = $this->labPriceResolver->resolve($doctorPuriya, $treatment, $mainLab);
+
+        $this->assertNotNull($labPrice);
+        $this->assertSame('100.00', number_format((float) $labPrice->unit_cost, 2, '.', ''));
+    }
 }

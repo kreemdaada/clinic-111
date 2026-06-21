@@ -6,6 +6,7 @@ use App\Enums\CommissionType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Clinic doctor with commission rules and optional lab assignment.
@@ -67,5 +68,13 @@ class Doctor extends Model
     public function doctorFixedFees(): HasMany
     {
         return $this->hasMany(DoctorFixedFee::class);
+    }
+
+    /**
+     * Server Income Excel layout (sheet name, column map, layout type).
+     */
+    public function incomeExportProfile(): HasOne
+    {
+        return $this->hasOne(DoctorIncomeExportProfile::class);
     }
 }

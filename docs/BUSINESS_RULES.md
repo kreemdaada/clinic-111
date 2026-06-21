@@ -121,6 +121,8 @@ DOCTOR INCOME          = 12,456.94 AED
 
 Applies to: Dr Jack (35%), Dr Riyad (35%), Dr Puriya (25%).
 
+Dr Puriya uses the same JOB / Income Excel layout as other percentage doctors, but only lab treatments **MC, ZIR, POST, REMOV** appear in columns H–P (no IMPL, ABT, etc.).
+
 For all percentage doctors, **lab costs are deducted before commission**:
 
 ```
@@ -195,7 +197,7 @@ Dr Riyad uses lab `RIYADH_LAB`; all other doctors default to `MAIN_LAB`.
 | RCT | Root Canal Treatment |
 | RE-RCT | Repeat Root Canal Treatment |
 | REPAIR | Repair |
-| REMOV | Removable Tooth |
+| REMOV | Removable Tooth (100 AED lab cost) |
 | BG | Bone Graft (Dr Wa fixed fee only) |
 | SINUS | Sinus Lift (Dr Wa fixed fee only) |
 

@@ -5,16 +5,18 @@ namespace App\Services\Import;
 use App\Enums\ReportSourceType;
 use App\Enums\ReportStatus;
 use App\Models\DailyReport;
+use App\Models\DailyReportImportWarning;
 use App\Models\DailyWorkRow;
 use App\Models\Doctor;
+use App\Support\ReportMonthResolver;
 use App\Services\Accounting\IncomeReconciliationService;
 use App\Services\Accounting\LabJobCalculationService;
 use App\Services\Accounting\PaymentCalculationService;
-use App\Services\Accounting\TreatmentParserService;
 use App\Services\Import\ImportActivityLogger;
 use App\Support\DoctorLabelNormalizer;
-use App\Support\ReportMonthResolver;
+use App\Support\ImportRowPrivacySanitizer;
 use App\Support\MoneyCalculator;
+use App\Support\PatientReferenceHasher;
 use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -30,20 +32,24 @@ class DailyReportImportService
     /**
      * @param  ExcelDailyReportParser  $excelParser  Parses uploaded Excel workbooks.
      * @param  PaymentCalculationService  $paymentCalculationService  Computes AED totals and payment rows.
-     * @param  TreatmentParserService  $treatmentParserService  Parses treatment text into work items.
      * @param  LabJobCalculationService  $labJobCalculationService  Calculates lab job costs.
      * @param  IncomeReconciliationService  $incomeReconciliationService  Validates totals before export.
      * @param  ImportActivityLogger  $importActivityLogger  Audit and file logging.
      * @param  ImportExtractionLogService  $importExtractionLogService  Structured extraction log writer.
+     * @param  TreatmentImportValidationService  $treatmentImportValidationService  Validates treatments and emits warnings.
+     * @param  PatientReferenceHasher  $patientReferenceHasher  HMAC hash for patient references.
+     * @param  ImportRowPrivacySanitizer  $importRowPrivacySanitizer  Strips PII from raw_data_json.
      */
     public function __construct(
         private readonly ExcelDailyReportParser $excelParser,
         private readonly PaymentCalculationService $paymentCalculationService,
-        private readonly TreatmentParserService $treatmentParserService,
         private readonly LabJobCalculationService $labJobCalculationService,
         private readonly IncomeReconciliationService $incomeReconciliationService,
         private readonly ImportActivityLogger $importActivityLogger,
         private readonly ImportExtractionLogService $importExtractionLogService,
+        private readonly TreatmentImportValidationService $treatmentImportValidationService,
+        private readonly PatientReferenceHasher $patientReferenceHasher,
+        private readonly ImportRowPrivacySanitizer $importRowPrivacySanitizer,
     ) {}
 
     /**
@@ -68,7 +74,7 @@ class DailyReportImportService
 
         $storedPath = $this->storeUploadedFile($uploadedFile);
 
-        return DB::transaction(function () use ($uploadedFile, $storedPath, $monthAnchor, $resolvedReportDate) {
+        $dailyReport = DB::transaction(function () use ($uploadedFile, $storedPath, $monthAnchor, $resolvedReportDate) {
 
             $dailyReport = DailyReport::query()->create([
                 'report_date' => $resolvedReportDate,
@@ -113,6 +119,7 @@ class DailyReportImportService
                     'dailyWorkRows.payments',
                     'dailyWorkRows.workItems.treatment',
                     'dailyWorkRows.workItems.labJob',
+                    'importWarnings',
                 ]);
             } catch (\Throwable $exception) {
                 $dailyReport->update(['status' => ReportStatus::Failed]);
@@ -125,6 +132,10 @@ class DailyReportImportService
                 throw $exception;
             }
         });
+
+        $this->deleteUploadedFileIfConfigured($storedPath);
+
+        return $dailyReport;
     }
 
     /**
@@ -140,10 +151,13 @@ class DailyReportImportService
             throw new RuntimeException('Approved reports are read-only.');
         }
 
-        $dailyReport->load('dailyWorkRows');
+        $dailyReport->load('dailyWorkRows.doctor');
+
+        $allWarnings = [];
 
         foreach ($dailyReport->dailyWorkRows as $dailyWorkRow) {
-            $this->treatmentParserService->parseAndPersist($dailyWorkRow);
+            $result = $this->treatmentImportValidationService->validateAndPersist($dailyWorkRow);
+            $allWarnings = array_merge($allWarnings, $result->warnings);
         }
 
         $dailyReport->update(['status' => ReportStatus::Parsed]);
@@ -153,8 +167,15 @@ class DailyReportImportService
         $dailyReport->load('dailyWorkRows.doctor');
 
         foreach ($dailyReport->dailyWorkRows as $dailyWorkRow) {
+            $dailyWorkRow->load(['workItems.treatment', 'workItems.labJob']);
+            $allWarnings = array_merge(
+                $allWarnings,
+                $this->treatmentImportValidationService->collectLabPriceWarnings($dailyWorkRow),
+            );
             $this->importExtractionLogService->recordCalculatedRow($dailyWorkRow);
         }
+
+        $this->persistImportWarnings($dailyReport, $allWarnings);
 
         $reconciliationIssues = $this->incomeReconciliationService->validateReport($dailyReport);
 
@@ -164,7 +185,9 @@ class DailyReportImportService
             $this->importActivityLogger->logReconciliation($dailyReport, $reconciliationIssues);
         }
 
-        $dailyReport->update(['status' => ReportStatus::Calculated]);
+        $dailyReport->update([
+            'status' => $allWarnings !== [] ? ReportStatus::NeedsReview : ReportStatus::Calculated,
+        ]);
     }
 
     /**
@@ -194,6 +217,11 @@ class DailyReportImportService
             $dhsAmount = MoneyCalculator::add($dhsAmount, $paymentTotals['rubl_to_aed_amount']);
         }
 
+        $patientName = $this->sanitizeString($this->getParsedRowValue($parsedRow, 'patient_name'));
+        $mrn = $this->sanitizeString($this->getParsedRowValue($parsedRow, 'mrn'));
+        $fileNumber = $this->sanitizeString($this->getParsedRowValue($parsedRow, 'file_number'));
+        $excelRowNumber = (int) ($parsedRow['raw_row_number'] ?? $parsedRow['excel_row'] ?? 0);
+
         $dailyWorkRow = DailyWorkRow::query()->create([
             'daily_report_id' => $dailyReport->id,
             'doctor_id' => $doctor->id,
@@ -202,9 +230,8 @@ class DailyReportImportService
                 $monthAnchor,
                 $this->getParsedRowValue($parsedRow, 'sheet_day'),
             ),
-            'patient_name' => $this->sanitizeString($this->getParsedRowValue($parsedRow, 'patient_name')),
-            'mrn' => $this->sanitizeString($this->getParsedRowValue($parsedRow, 'mrn')),
-            'file_number' => $this->sanitizeString($this->getParsedRowValue($parsedRow, 'file_number')),
+            'patient_reference_hash' => $this->patientReferenceHasher->hash($patientName, $mrn, $fileNumber),
+            'excel_row_number' => $excelRowNumber > 0 ? $excelRowNumber : null,
             'treatment_text' => $this->sanitizeString($this->getParsedRowValue($parsedRow, 'treatment_text')),
             'total_cost' => $this->toDecimalString($this->getParsedRowValue($parsedRow, 'total_cost', 0)),
             'discount_amount' => $this->toDecimalString($this->getParsedRowValue($parsedRow, 'discount_amount', 0)),
@@ -216,7 +243,7 @@ class DailyReportImportService
             'balance_dhs' => $this->toDecimalString($this->getParsedRowValue($parsedRow, 'balance_dhs', 0)),
             'balance_usd' => $this->toDecimalString($this->getParsedRowValue($parsedRow, 'balance_usd', 0)),
             'crown_count' => (int) $this->getParsedRowValue($parsedRow, 'crown_count', 0),
-            'raw_data_json' => $parsedRow,
+            'raw_data_json' => $this->importRowPrivacySanitizer->sanitize($parsedRow),
         ]);
 
         $this->paymentCalculationService->createPaymentsForWorkRow($dailyWorkRow);
@@ -363,5 +390,55 @@ class DailyReportImportService
         }
 
         return $parsedRow[$key];
+    }
+
+    /**
+     * @param  array<int, \App\DTOs\ImportParseWarningDto>  $warnings
+     */
+    private function persistImportWarnings(DailyReport $dailyReport, array $warnings): void
+    {
+        DailyReportImportWarning::query()
+            ->where('daily_report_id', $dailyReport->id)
+            ->delete();
+
+        if ($warnings === []) {
+            return;
+        }
+
+        $dailyReport->load('dailyWorkRows');
+
+        $rowsByExcelRow = $dailyReport->dailyWorkRows->keyBy(
+            fn (DailyWorkRow $row) => (int) ($row->excel_row_number ?? 0),
+        );
+
+        foreach ($warnings as $warning) {
+            $workRow = $rowsByExcelRow->get($warning->excelRow);
+
+            DailyReportImportWarning::query()->create([
+                'daily_report_id' => $dailyReport->id,
+                'daily_work_row_id' => $workRow?->id,
+                'excel_row_number' => $warning->excelRow > 0 ? $warning->excelRow : null,
+                'doctor_code' => $warning->doctor,
+                'treatment_text' => $warning->treatmentText,
+                'warning_code' => $warning->warningCode,
+                'message' => $warning->message,
+            ]);
+        }
+    }
+
+    /**
+     * Delete the stored upload when configured (default: true after successful import).
+     */
+    private function deleteUploadedFileIfConfigured(string $storedPath): void
+    {
+        if (! config('accounting.upload.delete_after_import', true)) {
+            return;
+        }
+
+        $disk = config('accounting.upload.disk');
+
+        if (Storage::disk($disk)->exists($storedPath)) {
+            Storage::disk($disk)->delete($storedPath);
+        }
     }
 }

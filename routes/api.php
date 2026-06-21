@@ -22,6 +22,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/daily-reports/{dailyReport}', [DailyReportController::class, 'show'])
         ->middleware('role:admin,accountant,viewer');
 
+    Route::get('/daily-reports/{dailyReport}/validation-summary', [DailyReportController::class, 'validationSummary'])
+        ->middleware('role:admin,accountant,viewer');
+
     Route::post('/daily-reports/import', [DailyReportController::class, 'import'])
         ->middleware(['role:admin,accountant', 'throttle:20,1']);
 });

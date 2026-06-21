@@ -18,7 +18,6 @@ final class NonLabIncomeTreatmentCatalog
         'RCF',
         'RE-RCT',
         'BLEACHING',
-        'APICO',
         'REPAIR',
         'REIMPL',
         'PARTIAL',

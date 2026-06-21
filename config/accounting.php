@@ -9,5 +9,8 @@ return [
         'directory' => 'daily-reports',
         'max_kilobytes' => 10240,
         'allowed_extensions' => ['xlsx', 'xlsm'],
+        'delete_after_import' => env('ACCOUNTING_DELETE_UPLOAD_AFTER_IMPORT', true),
     ],
+
+    'patient_reference_hmac_key' => env('ACCOUNTING_PATIENT_REFERENCE_HMAC_KEY'),
 ];

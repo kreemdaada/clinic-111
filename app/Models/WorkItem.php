@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 /**
  * One parsed treatment line (code + quantity) from `treatment_text`.
  *
- * Table: `work_items`. Only created for treatments with `has_lab_cost = true`
- * unless manually inserted for testing.
+ * Table: `work_items`. Created for every valid parsed treatment.
+ * {@see LabJob} rows are only created when the treatment has `has_lab_cost = true`.
  */
 class WorkItem extends Model
 {

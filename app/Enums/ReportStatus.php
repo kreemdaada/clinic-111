@@ -5,7 +5,7 @@ namespace App\Enums;
 /**
  * Processing state of a {@see \App\Models\DailyReport} import pipeline.
  *
- * Advances: uploaded → parsed → calculated → approved.
+ * Advances: uploaded → parsed → calculated|needs_review → approved.
  * On failure the report is marked `failed` and the DB transaction is rolled back.
  */
 enum ReportStatus: string
@@ -18,6 +18,9 @@ enum ReportStatus: string
 
     /** Lab jobs calculated for all lab-cost work items. */
     case Calculated = 'calculated';
+
+    /** Import completed but parser/lab warnings require human review. */
+    case NeedsReview = 'needs_review';
 
     /** Report locked — read-only; re-import for same date is rejected. */
     case Approved = 'approved';

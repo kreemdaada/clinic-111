@@ -18,9 +18,8 @@ class DailyWorkRow extends Model
         'daily_report_id',
         'doctor_id',
         'work_date',
-        'patient_name',
-        'mrn',
-        'file_number',
+        'patient_reference_hash',
+        'excel_row_number',
         'treatment_text',
         'total_cost',
         'discount_amount',
@@ -54,6 +53,7 @@ class DailyWorkRow extends Model
             'balance_dhs' => 'decimal:2',
             'balance_usd' => 'decimal:2',
             'crown_count' => 'integer',
+            'excel_row_number' => 'integer',
             'raw_data_json' => 'array',
         ];
     }

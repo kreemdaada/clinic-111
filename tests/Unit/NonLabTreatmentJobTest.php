@@ -19,7 +19,7 @@ class NonLabTreatmentJobTest extends TestCase
         $this->seedAccountingData();
     }
 
-    public function test_cf_and_sxp_are_not_persisted_as_work_items(): void
+    public function test_cf_and_sxp_are_persisted_as_work_items_without_lab_jobs(): void
     {
         $doctor = Doctor::query()->where('code', 'JACK')->firstOrFail();
         $dailyReport = DailyReport::query()->create([
@@ -37,7 +37,8 @@ class NonLabTreatmentJobTest extends TestCase
 
         app(\App\Services\Accounting\TreatmentParserService::class)->parseAndPersist($dailyWorkRow);
 
-        $this->assertSame(0, $dailyWorkRow->workItems()->count());
+        $this->assertSame(2, $dailyWorkRow->workItems()->count());
+        $this->assertSame(0, $dailyWorkRow->workItems()->whereHas('labJob')->count());
     }
 
     public function test_cf_and_sxp_do_not_create_lab_jobs(): void

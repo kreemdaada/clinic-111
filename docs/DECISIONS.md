@@ -162,6 +162,16 @@ Date: YYYY-MM-DD
 
 ---
 
+## ADR-016: Doctor Income Export Profiles in Database
+
+**Decision:** Server Income Excel layout (sheet name, column letters, layout type) is stored in `doctor_income_export_profiles`, loaded by `DoctorIncomeExportProfileService`. No hardcoded doctor profile arrays in export code.
+
+**Reason:** New or inactive doctors should be configurable via DB/seeder/admin without code deploy. JOB calculation remains one pipeline (`LabJobCalculationService` + `lab_prices`); only Excel layout is profile-driven.
+
+**Date:** 2026-06-19
+
+---
+
 ## What Changed
 
 **Updated — 2026-06-19**

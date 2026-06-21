@@ -99,9 +99,10 @@ class TreatmentParserService
     }
 
     /**
-     * Parse treatment text and persist lab-cost work items for a daily work row.
+     * Parse treatment text and persist work items for all known treatments on a daily work row.
      *
-     * Deletes existing work items first; skips treatments without lab cost.
+     * Deletes existing work items first. Lab jobs are created separately by
+     * {@see LabJobCalculationService} only when `has_lab_cost = true`.
      *
      * @param  DailyWorkRow  $dailyWorkRow  Row whose treatment_text is parsed.
      */
@@ -119,7 +120,7 @@ class TreatmentParserService
         foreach ($parsedItems as $parsedItem) {
             $treatment = $treatmentsByCode->get($parsedItem->treatmentCode);
 
-            if ($treatment === null || ! $treatment->has_lab_cost) {
+            if ($treatment === null) {
                 continue;
             }
 

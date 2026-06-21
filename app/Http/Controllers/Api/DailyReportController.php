@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\DailyReports\ImportDailyReportRequest;
 use App\Models\DailyReport;
 use App\Services\Import\DailyReportImportService;
+use App\Services\Import\DailyReportValidationSummaryService;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -28,8 +29,12 @@ class DailyReportController extends Controller
     ): JsonResponse {
         $dailyReport = $importService->import($request->file('file'));
 
+        $message = $dailyReport->status->value === 'needs_review'
+            ? 'Daily report imported with parser warnings requiring review.'
+            : 'Daily report imported and calculated successfully.';
+
         return response()->json([
-            'message' => 'Daily report imported and calculated successfully.',
+            'message' => $message,
             'data' => $this->formatDailyReport($dailyReport),
         ], 201);
     }
@@ -51,6 +56,18 @@ class DailyReportController extends Controller
 
         return response()->json([
             'data' => $this->formatDailyReport($dailyReport),
+        ]);
+    }
+
+    /**
+     * Return parser validation summary for a daily report import.
+     */
+    public function validationSummary(
+        DailyReport $dailyReport,
+        DailyReportValidationSummaryService $validationSummaryService,
+    ): JsonResponse {
+        return response()->json([
+            'data' => $validationSummaryService->build($dailyReport),
         ]);
     }
 
@@ -77,9 +94,7 @@ class DailyReportController extends Controller
                         'name' => $row->doctor->name,
                     ],
                     'work_date' => $row->work_date->toDateString(),
-                    'patient_name' => $row->patient_name,
-                    'mrn' => $row->mrn,
-                    'file_number' => $row->file_number,
+                    'excel_row_number' => $row->excel_row_number,
                     'treatment_text' => $row->treatment_text,
                     'paid_total_aed' => $row->paid_total_aed,
                     'payments' => $row->payments->map(fn ($payment) => [

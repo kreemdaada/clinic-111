@@ -25,7 +25,7 @@ class LabPriceSeeder extends Seeder
             'POST' => ['unit_cost' => 55, 'lab_id' => $mainLab->id],
             'ABT' => ['unit_cost' => 511, 'lab_id' => $mainLab->id],
             'IMPL' => ['unit_cost' => 1000, 'lab_id' => $mainLab->id],
-            'REMOV' => ['unit_cost' => 200, 'lab_id' => $mainLab->id],
+            'REMOV' => ['unit_cost' => 100, 'lab_id' => $mainLab->id],
         ];
 
         foreach ($defaultPrices as $treatmentCode => $priceData) {

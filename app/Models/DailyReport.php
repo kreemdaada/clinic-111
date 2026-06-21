@@ -44,6 +44,14 @@ class DailyReport extends Model
     }
 
     /**
+     * Parser and lab-pricing warnings raised during import.
+     */
+    public function importWarnings(): HasMany
+    {
+        return $this->hasMany(DailyReportImportWarning::class);
+    }
+
+    /**
      * Whether this report is locked and cannot be re-imported or modified.
      */
     public function isApproved(): bool

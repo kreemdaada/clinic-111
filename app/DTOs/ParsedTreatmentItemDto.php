@@ -6,7 +6,7 @@ namespace App\DTOs;
  * One treatment line extracted from a daily report `treatment_text` field.
  *
  * Created by {@see \App\Services\Accounting\TreatmentParserService::parse()}.
- * Only items whose code has `has_lab_cost = true` are persisted as work items.
+ * Valid known codes are persisted as {@see \App\Models\WorkItem} rows during import.
  */
 readonly class ParsedTreatmentItemDto
 {

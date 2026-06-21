@@ -17,7 +17,7 @@ class LabCostTreatmentCatalogTest extends TestCase
 
     public function test_cf_and_sxp_do_not_have_lab_cost(): void
     {
-        foreach (['CF', 'SXP', 'RCT', 'AF', 'BLEACHING', 'EXO', 'APICO'] as $code) {
+        foreach (['CF', 'SXP', 'RCT', 'AF', 'RE-RCT', 'REPAIR', 'BLEACHING', 'EXO', 'APICO'] as $code) {
             $treatment = Treatment::query()->where('code', $code)->firstOrFail();
 
             $this->assertFalse($treatment->has_lab_cost, "{$code} must not generate JOB");

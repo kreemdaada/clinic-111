@@ -33,5 +33,6 @@
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
         <env name="MEMORY_LIMIT" value="512M"/>
+        <env name="ACCOUNTING_PATIENT_REFERENCE_HMAC_KEY" value="test-patient-reference-hmac-key-for-unit-tests-only"/>
     </php>
 </phpunit>

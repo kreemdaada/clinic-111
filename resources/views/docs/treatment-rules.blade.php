@@ -4,12 +4,39 @@
 
 @push('styles')
 <style>
-    .rules-page { max-width: 720px; }
-    .rules-page h2 { font-size: 1.15rem; margin: 1.5rem 0 0.65rem; }
-    .rules-page p, .rules-page li { line-height: 1.55; }
-    .rules-page table { width: 100%; margin: 0.75rem 0; font-size: 0.9rem; }
-    .rules-page code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; }
-    .rules-codes { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.75rem 0; }
+    .rules-page {
+        max-width: 720px;
+    }
+
+    .rules-page h2 {
+        font-size: 1.15rem;
+        margin: 1.5rem 0 0.65rem;
+    }
+
+    .rules-page p,
+    .rules-page li {
+        line-height: 1.55;
+    }
+
+    .rules-page table {
+        width: 100%;
+        margin: 0.75rem 0;
+        font-size: 0.9rem;
+    }
+
+    .rules-page code {
+        background: #f1f5f9;
+        padding: 0.1rem 0.35rem;
+        border-radius: 4px;
+    }
+
+    .rules-codes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        margin: 0.75rem 0;
+    }
+
     .rules-code {
         background: #dcfce7;
         border: 1px solid #86efac;
@@ -19,6 +46,7 @@
         font-size: 0.85rem;
         font-weight: 600;
     }
+
     .rules-example {
         background: #f8fafc;
         border: 1px solid #e2e8f0;
@@ -29,8 +57,14 @@
         margin: 0.5rem 0;
         white-space: pre-line;
     }
-    .rules-bad { color: #b91c1c; }
-    .rules-good { color: #15803d; }
+
+    .rules-bad {
+        color: #b91c1c;
+    }
+
+    .rules-good {
+        color: #15803d;
+    }
 </style>
 @endpush
 
@@ -53,41 +87,77 @@
 
         <h2>Examples (correct)</h2>
         <div class="rules-example">ZIR x 2
-ZIR x 2 + POST x 1
-MC x 3 + IMPL-ZIR x 1
-IMPL x 2 + ABT x 2
-IMPL-CR x 4</div>
+            ZIR x 2 + POST x 1
+            MC x 3 + IMPL-ZIR x 1
+            IMPL x 2 + ABT x 2
+            IMPL-CR x 4</div>
 
         <h2>Lab treatment codes (JOB)</h2>
         <div class="rules-codes">
             @foreach (['MC', 'ZIR', 'POST', 'IMPL', 'IMPL-CR', 'IMPL-ZIR', 'ABT'] as $code)
-                <span class="rules-code">{{ $code }}</span>
+            <span class="rules-code">{{ $code }}</span>
             @endforeach
         </div>
         <table>
             <thead>
-                <tr><th>Code</th><th>Treatment</th></tr>
+                <tr>
+                    <th>Code</th>
+                    <th>Treatment</th>
+                </tr>
             </thead>
             <tbody>
-                <tr><td>MC</td><td>Metal Ceramic Crown</td></tr>
-                <tr><td>ZIR</td><td>Zircon Crown</td></tr>
-                <tr><td>POST</td><td>Post</td></tr>
-                <tr><td>IMPL</td><td>Implant (<code>IMP</code> also accepted)</td></tr>
-                <tr><td>IMPL-CR</td><td>Implant Crown (<code>IMP-CR</code> also accepted)</td></tr>
-                <tr><td>IMPL-ZIR</td><td>Zircon Implant Crown</td></tr>
-                <tr><td>ABT</td><td>Abutment</td></tr>
+                <tr>
+                    <td>MC</td>
+                    <td>Metal Ceramic Crown</td>
+                </tr>
+                <tr>
+                    <td>ZIR</td>
+                    <td>Zircon Crown</td>
+                </tr>
+                <tr>
+                    <td>POST</td>
+                    <td>Post</td>
+                </tr>
+                <tr>
+                    <td>IMPL</td>
+                    <td>Implant (<code>IMP</code> also accepted)</td>
+                </tr>
+                <tr>
+                    <td>IMPL-CR</td>
+                    <td>Implant Crown (<code>IMP-CR</code> also accepted)</td>
+                </tr>
+                <tr>
+                    <td>IMPL-ZIR</td>
+                    <td>Zircon Implant Crown</td>
+                </tr>
+                <tr>
+                    <td>ABT</td>
+                    <td>Abutment</td>
+                </tr>
             </tbody>
         </table>
 
         <h2>Do not use</h2>
         <table>
             <thead>
-                <tr><th>Wrong</th><th>Why</th></tr>
+                <tr>
+                    <th>Wrong</th>
+                    <th>Why</th>
+                </tr>
             </thead>
             <tbody>
-                <tr><td class="rules-bad"><code>post |4</code></td><td>4 is read as tooth, not quantity 4</td></tr>
-                <tr><td class="rules-bad"><code>zir x 2</code></td><td>Use UPPERCASE: <code>ZIR x 2</code></td></tr>
-                <tr><td class="rules-bad"><code>ZIR 2</code> without x</td><td>Quantity may be guessed wrong</td></tr>
+                <tr>
+                    <td class="rules-bad"><code>post |4</code></td>
+                    <td>4 is read as tooth, not quantity 4</td>
+                </tr>
+                <tr>
+                    <td class="rules-bad"><code>zir x 2</code></td>
+                    <td>Use UPPERCASE: <code>ZIR x 2</code></td>
+                </tr>
+                <tr>
+                    <td class="rules-bad"><code>ZIR 2</code> without x</td>
+                    <td>Quantity may be guessed wrong</td>
+                </tr>
             </tbody>
         </table>
 
