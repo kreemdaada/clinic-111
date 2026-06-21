@@ -17,6 +17,28 @@ class TreatmentParserServiceTest extends TestCase
         $this->treatmentParserService = app(TreatmentParserService::class);
     }
 
+    public function test_parses_zir_x_notation_with_plus(): void
+    {
+        $parsedItems = $this->treatmentParserService->parse('ZIR x 2 + POST x 1');
+
+        $itemsByCode = collect($parsedItems)->keyBy(fn ($item) => $item->treatmentCode);
+
+        $this->assertSame(2, $itemsByCode->get('ZIR')->quantity);
+        $this->assertSame(1, $itemsByCode->get('POST')->quantity);
+        $this->assertSame(100, $itemsByCode->get('ZIR')->confidence);
+        $this->assertSame(100, $itemsByCode->get('POST')->confidence);
+    }
+
+    public function test_imp_cr_alias_maps_to_impl_cr(): void
+    {
+        $parsedItems = $this->treatmentParserService->parse('IMP-CR x 3');
+
+        $itemsByCode = collect($parsedItems)->keyBy(fn ($item) => $item->treatmentCode);
+
+        $this->assertTrue($itemsByCode->has('IMPL-CR'));
+        $this->assertSame(3, $itemsByCode->get('IMPL-CR')->quantity);
+    }
+
     public function test_parses_zir_and_post_with_quantities(): void
     {
         $parsedItems = $this->treatmentParserService->parse('ZIR 4 + POST 2');
@@ -71,6 +93,16 @@ class TreatmentParserServiceTest extends TestCase
 
         $this->assertTrue($itemsByCode->has('ABT'));
         $this->assertSame(2, $itemsByCode->get('ABT')->quantity);
+    }
+
+    public function test_mc_cr_dual_quadrant_tooth_notation_counts_all_teeth(): void
+    {
+        $parsedItems = $this->treatmentParserService->parse('MC cr  8765|5678');
+
+        $itemsByCode = collect($parsedItems)->keyBy(fn ($item) => $item->treatmentCode);
+
+        $this->assertTrue($itemsByCode->has('MC'));
+        $this->assertSame(8, $itemsByCode->get('MC')->quantity);
     }
 
     public function test_mc_pipe_single_tooth_is_quantity_one(): void

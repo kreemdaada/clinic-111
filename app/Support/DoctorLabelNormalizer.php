@@ -4,6 +4,8 @@ namespace App\Support;
 
 /**
  * Normalizes daily-report doctor section labels to canonical DB doctor codes.
+ *
+ * Handles spelling variants (PORIA → PURIYA, RIYADH → RIYAD) and strips "Dr." prefix.
  */
 class DoctorLabelNormalizer
 {
@@ -17,6 +19,14 @@ class DoctorLabelNormalizer
         'WAEL' => 'WA',
     ];
 
+    /**
+     * Convert a raw Excel doctor label to the best-guess canonical code.
+     *
+     * Does not hit the database — use for matching hints and column mapping only.
+     *
+     * @param  string  $doctorLabel  Raw label from daily report (e.g. "Dr. Poria", "RIYADH").
+     * @return string Uppercase canonical code or normalized label if no alias exists.
+     */
     public static function extractCodeGuess(string $doctorLabel): string
     {
         $normalized = strtoupper(trim($doctorLabel));
@@ -31,6 +41,8 @@ class DoctorLabelNormalizer
     }
 
     /**
+     * Return all configured label → code alias mappings.
+     *
      * @return array<string, string>
      */
     public static function aliases(): array

@@ -13,6 +13,8 @@ use Illuminate\Support\Collection;
 
 /**
  * Calculates JOB (lab cost) as SUM(quantity × unit_cost) per work item.
+ *
+ * Only runs for treatments with `has_lab_cost = true`. Creates `lab_jobs` rows.
  */
 class LabJobCalculationService
 {
@@ -20,6 +22,11 @@ class LabJobCalculationService
         private readonly LabPriceResolver $labPriceResolver,
     ) {}
 
+    /**
+     * Calculate lab jobs for every work item on every row in a report.
+     *
+     * @param  DailyReport  $dailyReport  Report with daily work rows to process.
+     */
     public function calculateForReport(DailyReport $dailyReport): void
     {
         $activeLabs = Lab::query()->where('is_active', true)->get();
@@ -34,6 +41,12 @@ class LabJobCalculationService
         }
     }
 
+    /**
+     * Calculate lab jobs for all work items on one daily work row.
+     *
+     * @param  DailyWorkRow  $dailyWorkRow  Row with work items loaded or loadable.
+     * @param  Collection<int, Lab>|null  $activeLabs  Optional preloaded labs.
+     */
     public function calculateForWorkRow(DailyWorkRow $dailyWorkRow, ?Collection $activeLabs = null): void
     {
         if ($activeLabs === null) {
@@ -46,6 +59,15 @@ class LabJobCalculationService
         }
     }
 
+    /**
+     * Resolve price and create or replace one lab job for a single work item.
+     *
+     * Deletes existing lab job first. No-op when treatment has no lab cost or no price found.
+     *
+     * @param  WorkItem  $workItem  Parsed treatment line.
+     * @param  DailyWorkRow  $dailyWorkRow  Parent row (doctor + work_date for pricing).
+     * @param  Collection<int, Lab>  $activeLabs  Active labs for doctor resolution.
+     */
     private function calculateForWorkItem(
         WorkItem $workItem,
         DailyWorkRow $dailyWorkRow,

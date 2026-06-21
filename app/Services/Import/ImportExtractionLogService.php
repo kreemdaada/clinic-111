@@ -20,11 +20,23 @@ class ImportExtractionLogService
     /** @var array<int, array<string, mixed>> */
     private array $parserEvents = [];
 
+    /**
+     * @param  TreatmentParserService  $treatmentParserService  Injected treatment parser service.
+     * @param  ImportRowDiagnosticsBuilder  $diagnosticsBuilder  Builds per-row calculation diagnostics.
+     */
     public function __construct(
         private readonly TreatmentParserService $treatmentParserService,
         private readonly ImportRowDiagnosticsBuilder $diagnosticsBuilder,
     ) {}
 
+    /**
+     * Initialize a new extraction log document for the given report.
+     *
+     * Resets in-memory state and prints a start banner to the import terminal.
+     *
+     * @param  DailyReport  $dailyReport  Report being imported.
+     * @param  string  $sourcePath  Absolute path to the uploaded Excel file.
+     */
     public function startReport(DailyReport $dailyReport, string $sourcePath): void
     {
         $this->document = [
@@ -51,7 +63,11 @@ class ImportExtractionLogService
     }
 
     /**
-     * @param  array<int, array<string, mixed>>  $events
+     * Merge parser extraction events into the log document.
+     *
+     * Skipped rows are stored separately; extracted rows are queued for later enrichment.
+     *
+     * @param  array<int, array<string, mixed>>  $events  Events from {@see ExcelDailyReportParser}.
      */
     public function recordParserEvents(array $events): void
     {
@@ -82,7 +98,9 @@ class ImportExtractionLogService
     }
 
     /**
-     * @param  array<int, array<string, mixed>>  $issues
+     * Store income-reconciliation issues and echo each to the terminal.
+     *
+     * @param  array<int, array<string, mixed>>  $issues  Issues from {@see IncomeReconciliationService}.
      */
     public function recordReconciliationIssues(array $issues): void
     {
@@ -94,7 +112,9 @@ class ImportExtractionLogService
     }
 
     /**
-     * @param  array<string, mixed>  $event
+     * Print a compact preview line for a parser-extracted row.
+     *
+     * @param  array<string, mixed>  $event  Parser extraction event.
      */
     private function terminalExtractedPreview(array $event): void
     {
@@ -112,7 +132,10 @@ class ImportExtractionLogService
     }
 
     /**
-     * @param  array<string, mixed>  $event
+     * Compute DHS + USD→AED + VISA total for terminal display.
+     *
+     * @param  array<string, mixed>  $event  Parser extraction event with payment fields.
+     * @return string Combined total in AED with 2 decimal places.
      */
     private function formatPaymentTotal(array $event): string
     {
@@ -125,7 +148,9 @@ class ImportExtractionLogService
     }
 
     /**
-     * @param  array<string, mixed>  $parsedRow
+     * Log a parsed row whose doctor label could not be matched to the database.
+     *
+     * @param  array<string, mixed>  $parsedRow  Raw row from the Excel parser.
      */
     public function recordUnresolvedDoctorRow(array $parsedRow): void
     {
@@ -158,6 +183,12 @@ class ImportExtractionLogService
         ));
     }
 
+    /**
+     * Normalize a cell value to a two-decimal string for log output.
+     *
+     * @param  mixed  $value  Raw amount from Excel or database.
+     * @return string|null Formatted amount, or null if not numeric.
+     */
     private function normalizeAmountForLog(mixed $value): ?string
     {
         if ($value === null || $value === '') {
@@ -174,7 +205,10 @@ class ImportExtractionLogService
     }
 
     /**
-     * @param  array<string, mixed>  $parsedRow
+     * Record a newly persisted work row in the extraction log (pre-calculation).
+     *
+     * @param  DailyWorkRow  $dailyWorkRow  Saved database row.
+     * @param  array<string, mixed>  $parsedRow  Original parsed Excel data.
      */
     public function recordPersistedRow(DailyWorkRow $dailyWorkRow, array $parsedRow): void
     {
@@ -215,6 +249,13 @@ class ImportExtractionLogService
         Log::channel('import')->info('Extracted daily subtotal.', $entry);
     }
 
+    /**
+     * Enrich an imported row with treatment parsing and lab-job diagnostics.
+     *
+     * Called after {@see TreatmentParserService} and lab calculations complete.
+     *
+     * @param  DailyWorkRow  $dailyWorkRow  Work row with work items loaded.
+     */
     public function recordCalculatedRow(DailyWorkRow $dailyWorkRow): void
     {
         if ($this->document === []) {
@@ -268,6 +309,12 @@ class ImportExtractionLogService
         $this->terminalImportedRow($this->findImportedRow($key));
     }
 
+    /**
+     * Write the extraction log JSON to disk and print a summary to the terminal.
+     *
+     * @param  DailyReport  $dailyReport  Report whose import has finished.
+     * @return string Absolute path to the saved JSON log file.
+     */
     public function finalize(DailyReport $dailyReport): string
     {
         $this->document['finished_at'] = now()->toIso8601String();
@@ -318,6 +365,12 @@ class ImportExtractionLogService
         return $absolutePath;
     }
 
+    /**
+     * Resolve the on-disk path for a report's extraction log, if it exists.
+     *
+     * @param  DailyReport  $dailyReport  Report to look up.
+     * @return string|null Absolute path, or null when no log file has been written.
+     */
     public function getLogPath(DailyReport $dailyReport): ?string
     {
         $relativePath = 'import-extractions/report-'.$dailyReport->id.'.json';
@@ -330,7 +383,10 @@ class ImportExtractionLogService
     }
 
     /**
-     * @return array<string, mixed>|null
+     * Load a previously saved extraction log document from disk.
+     *
+     * @param  DailyReport  $dailyReport  Report whose log to read.
+     * @return array<string, mixed>|null Decoded JSON document, or null if missing/invalid.
      */
     public function loadForReport(DailyReport $dailyReport): ?array
     {
@@ -346,7 +402,11 @@ class ImportExtractionLogService
     }
 
     /**
-     * @param  array<string, mixed>  $row
+     * Print a detailed terminal block for a fully calculated imported row.
+     *
+     * Shows payments, treatment text, JOB lines, flags, and per-row issues.
+     *
+     * @param  array<string, mixed>  $row  Enriched imported-row entry from the log document.
      */
     private function terminalImportedRow(array $row): void
     {
@@ -408,7 +468,10 @@ class ImportExtractionLogService
     }
 
     /**
-     * @param  array<string, mixed>  $issue
+     * Print a single issue line to the import terminal.
+     *
+     * @param  array<string, mixed>  $issue  Issue with severity and message.
+     * @param  string  $prefix  Label prefix (e.g. `ROW`, `RECON`).
      */
     private function terminalIssue(array $issue, string $prefix): void
     {
@@ -421,6 +484,8 @@ class ImportExtractionLogService
     }
 
     /**
+     * Count errors, warnings, and info items across all log sections.
+     *
      * @return array{error: int, warning: int, info: int}
      */
     private function buildIssueSummary(): array
@@ -449,6 +514,13 @@ class ImportExtractionLogService
         return $summary;
     }
 
+    /**
+     * Collapse whitespace and truncate treatment text for terminal display.
+     *
+     * @param  string  $text  Raw treatment text.
+     * @param  int  $maxLength  Maximum character length before ellipsis.
+     * @return string Truncated single-line text, or `-` when empty.
+     */
     private function truncateTreatmentText(string $text, int $maxLength = 80): string
     {
         $text = trim(preg_replace('/\s+/', ' ', $text) ?? '');
@@ -464,13 +536,20 @@ class ImportExtractionLogService
         return $text;
     }
 
+    /**
+     * Write a line to the import terminal log channel.
+     *
+     * @param  string  $message  Human-readable log line.
+     */
     private function terminal(string $message): void
     {
         Log::channel('import_terminal')->info($message);
     }
 
     /**
-     * @param  array<string, mixed>  $event
+     * Print a skipped-row summary line to the import terminal.
+     *
+     * @param  array<string, mixed>  $event  Parser skip event with reason and payment fields.
      */
     private function terminalSkippedRow(array $event): void
     {
@@ -488,7 +567,10 @@ class ImportExtractionLogService
     }
 
     /**
-     * @return array<string, mixed>|null
+     * Find an imported-row entry by its composite sheet-day/doctor/Excel-row key.
+     *
+     * @param  string  $key  Key from {@see rowKey()}.
+     * @return array<string, mixed>|null Matching row entry, or null if not found.
      */
     private function findImportedRow(string $key): ?array
     {
@@ -508,7 +590,11 @@ class ImportExtractionLogService
     }
 
     /**
-     * @return array<int, string>
+     * Detect special-case flags from treatment text and column G content.
+     *
+     * @param  string|null  $treatmentText  Combined patient treatment text.
+     * @param  mixed  $gCell  Raw value of Excel column G.
+     * @return array<int, string> Flag labels (e.g. `transfer`, `cash`).
      */
     private function detectFlags(?string $treatmentText, mixed $gCell): array
     {
@@ -538,13 +624,25 @@ class ImportExtractionLogService
         return $flags;
     }
 
+    /**
+     * Build a stable lookup key for a sheet row within the extraction log.
+     *
+     * @param  int  $sheetDay  Day-of-month sheet number (1–31).
+     * @param  string  $doctor  Doctor label or code from Excel.
+     * @param  int  $excelRow  1-based Excel row index.
+     * @return string Composite key `day|DOCTOR|row`.
+     */
     private function rowKey(int $sheetDay, string $doctor, int $excelRow): string
     {
         return $sheetDay.'|'.strtoupper(trim($doctor)).'|'.$excelRow;
     }
 
     /**
-     * @param  array<string, mixed>  $data
+     * Merge new data into an existing imported-row entry, if the key matches.
+     *
+     * @param  string  $key  Row key from {@see rowKey()}.
+     * @param  array<string, mixed>  $data  Fields to merge into the existing entry.
+     * @return bool True when an existing row was updated; false when no match was found.
      */
     private function upsertImportedRow(string $key, array $data): bool
     {
@@ -568,7 +666,9 @@ class ImportExtractionLogService
     }
 
     /**
-     * @return array<string, array<string, mixed>>
+     * Aggregate per-doctor totals from imported, skipped, and unresolved rows.
+     *
+     * @return array<string, array<string, mixed>> Doctor code → totals (paid, job, counts).
      */
     private function buildDoctorTotals(): array
     {

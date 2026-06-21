@@ -11,9 +11,21 @@ use Illuminate\Support\Collection;
 
 /**
  * Resolves lab unit prices using doctor-specific overrides with default fallback.
+ *
+ * Lookup order: doctor-specific price → default price (`doctor_id IS NULL`).
+ * Both respect `valid_from` / `valid_to` when set.
  */
 class LabPriceResolver
 {
+    /**
+     * Find the effective lab price for a doctor/treatment/lab on a given date.
+     *
+     * @param  Doctor  $doctor  Row's doctor (may have override prices).
+     * @param  Treatment  $treatment  Treatment with lab cost.
+     * @param  Lab  $lab  Lab to price against.
+     * @param  CarbonInterface|null  $effectiveDate  Work date (defaults to now).
+     * @return LabPrice|null Matching price row or null if none configured.
+     */
     public function resolve(
         Doctor $doctor,
         Treatment $treatment,
@@ -33,6 +45,15 @@ class LabPriceResolver
         return $this->findPrice(null, $treatment->id, $lab->id, $effectiveDate);
     }
 
+    /**
+     * Query one price row for optional doctor scope and date validity window.
+     *
+     * @param  int|null  $doctorId  Doctor ID or null for default price.
+     * @param  int  $treatmentId  Treatment FK.
+     * @param  int  $labId  Lab FK.
+     * @param  CarbonInterface  $effectiveDate  Date price must be valid for.
+     * @return LabPrice|null First matching row.
+     */
     private function findPrice(
         ?int $doctorId,
         int $treatmentId,
@@ -63,6 +84,14 @@ class LabPriceResolver
         return $query->first();
     }
 
+    /**
+     * Pick the lab used for JOB calculation for this doctor.
+     *
+     * Uses `doctors.default_lab_id` when set and active; otherwise first active lab.
+     *
+     * @param  Doctor  $doctor  Doctor owning the work row.
+     * @param  Collection<int, Lab>  $activeLabs  Preloaded active labs collection.
+     */
     public function resolveLabForDoctor(Doctor $doctor, Collection $activeLabs): Lab
     {
         if ($doctor->default_lab_id !== null) {

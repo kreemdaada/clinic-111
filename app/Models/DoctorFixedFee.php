@@ -5,6 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Fixed fee per treatment for doctors with `CommissionType::Fixed`.
+ *
+ * Table: `doctor_fixed_fees`. USD fees are converted to AED at import/calculation time.
+ */
 class DoctorFixedFee extends Model
 {
     protected $fillable = [
@@ -16,6 +21,11 @@ class DoctorFixedFee extends Model
         'valid_to',
     ];
 
+    /**
+     * Cast database columns to native PHP types.
+     *
+     * @return array<string, string>
+     */
     protected function casts(): array
     {
         return [
@@ -25,11 +35,17 @@ class DoctorFixedFee extends Model
         ];
     }
 
+    /**
+     * Doctor who receives this fixed fee.
+     */
     public function doctor(): BelongsTo
     {
         return $this->belongsTo(Doctor::class);
     }
 
+    /**
+     * Treatment the fee applies to (e.g. IMPL, BG, SINUS for Dr Wa).
+     */
     public function treatment(): BelongsTo
     {
         return $this->belongsTo(Treatment::class);

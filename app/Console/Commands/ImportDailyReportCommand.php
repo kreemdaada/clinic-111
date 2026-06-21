@@ -9,13 +9,27 @@ use Illuminate\Support\Facades\File;
 use Symfony\Component\HttpFoundation\File\File as SymfonyFile;
 use Throwable;
 
+/**
+ * CLI import for large daily Excel files (bypasses HTTP upload limits).
+ *
+ * Signature: `php artisan daily-report:import "/path/to/daily report January 2026.xlsm"`
+ * Report month is read from the file name, not from today's date.
+ */
 class ImportDailyReportCommand extends Command
 {
+    /** @var string Artisan command name and path argument. */
     protected $signature = 'daily-report:import
                             {path : Absolute or relative path to the Excel file (.xlsx or .xlsm)}';
 
+    /** @var string Short description shown in `php artisan list`. */
     protected $description = 'Import a daily Excel report from disk (month is read from the file name)';
 
+    /**
+     * Run the full import pipeline and print report summary to the terminal.
+     *
+     * @param  DailyReportImportService  $importService  Same pipeline as web/API upload.
+     * @return int Command::SUCCESS or Command::FAILURE exit code.
+     */
     public function handle(DailyReportImportService $importService): int
     {
         $filePath = $this->argument('path');
@@ -67,6 +81,13 @@ class ImportDailyReportCommand extends Command
         }
     }
 
+    /**
+     * Wrap a disk file as an UploadedFile so {@see DailyReportImportService} can reuse the HTTP path.
+     *
+     * @param  string  $absolutePath  Resolved absolute path to the Excel file.
+     * @param  string  $originalName  Basename used for month detection and storage.
+     * @return UploadedFile Test-mode upload instance (`test: true`).
+     */
     private function createUploadedFile(string $absolutePath, string $originalName): UploadedFile
     {
         $symfonyFile = new SymfonyFile($absolutePath);

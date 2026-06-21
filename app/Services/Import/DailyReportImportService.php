@@ -21,8 +21,21 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
+/**
+ * Orchestrates the full daily-report import pipeline: parse Excel, persist rows,
+ * calculate treatments/lab jobs, reconcile totals, and write extraction logs.
+ */
 class DailyReportImportService
 {
+    /**
+     * @param  ExcelDailyReportParser  $excelParser  Parses uploaded Excel workbooks.
+     * @param  PaymentCalculationService  $paymentCalculationService  Computes AED totals and payment rows.
+     * @param  TreatmentParserService  $treatmentParserService  Parses treatment text into work items.
+     * @param  LabJobCalculationService  $labJobCalculationService  Calculates lab job costs.
+     * @param  IncomeReconciliationService  $incomeReconciliationService  Validates totals before export.
+     * @param  ImportActivityLogger  $importActivityLogger  Audit and file logging.
+     * @param  ImportExtractionLogService  $importExtractionLogService  Structured extraction log writer.
+     */
     public function __construct(
         private readonly ExcelDailyReportParser $excelParser,
         private readonly PaymentCalculationService $paymentCalculationService,
@@ -33,6 +46,14 @@ class DailyReportImportService
         private readonly ImportExtractionLogService $importExtractionLogService,
     ) {}
 
+    /**
+     * Import an uploaded Excel daily report end-to-end inside a database transaction.
+     *
+     * @param  UploadedFile  $uploadedFile  Excel file from the HTTP upload.
+     * @return DailyReport Fresh report with work rows, payments, and work items loaded.
+     *
+     * @throws RuntimeException When an approved report already exists for the month.
+     */
     public function import(UploadedFile $uploadedFile): DailyReport
     {
         $monthAnchor = ReportMonthResolver::requireFromFilename($uploadedFile->getClientOriginalName());
@@ -106,6 +127,13 @@ class DailyReportImportService
         });
     }
 
+    /**
+     * Run treatment parsing, lab calculation, and reconciliation on a parsed report.
+     *
+     * @param  DailyReport  $dailyReport  Report in Uploaded or Parsed status.
+     *
+     * @throws RuntimeException When the report is already approved.
+     */
     public function processParsedReport(DailyReport $dailyReport): void
     {
         if ($dailyReport->isApproved()) {
@@ -140,7 +168,13 @@ class DailyReportImportService
     }
 
     /**
-     * @param  array<string, mixed>  $parsedRow
+     * Create a DailyWorkRow and associated Payment records from a parsed Excel row.
+     *
+     * @param  DailyReport  $dailyReport  Parent report.
+     * @param  array<string, mixed>  $parsedRow  Row dictionary from the Excel parser.
+     * @param  Carbon  $monthAnchor  Month anchor for work-date resolution.
+     * @param  Doctor  $doctor  Resolved doctor for this row.
+     * @return DailyWorkRow Newly created work row with payments.
      */
     private function createWorkRowFromParsedData(DailyReport $dailyReport, array $parsedRow, Carbon $monthAnchor, Doctor $doctor): DailyWorkRow
     {
@@ -191,7 +225,10 @@ class DailyReportImportService
     }
 
     /**
-     * @param  array<string, mixed>  $parsedRow
+     * Match a parsed row's doctor label to an active Doctor record.
+     *
+     * @param  array<string, mixed>  $parsedRow  Row with a `doctor` field.
+     * @return Doctor|null Matched doctor, or null when no match is found.
      */
     private function resolveDoctorFromRow(array $parsedRow): ?Doctor
     {
@@ -222,6 +259,12 @@ class DailyReportImportService
         return $doctor;
     }
 
+    /**
+     * Store the uploaded file on the configured accounting upload disk.
+     *
+     * @param  UploadedFile  $uploadedFile  File from the HTTP request.
+     * @return string Stored relative path on the disk.
+     */
     private function storeUploadedFile(UploadedFile $uploadedFile): string
     {
         $disk = config('accounting.upload.disk');
@@ -230,6 +273,14 @@ class DailyReportImportService
         return $uploadedFile->store($directory, $disk);
     }
 
+    /**
+     * Resolve a work date from sheet day, cell value, or month anchor fallback.
+     *
+     * @param  mixed  $value  Raw date cell value from Excel.
+     * @param  Carbon|string  $monthAnchor  Target import month.
+     * @param  mixed  $sheetDay  Day-of-month from sheet tab name (1–31).
+     * @return string ISO date string (Y-m-d).
+     */
     private function parseWorkDate(mixed $value, Carbon|string $monthAnchor, mixed $sheetDay = null): string
     {
         $monthStart = Carbon::parse($monthAnchor)->startOfMonth();
@@ -265,6 +316,12 @@ class DailyReportImportService
         return $monthStart->toDateString();
     }
 
+    /**
+     * Normalize a cell value to a two-decimal string for database storage.
+     *
+     * @param  mixed  $value  Raw numeric cell value.
+     * @return string Amount with 2 decimal places (`0.00` when empty).
+     */
     private function toDecimalString(mixed $value): string
     {
         if ($value === null || $value === '') {
@@ -276,6 +333,12 @@ class DailyReportImportService
         return number_format((float) $normalized, 2, '.', '');
     }
 
+    /**
+     * Trim and strip HTML tags from a string cell value.
+     *
+     * @param  mixed  $value  Raw cell value.
+     * @return string|null Sanitized string, or null when empty.
+     */
     private function sanitizeString(mixed $value): ?string
     {
         if ($value === null || $value === '') {
@@ -286,7 +349,12 @@ class DailyReportImportService
     }
 
     /**
-     * @param  array<string, mixed>  $parsedRow
+     * Read a field from a parsed row with a default when missing or null.
+     *
+     * @param  array<string, mixed>  $parsedRow  Parsed Excel row dictionary.
+     * @param  string  $key  Field name to read.
+     * @param  mixed  $default  Value returned when the key is absent or null.
+     * @return mixed Field value or default.
      */
     private function getParsedRowValue(array $parsedRow, string $key, mixed $default = null): mixed
     {

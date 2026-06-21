@@ -8,8 +8,18 @@ use App\Models\Lab;
 use App\Models\Treatment;
 use Illuminate\Http\JsonResponse;
 
+/**
+ * Read-only master data endpoints for clients and integrations.
+ *
+ * Routes: GET /api/doctors, /api/treatments, /api/labs
+ */
 class ReferenceDataController extends Controller
 {
+    /**
+     * List active doctors with commission type and default lab.
+     *
+     * @return JsonResponse `{ data: [ { id, name, code, commission_type, … } ] }`
+     */
     public function doctors(): JsonResponse
     {
         $doctors = Doctor::query()
@@ -33,6 +43,11 @@ class ReferenceDataController extends Controller
         return response()->json(['data' => $doctors]);
     }
 
+    /**
+     * List active treatments with lab-cost flag.
+     *
+     * @return JsonResponse `{ data: [ { id, code, name, has_lab_cost } ] }`
+     */
     public function treatments(): JsonResponse
     {
         $treatments = Treatment::query()
@@ -49,6 +64,11 @@ class ReferenceDataController extends Controller
         return response()->json(['data' => $treatments]);
     }
 
+    /**
+     * List active external labs.
+     *
+     * @return JsonResponse `{ data: [ { id, code, name } ] }`
+     */
     public function labs(): JsonResponse
     {
         $labs = Lab::query()

@@ -13,12 +13,20 @@ use App\Support\MoneyCalculator;
  */
 class ImportRowDiagnosticsBuilder
 {
+    /**
+     * @param  TreatmentParserService  $treatmentParserService  Re-parses treatment text for diagnostics.
+     */
     public function __construct(
         private readonly TreatmentParserService $treatmentParserService,
     ) {}
 
     /**
-     * @return array<string, mixed>
+     * Build a structured diagnostics payload for one work row.
+     *
+     * Compares payments, parsed treatments, persisted work items, and export columns.
+     *
+     * @param  DailyWorkRow  $dailyWorkRow  Row with doctor and workItems loaded.
+     * @return array<string, mixed> Diagnostics with payments, job, treatments, and issues.
      */
     public function buildForWorkRow(DailyWorkRow $dailyWorkRow): array
     {
@@ -138,10 +146,15 @@ class ImportRowDiagnosticsBuilder
     }
 
     /**
-     * @param  array<string, mixed>  $payments
-     * @param  array<int, array<string, mixed>>  $treatments
-     * @param  array<int, array<string, mixed>>  $ignoredTreatments
-     * @return array<int, array<string, mixed>>
+     * Collect payment, JOB, and parsing issues for a work row.
+     *
+     * @param  DailyWorkRow  $dailyWorkRow  Source work row.
+     * @param  array<string, mixed>  $payments  Payment breakdown with payment_ok flag.
+     * @param  array<int, array<string, mixed>>  $treatments  Lab-cost treatments from re-parse.
+     * @param  array<int, array<string, mixed>>  $ignoredTreatments  Non-lab treatments from re-parse.
+     * @param  string  $labTotal  Persisted JOB total in AED.
+     * @param  string|null  $doctorCode  Doctor code for export-column checks.
+     * @return array<int, array<string, mixed>> Issue entries with severity and message.
      */
     private function collectIssues(
         DailyWorkRow $dailyWorkRow,

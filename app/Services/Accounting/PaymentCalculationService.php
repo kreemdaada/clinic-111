@@ -15,10 +15,24 @@ use Carbon\CarbonInterface;
  */
 class PaymentCalculationService
 {
+    /**
+     * @param  string  $defaultUsdExchangeRate  Default USD→AED rate when not overridden.
+     */
     public function __construct(
         private readonly string $defaultUsdExchangeRate = '3.65',
     ) {}
 
+    /**
+     * Compute TOTAL collected in AED from payment components.
+     *
+     * @param  string  $dhsAmount  Cash AED amount.
+     * @param  string  $usdAmount  Cash USD amount (converted separately).
+     * @param  string  $visaAmount  Card payment in AED.
+     * @param  string|null  $usdExchangeRate  Override for USD conversion.
+     * @param  string  $rublAmount  Optional RUB amount (legacy column support).
+     * @param  string|null  $rubToAedRate  Override for RUB conversion.
+     * @return array{usd_to_aed_amount: string, rubl_to_aed_amount: string, paid_total_aed: string}
+     */
     public function calculateTotalCollectedAed(
         string $dhsAmount,
         string $usdAmount,
@@ -56,6 +70,15 @@ class PaymentCalculationService
         ];
     }
 
+    /**
+     * Create individual `payments` rows for non-zero DHS, USD, and VISA on a work row.
+     *
+     * Skips zero amounts. Sets `paid_at` to work date when not provided.
+     *
+     * @param  DailyWorkRow  $dailyWorkRow  Row with dhs/usd/visa amounts already set.
+     * @param  CarbonInterface|null  $paidAt  Payment date (defaults to work_date).
+     * @param  string|null  $usdExchangeRate  USD rate stored on the USD payment row.
+     */
     public function createPaymentsForWorkRow(
         DailyWorkRow $dailyWorkRow,
         ?CarbonInterface $paidAt = null,

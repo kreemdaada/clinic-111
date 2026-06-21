@@ -6,6 +6,11 @@ use App\Enums\PaymentMethod;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * One payment component (DHS, USD, or VISA) for a daily work row.
+ *
+ * Table: `payments`. Non-zero components are stored separately; `amount_aed` is normalized for totals.
+ */
 class Payment extends Model
 {
     protected $fillable = [
@@ -18,6 +23,11 @@ class Payment extends Model
         'paid_at',
     ];
 
+    /**
+     * Cast database columns to native PHP / enum types.
+     *
+     * @return array<string, string>
+     */
     protected function casts(): array
     {
         return [
@@ -29,6 +39,9 @@ class Payment extends Model
         ];
     }
 
+    /**
+     * Daily report row this payment belongs to.
+     */
     public function dailyWorkRow(): BelongsTo
     {
         return $this->belongsTo(DailyWorkRow::class);

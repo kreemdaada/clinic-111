@@ -2,13 +2,32 @@
 
 namespace App\Support;
 
+/**
+ * Deterministic decimal arithmetic for all accounting calculations.
+ *
+ * Uses PHP `bcmath` — never float. All results are strings with 2 decimal places
+ * unless intermediate precision requires more (see {@see percentage()}).
+ */
 class MoneyCalculator
 {
+    /**
+     * Multiply a monetary amount by an integer quantity.
+     *
+     * @param  string|float|int  $amount  Unit price or base amount.
+     * @param  int  $quantity  Number of units (crowns, items, etc.).
+     * @return string Product rounded to 2 decimal places.
+     */
     public static function multiply(string|float|int $amount, int $quantity): string
     {
         return bcmul((string) $amount, (string) $quantity, 2);
     }
 
+    /**
+     * Sum two or more decimal amounts.
+     *
+     * @param  string  ...$amounts  Amounts to add (each cast to string).
+     * @return string Total with 2 decimal places.
+     */
     public static function add(string ...$amounts): string
     {
         $total = '0.00';
@@ -20,11 +39,27 @@ class MoneyCalculator
         return $total;
     }
 
+    /**
+     * Subtract one amount from another.
+     *
+     * @param  string  $minuend  Value to subtract from.
+     * @param  string  $subtrahend  Value to subtract.
+     * @return string Difference with 2 decimal places.
+     */
     public static function subtract(string $minuend, string $subtrahend): string
     {
         return bcsub($minuend, $subtrahend, 2);
     }
 
+    /**
+     * Calculate a percentage of an amount (e.g. doctor commission).
+     *
+     * Uses 6-decimal intermediate precision, then half-up rounds to 2 decimals.
+     *
+     * @param  string  $amount  Base amount in AED.
+     * @param  string|float|int  $percentage  Percent value (e.g. 35 for 35%).
+     * @return string Result with 2 decimal places.
+     */
     public static function percentage(string $amount, string|float|int $percentage): string
     {
         $rawValue = bcdiv(
@@ -36,6 +71,14 @@ class MoneyCalculator
         return self::roundToTwoDecimals($rawValue);
     }
 
+    /**
+     * Round a decimal string to 2 places using half-up rounding.
+     *
+     * Positive amounts add 0.005 before truncating; negative subtract 0.005.
+     *
+     * @param  string  $amount  Value with up to 6 decimal places.
+     * @return string Rounded value with 2 decimal places.
+     */
     public static function roundToTwoDecimals(string $amount): string
     {
         if (bccomp($amount, '0', 6) >= 0) {
@@ -45,6 +88,14 @@ class MoneyCalculator
         return bcsub($amount, '0.005', 2);
     }
 
+    /**
+     * Normalize an amount to AED using the given exchange rate for non-AED currency.
+     *
+     * @param  string  $amount  Original amount.
+     * @param  string  $currency  ISO-style code (`AED`, `USD`, …).
+     * @param  string  $exchangeRate  USD→AED rate (default 3.65).
+     * @return string Amount in AED with 2 decimal places.
+     */
     public static function convertToAed(string $amount, string $currency, string $exchangeRate = '3.65'): string
     {
         if (strtoupper($currency) === 'AED') {

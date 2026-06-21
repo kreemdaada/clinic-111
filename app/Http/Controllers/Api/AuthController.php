@@ -9,8 +9,21 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * Sanctum token authentication for the REST API.
+ *
+ * Routes: POST /api/login, POST /api/logout (authenticated).
+ */
 class AuthController extends Controller
 {
+    /**
+     * Authenticate credentials and return a Bearer API token.
+     *
+     * @param  LoginRequest  $request  Validated email + password.
+     * @return JsonResponse `{ token, user: { id, name, email, role } }`
+     *
+     * @throws ValidationException When email/password do not match.
+     */
     public function login(LoginRequest $request): JsonResponse
     {
         $credentials = $request->validated();
@@ -36,6 +49,11 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Revoke the current Sanctum access token for the authenticated user.
+     *
+     * @return JsonResponse `{ message: "Logged out successfully." }`
+     */
     public function logout(): JsonResponse
     {
         $user = request()->user();

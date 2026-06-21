@@ -7,6 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
+/**
+ * Immutable audit trail entry for sensitive actions (imports, price changes, approvals).
+ *
+ * Table: `audit_logs`. Links optionally to any auditable model via polymorphic relation.
+ */
 class AuditLog extends Model
 {
     protected $fillable = [
@@ -19,6 +24,11 @@ class AuditLog extends Model
         'ip_address',
     ];
 
+    /**
+     * Cast database columns to native PHP / enum types.
+     *
+     * @return array<string, string>
+     */
     protected function casts(): array
     {
         return [
@@ -28,11 +38,17 @@ class AuditLog extends Model
         ];
     }
 
+    /**
+     * User who performed the action (null for system actions).
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Polymorphic target model (e.g. DailyReport) that was affected.
+     */
     public function auditable(): MorphTo
     {
         return $this->morphTo();

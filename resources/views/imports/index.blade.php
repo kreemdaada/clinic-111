@@ -41,12 +41,51 @@
     }
     .spinner { display: none; align-items: center; gap: 0.5rem; color: #64748b; font-size: 0.9rem; }
     .spinner.visible { display: flex; }
+    .rules-box {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 8px;
+        padding: 1rem 1.15rem;
+        font-size: 0.85rem;
+        color: #14532d;
+        margin-bottom: 1.25rem;
+    }
+    .rules-box h2 { font-size: 1rem; margin: 0 0 0.65rem; color: #166534; }
+    .rules-box code { background: #dcfce7; padding: 0.1rem 0.35rem; border-radius: 4px; }
+    .rules-box ul { margin: 0.5rem 0 0; padding-left: 1.25rem; }
+    .rules-box li { margin-bottom: 0.35rem; }
+    .rules-codes { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.5rem 0; }
+    .rules-code {
+        background: #dcfce7;
+        border: 1px solid #86efac;
+        border-radius: 4px;
+        padding: 0.15rem 0.45rem;
+        font-family: ui-monospace, monospace;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
 </style>
 @endpush
 
 @section('content')
 <h1 class="page-title">Import Daily Report</h1>
 <p class="page-subtitle">Upload your daily Excel — the Server Income file downloads automatically.</p>
+
+<div class="rules-box">
+    <h2>Treatment rules (daily report writers)</h2>
+    <p><strong>Format:</strong> <code>CODE x QUANTITY</code> — codes must be <strong>UPPERCASE</strong>.</p>
+    <div class="rules-codes">
+        @foreach (['MC', 'ZIR', 'POST', 'IMPL', 'IMPL-CR', 'IMPL-ZIR', 'ABT'] as $code)
+            <span class="rules-code">{{ $code }}</span>
+        @endforeach
+    </div>
+    <ul>
+        <li>One treatment: <code>ZIR x 2</code></li>
+        <li>Several treatments: <code>ZIR x 2 + POST x 1</code></li>
+        <li>Do <strong>not</strong> use tooth notation for lab items (e.g. <code>POST |4</code> — wrong quantity)</li>
+    </ul>
+    <p style="margin:0.65rem 0 0;"><a href="{{ route('docs.treatment-rules') }}">Full treatment rules →</a></p>
+</div>
 
 <div class="hint-box">
     Server must be started with <code>./bin/serve</code> — not <code>php artisan serve</code>.

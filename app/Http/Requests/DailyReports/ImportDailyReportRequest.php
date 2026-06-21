@@ -4,14 +4,24 @@ namespace App\Http\Requests\DailyReports;
 
 use Illuminate\Foundation\Http\FormRequest;
 
+/**
+ * Validates daily Excel upload for web and API import endpoints.
+ *
+ * Month is inferred from the file name — `report_date` is not submitted by the client.
+ */
 class ImportDailyReportRequest extends FormRequest
 {
+    /**
+     * Import is authorized at route level via role middleware.
+     */
     public function authorize(): bool
     {
         return true;
     }
 
     /**
+     * Require an Excel macro-enabled or standard workbook within configured size limit.
+     *
      * @return array<string, mixed>
      */
     public function rules(): array
@@ -29,6 +39,8 @@ class ImportDailyReportRequest extends FormRequest
     }
 
     /**
+     * User-friendly messages for common PHP upload limit failures.
+     *
      * @return array<string, string>
      */
     public function messages(): array

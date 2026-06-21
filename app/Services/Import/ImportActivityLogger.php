@@ -8,12 +8,22 @@ use App\Services\Audit\AuditLogService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Writes import outcomes to the import log channel and audit trail.
+ */
 class ImportActivityLogger
 {
     public function __construct(
         private readonly AuditLogService $auditLogService,
     ) {}
 
+    /**
+     * Log a successful daily report import to the import channel and audit log.
+     *
+     * @param  DailyReport  $dailyReport  Imported report.
+     * @param  int  $rowCount  Number of work rows persisted.
+     * @param  string|null  $extractionLogPath  Absolute path to the JSON extraction log.
+     */
     public function logSuccess(DailyReport $dailyReport, int $rowCount, ?string $extractionLogPath = null): void
     {
         $context = [
@@ -35,6 +45,12 @@ class ImportActivityLogger
         );
     }
 
+    /**
+     * Log a failed import attempt to the import channel and audit log.
+     *
+     * @param  string  $fileName  Original uploaded file name.
+     * @param  string  $errorMessage  Exception or validation message.
+     */
     public function logFailure(string $fileName, string $errorMessage): void
     {
         $context = [
@@ -53,7 +69,10 @@ class ImportActivityLogger
     }
 
     /**
-     * @param  array<int, array<string, mixed>>  $issues
+     * Log reconciliation warnings/errors detected after import calculation.
+     *
+     * @param  DailyReport  $dailyReport  Report that was reconciled.
+     * @param  array<int, array<string, mixed>>  $issues  Issues from {@see IncomeReconciliationService}.
      */
     public function logReconciliation(DailyReport $dailyReport, array $issues): void
     {
@@ -80,7 +99,10 @@ class ImportActivityLogger
     }
 
     /**
-     * @return array<int, string>
+     * Read the most recent lines from import log files for UI display.
+     *
+     * @param  int  $limit  Maximum number of lines to return.
+     * @return array<int, string> Most recent log lines, oldest first within the slice.
      */
     public function getRecentFileLogLines(int $limit = 100): array
     {

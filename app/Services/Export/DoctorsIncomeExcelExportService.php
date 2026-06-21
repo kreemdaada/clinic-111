@@ -70,11 +70,25 @@ class DoctorsIncomeExcelExportService
         ],
     ];
 
+    /**
+     * @param  IncomeReconciliationService  $incomeReconciliationService  Pre-export validation.
+     * @param  string  $defaultUsdExchangeRate  USD→AED rate for Wael fixed-fee conversion.
+     */
     public function __construct(
         private readonly IncomeReconciliationService $incomeReconciliationService,
         private readonly string $defaultUsdExchangeRate = '3.65',
     ) {}
 
+    /**
+     * Export the Original Income Excel for a single daily report's month.
+     *
+     * Blocks export when reconciliation reports errors.
+     *
+     * @param  DailyReport  $dailyReport  Parsed/calculated report to export.
+     * @return string Absolute path to the saved `.xlsx` file.
+     *
+     * @throws RuntimeException When reconciliation fails or the template is missing.
+     */
     public function exportForReport(DailyReport $dailyReport): string
     {
         $reconciliationIssues = $this->incomeReconciliationService->validateReport($dailyReport);
@@ -91,6 +105,16 @@ class DoctorsIncomeExcelExportService
         return $this->exportForMonth($monthStart, $monthEnd, $dailyReport);
     }
 
+    /**
+     * Fill the Original Income template for all active doctors in a month.
+     *
+     * @param  Carbon  $monthStart  First day of the target month.
+     * @param  Carbon|null  $monthEnd  Last day of the month (defaults to month end).
+     * @param  DailyReport|null  $dailyReport  When set, limits rows to this report only.
+     * @return string Absolute path to the saved `.xlsx` file.
+     *
+     * @throws RuntimeException When the template file is not found.
+     */
     public function exportForMonth(Carbon $monthStart, ?Carbon $monthEnd = null, ?DailyReport $dailyReport = null): string
     {
         if ($monthEnd === null) {
@@ -154,6 +178,14 @@ class DoctorsIncomeExcelExportService
         return $absolutePath;
     }
 
+    /**
+     * Generate an export and return an HTTP download response.
+     *
+     * @param  DailyReport  $dailyReport  Report to export.
+     * @return BinaryFileResponse Spreadsheet download response.
+     *
+     * @throws RuntimeException When export is blocked by reconciliation errors.
+     */
     public function downloadResponse(DailyReport $dailyReport): BinaryFileResponse
     {
         $absolutePath = $this->exportForReport($dailyReport);
@@ -165,7 +197,14 @@ class DoctorsIncomeExcelExportService
     }
 
     /**
-     * @param  array<string, mixed>  $profile
+     * Fill a standard-layout doctor sheet with daily payments, JOB totals, and treatment counts.
+     *
+     * @param  Worksheet  $sheet  Target worksheet tab.
+     * @param  array<string, mixed>  $profile  Export profile from {@see DOCTOR_EXPORT_PROFILES}.
+     * @param  Doctor  $doctor  Doctor whose data to write.
+     * @param  Collection<int, DailyWorkRow>  $doctorRows  Work rows for this doctor.
+     * @param  Carbon  $monthStart  First day of the export month.
+     * @param  Carbon  $monthEnd  Last day of the export month.
      */
     private function fillStandardDoctorSheet(
         Worksheet $sheet,
@@ -349,6 +388,15 @@ class DoctorsIncomeExcelExportService
         $this->setNumericCell($sheet, 'B'.($summaryStart + 7), $doctorIncome);
     }
 
+    /**
+     * Fill the Wael-specific sheet layout with payments and fixed-fee surgery columns.
+     *
+     * @param  Worksheet  $sheet  Wael worksheet tab.
+     * @param  Doctor  $doctor  Doctor record with fixed fees loaded.
+     * @param  Collection<int, DailyWorkRow>  $doctorRows  Work rows for this doctor.
+     * @param  Carbon  $monthStart  First day of the export month.
+     * @param  Carbon  $monthEnd  Last day of the export month.
+     */
     private function fillWaelSheet(
         Worksheet $sheet,
         Doctor $doctor,
@@ -439,7 +487,12 @@ class DoctorsIncomeExcelExportService
     }
 
     /**
-     * @return array<string, array<string, mixed>>
+     * Aggregate standard-layout daily payment and lab-cost data keyed by date.
+     *
+     * @param  Collection<int, DailyWorkRow>  $doctorRows  Work rows for one doctor.
+     * @param  Carbon  $monthStart  Month anchor for sheet-day date resolution.
+     * @param  bool  $paymentsOnly  When true, skip treatment and JOB aggregation.
+     * @return array<string, array<string, mixed>> Date string (Y-m-d) → daily totals.
      */
     private function aggregateStandardDailyData(Collection $doctorRows, Carbon $monthStart, bool $paymentsOnly = false): array
     {
@@ -512,8 +565,12 @@ class DoctorsIncomeExcelExportService
     }
 
     /**
-     * @param  array<string, mixed>  $fixedFeesByCode
-     * @return array<string, array<string, string>>
+     * Aggregate Wael-layout daily payment and fixed-fee surgery data keyed by date.
+     *
+     * @param  Collection<int, DailyWorkRow>  $doctorRows  Work rows for Wael.
+     * @param  array<string, mixed>  $fixedFeesByCode  Treatment code → fixed fee model.
+     * @param  Carbon  $monthStart  Month anchor for sheet-day date resolution.
+     * @return array<string, array<string, string>> Date string (Y-m-d) → daily amount fields.
      */
     private function aggregateWaelDailyData(Collection $doctorRows, array $fixedFeesByCode, Carbon $monthStart): array
     {
@@ -597,7 +654,12 @@ class DoctorsIncomeExcelExportService
     }
 
     /**
-     * @param  array<string, mixed>  $profile
+     * Write row-1 payment and treatment column headers for standard doctor sheets.
+     *
+     * Only applied when the profile sets `write_payment_headers`.
+     *
+     * @param  Worksheet  $sheet  Target worksheet.
+     * @param  array<string, mixed>  $profile  Export profile with header flags.
      */
     private function writeStandardHeaders(Worksheet $sheet, array $profile): void
     {
@@ -626,6 +688,13 @@ class DoctorsIncomeExcelExportService
         $sheet->setCellValue('T1', 'BLEACHING');
     }
 
+    /**
+     * Clear non-lab income columns (Q–T) in the data area before writing.
+     *
+     * @param  Worksheet  $sheet  Target worksheet.
+     * @param  int  $startRow  First data row (1-based).
+     * @param  int  $endRow  Last row to clear (inclusive).
+     */
     private function clearNonLabIncomeColumns(Worksheet $sheet, int $startRow, int $endRow): void
     {
         foreach (['Q', 'R', 'S', 'T'] as $column) {
@@ -635,6 +704,14 @@ class DoctorsIncomeExcelExportService
         }
     }
 
+    /**
+     * Clear all cells in a rectangular data area before filling new values.
+     *
+     * @param  Worksheet  $sheet  Target worksheet.
+     * @param  int  $startRow  First row to clear (1-based).
+     * @param  int  $endRow  Last row to clear (inclusive).
+     * @param  string  $lastColumn  Last column letter (e.g. `T`).
+     */
     private function clearDataArea(Worksheet $sheet, int $startRow, int $endRow, string $lastColumn): void
     {
         for ($row = $startRow; $row <= $endRow; $row++) {
@@ -645,6 +722,13 @@ class DoctorsIncomeExcelExportService
         }
     }
 
+    /**
+     * Write a numeric cell value, coercing zero/empty to literal 0.
+     *
+     * @param  Worksheet  $sheet  Target worksheet.
+     * @param  string  $cellAddress  Cell reference (e.g. `B5`).
+     * @param  string|int|float  $value  Amount to write.
+     */
     private function setNumericCell(Worksheet $sheet, string $cellAddress, string|int|float $value): void
     {
         if ($value === '' || $value === '0.00' || $value === 0 || $value === '0') {
@@ -657,7 +741,10 @@ class DoctorsIncomeExcelExportService
     }
 
     /**
-     * @return array<string, mixed>|null
+     * Resolve the export profile for a doctor by database code.
+     *
+     * @param  Doctor  $doctor  Doctor whose code is matched against profiles.
+     * @return array<string, mixed>|null Profile array, or null when the doctor has no export sheet.
      */
     private function resolveExportProfile(Doctor $doctor): ?array
     {
@@ -670,11 +757,23 @@ class DoctorsIncomeExcelExportService
         return self::DOCTOR_EXPORT_PROFILES[$doctorCode];
     }
 
+    /**
+     * Normalize a doctor code for profile lookup using label extraction rules.
+     *
+     * @param  string  $doctorCode  Raw doctor code from the database.
+     * @return string Normalized uppercase code guess.
+     */
     private function normalizeDoctorCode(string $doctorCode): string
     {
         return DoctorLabelNormalizer::extractCodeGuess($doctorCode);
     }
 
+    /**
+     * Build the output filename for a monthly income export.
+     *
+     * @param  Carbon  $monthStart  First day of the export month.
+     * @return string Filename like `Server Income January 2025.xlsx`.
+     */
     private function buildFileName(Carbon $monthStart): string
     {
         $monthLabel = $monthStart->format('F Y');

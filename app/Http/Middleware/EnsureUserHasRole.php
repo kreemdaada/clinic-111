@@ -7,10 +7,20 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Route middleware that restricts access to users with allowed roles.
+ *
+ * Usage: `->middleware('role:admin,accountant')` on web and API routes.
+ */
 class EnsureUserHasRole
 {
     /**
-     * @param  array<int, UserRole|string>  $roles
+     * Verify the authenticated user has one of the required roles.
+     *
+     * @param  Request  $request  Incoming HTTP request.
+     * @param  Closure  $next  Next middleware / controller.
+     * @param  string  ...$roles  Allowed role slugs (`admin`, `accountant`, `viewer`).
+     * @return Response Continues pipeline or aborts 401/403.
      */
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {

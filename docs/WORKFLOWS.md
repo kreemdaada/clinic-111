@@ -18,6 +18,11 @@ An accountant uploads a daily Excel file. The system parses it, creates all data
 4. Optionally set report date to first day of month (e.g. `2026-01-01` for January workbook)
 5. After import, view results at `/imports/{id}` and logs at `/logs`
 
+### Treatment text rules
+
+Staff who fill the daily Excel must use **`CODE x QUANTITY`** in **UPPERCASE** (e.g. `ZIR x 2 + POST x 1`).  
+See **`docs/TREATMENT_RULES.md`** and web page **`/docs/treatment-rules`**.
+
 ### Steps (API / curl)
 
 1. **User authenticates** — obtains Sanctum API token via `POST /api/login`.

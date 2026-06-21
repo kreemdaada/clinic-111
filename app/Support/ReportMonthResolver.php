@@ -5,9 +5,14 @@ namespace App\Support;
 use Carbon\Carbon;
 use RuntimeException;
 
+/**
+ * Derives the accounting month and per-row work dates from file names and sheet metadata.
+ *
+ * Never uses upload date — month must appear in the Excel file name.
+ */
 class ReportMonthResolver
 {
-    /** @var array<string, int> */
+    /** @var array<string, int> Lowercase month name / abbreviation → month number. */
     private const MONTH_NAMES = [
         'january' => 1,
         'jan' => 1,
@@ -35,6 +40,14 @@ class ReportMonthResolver
         'dec' => 12,
     ];
 
+    /**
+     * Parse report month from file name or throw if it cannot be detected.
+     *
+     * @param  string|null  $fileName  Uploaded Excel file name.
+     * @return Carbon First day of the resolved month at 00:00:00.
+     *
+     * @throws RuntimeException When no month/year pattern matches the file name.
+     */
     public static function requireFromFilename(?string $fileName): Carbon
     {
         $month = self::parseFromFilename($fileName);
@@ -49,6 +62,14 @@ class ReportMonthResolver
         return $month->copy()->startOfMonth();
     }
 
+    /**
+     * Try to parse report month from file name without throwing.
+     *
+     * Supports: "daily report January 2026", "2026-04", "04-2026", etc.
+     *
+     * @param  string|null  $fileName  Uploaded Excel file name.
+     * @return Carbon|null First day of month, or null when pattern not found.
+     */
     public static function parseFromFilename(?string $fileName): ?Carbon
     {
         if ($fileName === null || trim($fileName) === '') {
@@ -72,6 +93,17 @@ class ReportMonthResolver
         return null;
     }
 
+    /**
+     * Resolve the calendar date for one imported row within the report month.
+     *
+     * Prefers sheet day number (1–31) when valid; otherwise stored work_date if in same month;
+     * falls back to first day of month.
+     *
+     * @param  Carbon  $monthStart  First day of the report month.
+     * @param  mixed  $storedWorkDate  Date from Excel or parser (string|null).
+     * @param  mixed  $sheetDay  Day-of-month from sheet name or row (int|string|null).
+     * @return string ISO date string (`YYYY-MM-DD`).
+     */
     public static function resolveWorkDateForRow(Carbon $monthStart, mixed $storedWorkDate, mixed $sheetDay): string
     {
         if ($sheetDay !== null && is_numeric($sheetDay)) {
@@ -93,6 +125,13 @@ class ReportMonthResolver
         return $monthStart->toDateString();
     }
 
+    /**
+     * Build a Carbon month start from year and month number with validation.
+     *
+     * @param  int  $year  Four-digit year (2000–2100).
+     * @param  int|null  $monthNumber  Month 1–12.
+     * @return Carbon|null First day of month, or null when inputs are invalid.
+     */
     private static function monthFromParts(int $year, ?int $monthNumber): ?Carbon
     {
         if ($monthNumber === null || $monthNumber < 1 || $monthNumber > 12) {

@@ -13,7 +13,10 @@ use Illuminate\Support\Collection;
 class IncomeReconciliationService
 {
     /**
-     * @return array<int, array<string, mixed>>
+     * Validate all work rows and doctor aggregates for a daily report.
+     *
+     * @param  DailyReport  $dailyReport  Report with dailyWorkRows loaded.
+     * @return array<int, array<string, mixed>> List of reconciliation issues.
      */
     public function validateReport(DailyReport $dailyReport): array
     {
@@ -35,7 +38,10 @@ class IncomeReconciliationService
     }
 
     /**
-     * @return array<int, array<string, mixed>>
+     * Validate payment totals and treatment confidence for a single work row.
+     *
+     * @param  DailyWorkRow  $dailyWorkRow  Row with doctor, workItems, and labJob loaded.
+     * @return array<int, array<string, mixed>> Issues found for this row.
      */
     private function validateWorkRow(DailyWorkRow $dailyWorkRow): array
     {
@@ -90,8 +96,10 @@ class IncomeReconciliationService
     }
 
     /**
-     * @param  Collection<int, DailyWorkRow>  $workRows
-     * @return array<int, array<string, mixed>>
+     * Validate per-doctor payment and lab-cost aggregates across all work rows.
+     *
+     * @param  Collection<int, DailyWorkRow>  $workRows  All rows for the report.
+     * @return array<int, array<string, mixed>> Doctor-level issues (e.g. lab without payments).
      */
     private function validateDoctorAggregates(Collection $workRows): array
     {
@@ -129,7 +137,10 @@ class IncomeReconciliationService
     }
 
     /**
-     * @param  array<int, array<string, mixed>>  $issues
+     * Check whether any issue in the list has error severity.
+     *
+     * @param  array<int, array<string, mixed>>  $issues  Reconciliation issue list.
+     * @return bool True when at least one issue has `severity` = `error`.
      */
     public function hasErrors(array $issues): bool
     {

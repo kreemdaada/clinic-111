@@ -8,8 +8,20 @@ use App\Models\DailyReport;
 use App\Services\Import\DailyReportImportService;
 use Illuminate\Http\JsonResponse;
 
+/**
+ * Daily Excel report import and review API.
+ *
+ * Routes: POST /api/daily-reports/import, GET /api/daily-reports/{id}.
+ */
 class DailyReportController extends Controller
 {
+    /**
+     * Upload Excel, run full import pipeline, return calculated report JSON.
+     *
+     * @param  ImportDailyReportRequest  $request  Validated `.xlsx` / `.xlsm` upload.
+     * @param  DailyReportImportService  $importService  Parse → pay → treat → lab pipeline.
+     * @return JsonResponse 201 with formatted report including rows, payments, work items, lab jobs.
+     */
     public function import(
         ImportDailyReportRequest $request,
         DailyReportImportService $importService,
@@ -22,6 +34,12 @@ class DailyReportController extends Controller
         ], 201);
     }
 
+    /**
+     * Return one daily report with all nested relations loaded.
+     *
+     * @param  DailyReport  $dailyReport  Route-model-bound report ID.
+     * @return JsonResponse Report header + daily_work_rows with doctor, payments, work items, lab jobs.
+     */
     public function show(DailyReport $dailyReport): JsonResponse
     {
         $dailyReport->load([
@@ -36,6 +54,12 @@ class DailyReportController extends Controller
         ]);
     }
 
+    /**
+     * Transform a DailyReport model into the API JSON shape.
+     *
+     * @param  DailyReport  $dailyReport  Report with `dailyWorkRows` relation loaded.
+     * @return array<string, mixed> Snake_case keys for JSON serialization.
+     */
     private function formatDailyReport(DailyReport $dailyReport): array
     {
         return [

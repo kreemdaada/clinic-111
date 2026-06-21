@@ -25,12 +25,18 @@ use Illuminate\Support\Collection;
  */
 class MonthlyIncomeCalculationService
 {
+    /**
+     * @param  string  $defaultUsdExchangeRate  USD→AED rate for fixed-fee currency conversion.
+     */
     public function __construct(
         private readonly string $defaultUsdExchangeRate = '3.65',
     ) {}
 
     /**
-     * @return Collection<int, MonthlyIncomeSummaryDto>
+     * Calculate monthly income summaries for all active doctors.
+     *
+     * @param  string  $month  Month label in `Y-m` format.
+     * @return Collection<int, MonthlyIncomeSummaryDto> One summary per active doctor.
      */
     public function calculateForMonth(string $month): Collection
     {
@@ -41,9 +47,18 @@ class MonthlyIncomeCalculationService
             ->where('is_active', true)
             ->orderBy('name')
             ->get()
-            ->map(fn (Doctor $doctor) => $this->calculateForDoctor($doctor, $monthStart, $monthEnd, $month));
+            ->map(fn(Doctor $doctor) => $this->calculateForDoctor($doctor, $monthStart, $monthEnd, $month));
     }
 
+    /**
+     * Calculate the full monthly income summary for a single doctor.
+     *
+     * @param  Doctor  $doctor  Doctor to summarize.
+     * @param  Carbon  $monthStart  First day of the month.
+     * @param  Carbon  $monthEnd  Last day of the month.
+     * @param  string|null  $monthLabel  Display label (defaults to `Y-m` from monthStart).
+     * @return MonthlyIncomeSummaryDto Aggregated payments, lab cost, and income split.
+     */
     public function calculateForDoctor(
         Doctor $doctor,
         Carbon $monthStart,
@@ -55,7 +70,7 @@ class MonthlyIncomeCalculationService
         }
 
         $payments = Payment::query()
-            ->whereHas('dailyWorkRow', fn ($query) => $query->where('doctor_id', $doctor->id))
+            ->whereHas('dailyWorkRow', fn($query) => $query->where('doctor_id', $doctor->id))
             ->whereBetween('paid_at', [$monthStart->toDateString(), $monthEnd->toDateString()])
             ->get();
 
@@ -90,16 +105,39 @@ class MonthlyIncomeCalculationService
         );
     }
 
+    /**
+     * Compute net total as collected payments minus lab cost.
+     *
+     * @param  string  $totalCollectedAed  Sum of all payments in AED.
+     * @param  string  $labCostAed  Sum of lab job costs in AED.
+     * @return string Net total with 2 decimal places.
+     */
     public function calculateNetTotal(string $totalCollectedAed, string $labCostAed): string
     {
         return MoneyCalculator::subtract($totalCollectedAed, $labCostAed);
     }
 
+    /**
+     * Compute doctor income as a percentage of net total.
+     *
+     * @param  string  $netTotalAed  Net collected amount after lab cost.
+     * @param  string  $commissionPercentage  Percent value (e.g. `35` for 35%).
+     * @return string Doctor share with 2 decimal places.
+     */
     public function calculatePercentageDoctorIncome(string $netTotalAed, string $commissionPercentage): string
     {
         return MoneyCalculator::percentage($netTotalAed, $commissionPercentage);
     }
 
+    /**
+     * Compute doctor income using percentage or fixed-fee commission rules.
+     *
+     * @param  Doctor  $doctor  Doctor with commission_type configured.
+     * @param  string  $netTotalAed  Net collected amount after lab cost.
+     * @param  Carbon  $monthStart  First day of the month (for fixed-fee path).
+     * @param  Carbon  $monthEnd  Last day of the month (for fixed-fee path).
+     * @return string Doctor income in AED with 2 decimal places.
+     */
     private function calculateDoctorIncome(
         Doctor $doctor,
         string $netTotalAed,
@@ -121,6 +159,14 @@ class MonthlyIncomeCalculationService
         return $this->calculateFixedDoctorIncome($doctor, $monthStart, $monthEnd);
     }
 
+    /**
+     * Sum fixed-fee amounts for all billable work items in the month.
+     *
+     * @param  Doctor  $doctor  Doctor with doctorFixedFees relation.
+     * @param  Carbon  $monthStart  First day of the month.
+     * @param  Carbon  $monthEnd  Last day of the month.
+     * @return string Total fixed doctor income in AED.
+     */
     private function calculateFixedDoctorIncome(Doctor $doctor, Carbon $monthStart, Carbon $monthEnd): string
     {
         $doctor->loadMissing('doctorFixedFees.treatment');
@@ -159,6 +205,14 @@ class MonthlyIncomeCalculationService
         return $totalIncome;
     }
 
+    /**
+     * Sum lab job costs for a doctor's work items in the given month.
+     *
+     * @param  Doctor  $doctor  Doctor whose lab jobs to total.
+     * @param  Carbon  $monthStart  First day of the month.
+     * @param  Carbon  $monthEnd  Last day of the month.
+     * @return string Total lab cost in AED with 2 decimal places.
+     */
     private function calculateLabCostForDoctor(Doctor $doctor, Carbon $monthStart, Carbon $monthEnd): string
     {
         $labJobs = LabJob::query()
@@ -173,7 +227,12 @@ class MonthlyIncomeCalculationService
     }
 
     /**
-     * @return array<string, int>
+     * Count work-item quantities grouped by treatment code for the month.
+     *
+     * @param  Doctor  $doctor  Doctor whose work items to count.
+     * @param  Carbon  $monthStart  First day of the month.
+     * @param  Carbon  $monthEnd  Last day of the month.
+     * @return array<string, int> Treatment code → total quantity.
      */
     private function calculateTreatmentCounts(Doctor $doctor, Carbon $monthStart, Carbon $monthEnd): array
     {
@@ -203,6 +262,13 @@ class MonthlyIncomeCalculationService
         return $counts;
     }
 
+    /**
+     * Sum payment amounts filtered by payment method.
+     *
+     * @param  Collection<int, Payment>  $payments  Payment records for the period.
+     * @param  PaymentMethod  $method  DHS, USD, or VISA.
+     * @return string Total amount in AED with 2 decimal places.
+     */
     private function sumPaymentsByMethod(Collection $payments, PaymentMethod $method): string
     {
         $filtered = $payments->where('payment_method', $method);
@@ -210,6 +276,13 @@ class MonthlyIncomeCalculationService
         return $this->sumAmountAed($filtered);
     }
 
+    /**
+     * Sum a decimal amount field across a collection of records.
+     *
+     * @param  Collection<int, object>  $records  Models with a decimal amount column.
+     * @param  string  $amountField  Property name to sum (default `amount_aed`).
+     * @return string Total with 2 decimal places.
+     */
     private function sumAmountAed(Collection $records, string $amountField = 'amount_aed'): string
     {
         $total = '0.00';

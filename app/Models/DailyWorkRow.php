@@ -6,6 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * One accounting row from a daily report (one patient visit / payment line).
+ *
+ * Table: `daily_work_rows`. Holds payments, raw Excel data, and parsed treatments.
+ * `paid_total_aed` = DHS + USD→AED + VISA (collected payments, not treatment value).
+ */
 class DailyWorkRow extends Model
 {
     protected $fillable = [
@@ -29,6 +35,11 @@ class DailyWorkRow extends Model
         'raw_data_json',
     ];
 
+    /**
+     * Cast database columns to native PHP types.
+     *
+     * @return array<string, string>
+     */
     protected function casts(): array
     {
         return [
@@ -47,21 +58,33 @@ class DailyWorkRow extends Model
         ];
     }
 
+    /**
+     * Parent report this row belongs to.
+     */
     public function dailyReport(): BelongsTo
     {
         return $this->belongsTo(DailyReport::class);
     }
 
+    /**
+     * Doctor who performed the work / receives attribution.
+     */
     public function doctor(): BelongsTo
     {
         return $this->belongsTo(Doctor::class);
     }
 
+    /**
+     * Parsed treatment lines (only lab-cost codes are persisted).
+     */
     public function workItems(): HasMany
     {
         return $this->hasMany(WorkItem::class);
     }
 
+    /**
+     * Individual payment components (DHS, USD, VISA) for this row.
+     */
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);

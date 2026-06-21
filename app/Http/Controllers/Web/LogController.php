@@ -10,13 +10,27 @@ use App\Services\Import\ImportExtractionLogService;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
+/**
+ * Web UI for import audit logs and structured extraction diagnostics.
+ *
+ * Routes: GET /logs, /logs/extraction/{id}, /logs/extraction/{id}/download
+ */
 class LogController extends Controller
 {
+    /**
+     * @param  ImportActivityLogger  $importActivityLogger  Reads tail of `storage/logs/import.log`.
+     * @param  ImportExtractionLogService  $importExtractionLogService  Loads JSON extraction logs per report.
+     */
     public function __construct(
         private readonly ImportActivityLogger $importActivityLogger,
         private readonly ImportExtractionLogService $importExtractionLogService,
     ) {}
 
+    /**
+     * Show combined audit log, file log tail, and recent report list.
+     *
+     * @return View Renders `logs.index` with last 50 audit entries and 20 reports.
+     */
     public function index(): View
     {
         $auditLogs = AuditLog::query()
@@ -39,6 +53,15 @@ class LogController extends Controller
         ]);
     }
 
+    /**
+     * Show structured per-doctor extraction log for one imported report.
+     *
+     * Groups imported rows by doctor code, sorts by sheet day / Excel row,
+     * and prepares skipped and unresolved doctor rows for the Blade UI.
+     *
+     * @param  DailyReport  $dailyReport  Route-model-bound report.
+     * @return View Renders `logs.extraction` with diagnostics and issue summary.
+     */
     public function extraction(DailyReport $dailyReport): View
     {
         $log = $this->importExtractionLogService->loadForReport($dailyReport);
@@ -98,6 +121,12 @@ class LogController extends Controller
         ]);
     }
 
+    /**
+     * Download the raw JSON extraction log file for offline debugging.
+     *
+     * @param  DailyReport  $dailyReport  Route-model-bound report.
+     * @return BinaryFileResponse Attachment `extraction-report-{id}.json`.
+     */
     public function downloadExtraction(DailyReport $dailyReport): BinaryFileResponse
     {
         $path = $this->importExtractionLogService->getLogPath($dailyReport);

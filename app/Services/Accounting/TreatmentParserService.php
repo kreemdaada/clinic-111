@@ -19,6 +19,11 @@ use Illuminate\Support\Collection;
  * - RCF 321|12          → teeth 3,2,1 + 1,2 → quantity 5
  * - RCF |6 / CF |7      → single tooth → quantity 1
  * - SxP + CF 876        → SxP x1 + CF x3
+ *
+ * Crown / lab codes (MC, ZIR, …):
+ * - MC CR 8765|5678     → upper + lower teeth → quantity 8
+ * - ZIR CR 546|5        → tooth list + explicit quantity 5
+ * - MC x8               → explicit quantity (preferred from next month)
  */
 class TreatmentParserService
 {
@@ -34,6 +39,7 @@ class TreatmentParserService
         'ZIR BR' => 'ZIR',
         'IMPL CR' => 'IMPL-CR',
         'IMPL-CR' => 'IMPL-CR',
+        'IMP-CR' => 'IMPL-CR',
         'IMPL-ZIR' => 'IMPL-ZIR',
         'IMPL ZIR' => 'IMPL-ZIR',
         'IMP' => 'IMPL',
@@ -59,7 +65,12 @@ class TreatmentParserService
     private ?Collection $treatmentCodes = null;
 
     /**
-     * @return array<int, ParsedTreatmentItemDto>
+     * Parse treatment text into a list of treatment codes with quantities.
+     *
+     * Splits on ` | ` patient segments and merges duplicate codes.
+     *
+     * @param  string  $treatmentText  Raw treatment text from a daily work row.
+     * @return array<int, ParsedTreatmentItemDto> Parsed items keyed by merge order.
      */
     public function parse(string $treatmentText): array
     {
@@ -87,6 +98,13 @@ class TreatmentParserService
         return $this->mergeParsedItemsByCode($parsedItems);
     }
 
+    /**
+     * Parse treatment text and persist lab-cost work items for a daily work row.
+     *
+     * Deletes existing work items first; skips treatments without lab cost.
+     *
+     * @param  DailyWorkRow  $dailyWorkRow  Row whose treatment_text is parsed.
+     */
     public function parseAndPersist(DailyWorkRow $dailyWorkRow): void
     {
         $dailyWorkRow->workItems()->delete();
@@ -116,8 +134,12 @@ class TreatmentParserService
     }
 
     /**
-     * @param  array<int, string>  $segments
-     * @return array<int, string>
+     * Merge standalone digit segments into the previous segment as pipe notation.
+     *
+     * Handles continuations like `CF 876` followed by `|5` split across segments.
+     *
+     * @param  array<int, string>  $segments  Patient segments from splitting on ` | `.
+     * @return array<int, string> Segments with tooth continuations merged.
      */
     private function mergeToothContinuationSegments(array $segments): array
     {
@@ -139,7 +161,10 @@ class TreatmentParserService
     }
 
     /**
-     * @return array<int, ParsedTreatmentItemDto>
+     * Parse one patient segment split on `+` into filling and non-filling items.
+     *
+     * @param  string  $segment  Single patient treatment segment.
+     * @return array<int, ParsedTreatmentItemDto> Parsed items from this segment.
      */
     private function parseSegment(string $segment): array
     {
@@ -165,7 +190,10 @@ class TreatmentParserService
     }
 
     /**
-     * @return array<int, ParsedTreatmentItemDto>
+     * Parse filling codes (CF, RCF, SxP, AF) from a treatment part using tooth notation.
+     *
+     * @param  string  $part  Normalized sub-segment (one `+`-delimited piece).
+     * @return array<int, ParsedTreatmentItemDto> Filling items found in the part.
      */
     private function parseFillingPart(string $part): array
     {
@@ -187,6 +215,13 @@ class TreatmentParserService
         return $parsedItems;
     }
 
+    /**
+     * Match a single filling code against clinic tooth-notation patterns in a part.
+     *
+     * @param  string  $code  Filling treatment code (CF, RCF, SXP, AF).
+     * @param  string  $part  Normalized sub-segment to search.
+     * @return ParsedTreatmentItemDto|null Parsed item, or null when the code is not found.
+     */
     private function matchFillingCode(string $code, string $part): ?ParsedTreatmentItemDto
     {
         $codePattern = preg_quote($code, '/');
@@ -221,6 +256,14 @@ class TreatmentParserService
         return null;
     }
 
+    /**
+     * Build a filling ParsedTreatmentItemDto with clamped quantity and confidence warning.
+     *
+     * @param  string  $code  Treatment code.
+     * @param  int  $quantity  Raw quantity before clamping.
+     * @param  int  $confidence  Match confidence (100 = explicit, lower = inferred).
+     * @return ParsedTreatmentItemDto Parsed item with optional warning message.
+     */
     private function fillingItem(string $code, int $quantity, int $confidence): ParsedTreatmentItemDto
     {
         return new ParsedTreatmentItemDto(
@@ -232,7 +275,10 @@ class TreatmentParserService
     }
 
     /**
-     * @return array<int, ParsedTreatmentItemDto>
+     * Parse non-filling treatment codes from a part using longest-match-first scanning.
+     *
+     * @param  string  $part  Normalized sub-segment (one `+`-delimited piece).
+     * @return array<int, ParsedTreatmentItemDto> Crown, implant, and other non-filling items.
      */
     private function parseNonFillingPart(string $part): array
     {
@@ -292,7 +338,14 @@ class TreatmentParserService
     }
 
     /**
-     * @param  array<int, array<int, array{0: string, 1: int}>>  $matches
+     * Resolve treatment quantity from explicit match groups or pipe/tooth notation.
+     *
+     * @param  string  $code  Matched treatment code.
+     * @param  string  $normalizedSegment  Full normalized segment text.
+     * @param  string  $matchText  Regex match substring.
+     * @param  array<int, array<int, array{0: string, 1: int}>>  $matches  preg_match_all capture groups.
+     * @param  int  $index  Index of the current match within $matches[0].
+     * @return int Quantity clamped to 1..MAX_QUANTITY.
      */
     private function resolveQuantityFromMatch(
         string $code,
@@ -318,16 +371,37 @@ class TreatmentParserService
         return 1;
     }
 
+    /**
+     * Derive quantity from pipe/tooth-list notation following a treatment code.
+     *
+     * @param  string  $code  Treatment code preceding the tooth list.
+     * @param  string  $normalizedSegment  Full normalized segment text.
+     * @return int|null Resolved quantity, or null when no pipe notation applies.
+     */
     private function resolvePipeNotationQuantity(string $code, string $normalizedSegment): ?int
     {
         $codePattern = preg_quote($code, '/');
 
-        if (preg_match('/\b'.$codePattern.'\b[^|]*(\d+)\|(\d+)(?:\s|$|\+)/', $normalizedSegment, $toothQuantityMatch) === 1) {
-            $quantityCandidate = (int) $toothQuantityMatch[2];
+        if (preg_match('/\b'.$codePattern.'\b(?:\s+(?:CR|BR))?\s+([\d|]+)/', $normalizedSegment, $toothListMatch) === 1) {
+            $toothGroups = trim($toothListMatch[1], '|');
 
-            if ($quantityCandidate >= 1 && $quantityCandidate <= self::MAX_QUANTITY) {
-                return $quantityCandidate;
+            if ($toothGroups === '') {
+                return null;
             }
+
+            if (str_contains($toothGroups, '|')) {
+                $parts = array_values(array_filter(explode('|', $toothGroups), fn (string $part): bool => $part !== ''));
+                $lastPart = $parts[array_key_last($parts)] ?? '';
+
+                // ZIR CR 546|5 → explicit quantity 5 (not tooth "5" only)
+                if (count($parts) === 2 && strlen($lastPart) <= 2 && (int) $lastPart >= 1 && (int) $lastPart <= self::MAX_QUANTITY) {
+                    return (int) $lastPart;
+                }
+
+                return $this->countTeethFromPipeGroups($toothGroups);
+            }
+
+            return $this->countTeethFromPipeGroups($toothGroups);
         }
 
         if (preg_match('/\b'.$codePattern.'\b[^|]*(\d+)\|\s*(?:\s+\+|$)/', $normalizedSegment, $trailingToothMatch) === 1) {
@@ -345,6 +419,12 @@ class TreatmentParserService
         return null;
     }
 
+    /**
+     * Count total teeth across pipe-separated digit groups.
+     *
+     * @param  string  $toothGroups  Tooth digits with `|` group separators.
+     * @return int Total tooth count, clamped to MAX_QUANTITY.
+     */
     private function countTeethFromPipeGroups(string $toothGroups): int
     {
         $groups = preg_split('/\|/', $toothGroups) ?: [$toothGroups];
@@ -363,6 +443,12 @@ class TreatmentParserService
         return max(1, min(self::MAX_QUANTITY, $total));
     }
 
+    /**
+     * Count teeth represented by a digit string (FDI pairs or individual digits).
+     *
+     * @param  string  $digits  Digit sequence from tooth notation.
+     * @return int Tooth count (minimum 1).
+     */
     private function countToothDigits(string $digits): int
     {
         $digits = trim($digits);
@@ -378,6 +464,13 @@ class TreatmentParserService
         return $this->interpretPipeDigits($digits);
     }
 
+    /**
+     * Interpret a single-digit pipe quantity for crown/lab codes.
+     *
+     * @param  string  $code  Treatment code (MC, ZIR, etc.).
+     * @param  string  $digits  Single digit after `|`.
+     * @return int Resolved quantity.
+     */
     private function interpretDirectPipeQuantity(string $code, string $digits): int
     {
         if (in_array($code, self::CROWN_PIPE_QUANTITY_CODES, true) && strlen($digits) === 1) {
@@ -387,6 +480,13 @@ class TreatmentParserService
         return $this->interpretPipeDigits($digits);
     }
 
+    /**
+     * Interpret trailing pipe digits as explicit quantity for crown/lab codes.
+     *
+     * @param  string  $code  Treatment code (MC, ZIR, etc.).
+     * @param  string  $digits  Trailing digits after a pipe.
+     * @return int Resolved quantity.
+     */
     private function interpretTrailingPipeQuantity(string $code, string $digits): int
     {
         if (in_array($code, self::CROWN_PIPE_QUANTITY_CODES, true)) {
@@ -400,6 +500,12 @@ class TreatmentParserService
         return $this->countToothDigits($digits);
     }
 
+    /**
+     * Interpret a digit string as tooth count using FDI and multi-tooth heuristics.
+     *
+     * @param  string  $digits  Raw digit sequence from pipe notation.
+     * @return int Inferred quantity (minimum 1).
+     */
     private function interpretPipeDigits(string $digits): int
     {
         $digits = trim($digits);
@@ -431,6 +537,12 @@ class TreatmentParserService
         return 1;
     }
 
+    /**
+     * Uppercase, alias-expand, and normalize treatment text before parsing.
+     *
+     * @param  string  $treatmentText  Raw treatment text segment.
+     * @return string Normalized text ready for regex matching.
+     */
     private function normalizeTreatmentText(string $treatmentText): string
     {
         $normalized = strtoupper($treatmentText);
@@ -450,8 +562,12 @@ class TreatmentParserService
     }
 
     /**
-     * @param  array<int, ParsedTreatmentItemDto>  $parsedItems
-     * @return array<int, ParsedTreatmentItemDto>
+     * Merge parsed items that share the same treatment code by summing quantities.
+     *
+     * Keeps the lower confidence and existing warning message on merge.
+     *
+     * @param  array<int, ParsedTreatmentItemDto>  $parsedItems  Items from all segments.
+     * @return array<int, ParsedTreatmentItemDto> De-duplicated items by code.
      */
     private function mergeParsedItemsByCode(array $parsedItems): array
     {
@@ -477,7 +593,9 @@ class TreatmentParserService
     }
 
     /**
-     * @return Collection<string, Treatment>
+     * Load and cache active treatment records keyed by code.
+     *
+     * @return Collection<string, Treatment> Code → Treatment model.
      */
     private function getKnownTreatmentCodes(): Collection
     {
@@ -492,7 +610,12 @@ class TreatmentParserService
     }
 
     /**
-     * @param  array<int, array{0: int, 1: int}>  $matchedRanges
+     * Check whether a regex match range overlaps an already-matched span.
+     *
+     * @param  int  $offset  Start byte offset of the new match.
+     * @param  int  $end  End byte offset of the new match.
+     * @param  array<int, array{0: int, 1: int}>  $matchedRanges  Previously recorded [start, end] pairs.
+     * @return bool True when the new match overlaps an existing range.
      */
     private function overlapsExistingMatch(int $offset, int $end, array $matchedRanges): bool
     {
