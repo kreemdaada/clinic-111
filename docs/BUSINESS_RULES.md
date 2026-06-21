@@ -1,4 +1,4 @@
-ch # Business Rules
+# Business Rules
 
 All accounting formulas live in service classes (primarily `PaymentCalculationService`, `LabJobCalculationService`, `MonthlyIncomeCalculationService`). This document is the single source of truth for **what** is calculated; services implement **how**.
 
@@ -171,6 +171,7 @@ CLINIC INCOME = NET TOTAL - DOCTOR INCOME
 | POST | Post | 55 AED | — |
 | ABT | Abutment | 511 AED | — |
 | IMPL | Implant | 1,000 AED | — |
+| REMOV | Removable Tooth | 100 AED | — |
 
 Dr Riyad uses lab `RIYADH_LAB`; all other doctors default to `MAIN_LAB`.
 
@@ -187,6 +188,7 @@ Dr Riyad uses lab `RIYADH_LAB`; all other doctors default to `MAIN_LAB`.
 | POST | Post |
 | ABT | Abutment (the component placed on the implant) |
 | IMPL | Implant |
+| REMOV | Removable Tooth |
 
 ## Treatments Without Lab Cost
 
@@ -197,9 +199,19 @@ Dr Riyad uses lab `RIYADH_LAB`; all other doctors default to `MAIN_LAB`.
 | RCT | Root Canal Treatment |
 | RE-RCT | Repeat Root Canal Treatment |
 | REPAIR | Repair |
-| REMOV | Removable Tooth (100 AED lab cost) |
 | BG | Bone Graft (Dr Wa fixed fee only) |
 | SINUS | Sinus Lift (Dr Wa fixed fee only) |
+
+### Work items vs lab jobs
+
+Every **valid parsed** treatment creates a `work_item` (treatment count, audit, future income rules).
+
+Only treatments with `has_lab_cost = true` create a `lab_job` (column G / JOB).
+
+| Code | work_item | lab_job |
+|---|---|---|
+| ZIR, MC, POST, REMOV, … | ✓ | ✓ |
+| CF, AF, RCT, RE-RCT, REPAIR | ✓ | ✗ |
 
 ---
 
@@ -208,8 +220,9 @@ Dr Riyad uses lab `RIYADH_LAB`; all other doctors default to `MAIN_LAB`.
 | Status | Meaning |
 |---|---|
 | `uploaded` | File received, processing started |
-| `parsed` | Rows and payments created; treatments parsed |
-| `calculated` | Lab jobs calculated |
+| `parsed` | Rows and payments created |
+| `calculated` | Work items + lab jobs complete, no parser warnings |
+| `needs_review` | Import complete but parser/lab warnings require review |
 | `approved` | Report locked — read-only |
 | `failed` | Import failed; transaction rolled back |
 
@@ -253,14 +266,21 @@ Treatment counts are grouped by treatment code for the month.
 
 ## What Changed
 
-**Updated — 2026-06-19**
+**Updated — 2026-06-21 (import pipeline)**
+
+- REMOV: lab cost **100 AED** (`has_lab_cost = true`); still creates work_item
+- All valid treatments persist as work_items; lab_jobs only when `has_lab_cost`
+- Status `needs_review` when import warnings exist
+- Patient PII not stored; see WORKFLOWS.md privacy section
+
+**Updated — 2026-06-21**
 
 - MC lab cost corrected: 405 → **105 AED**
 - Doctor renamed: Dr Riyadh → **Dr Riyad** (code: `RIYAD`)
 - Treatment names updated: RE-RCT, REMOV, ABT descriptions
 - Documented lab deduction rule for percentage doctors
 
-**Initial documentation — 2026-06-19**
+**Initial documentation — 2026-06-21**
 
 Created:
 

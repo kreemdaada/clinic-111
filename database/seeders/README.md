@@ -1,0 +1,40 @@
+# Database Seeders
+
+Reference data for the accounting engine. Run via:
+
+```bash
+php artisan migrate --seed
+```
+
+Order is defined in `DatabaseSeeder` — labs and doctors must exist before prices and export profiles.
+
+## Seeder order
+
+| Seeder | Purpose |
+|---|---|
+| `LabSeeder` | `MAIN_LAB`, `RIYADH_LAB` |
+| `DoctorSeeder` | JACK, RIYAD, PURIYA, WA with commission settings |
+| `TreatmentSeeder` | Treatment catalog; `has_lab_cost` flag drives lab_jobs |
+| `LabPriceSeeder` | Default lab unit costs + Dr Riyad overrides |
+| `DoctorFixedFeeSeeder` | Dr Wa fixed fees (IMPL, BG, SINUS) |
+| `DoctorIncomeExportProfileSeeder` | Original Income Excel sheet/column layout per doctor |
+| `UserSeeder` | admin, accountant, viewer test users |
+
+## Treatment categories (seeded)
+
+**With lab cost (JOB):** MC, ZIR, IMPL-CR, IMPL-ZIR, VENEER, POST, ABT, IMPL, **REMOV (100 AED)**
+
+**Without lab cost (work_item only):** CF, RCF, SXP, AF, RCT, RE-RCT, REPAIR, EXO, APICO, BG, SINUS, …
+
+All valid parsed treatments create `work_items`. Only `has_lab_cost = true` creates `lab_jobs`.
+
+## Lab price highlights
+
+| Code | Default | Dr Riyad |
+|---|---|---|
+| MC | 105 AED | — |
+| ZIR | 360 AED | 400 AED |
+| IMPL-ZIR | 460 AED | 500 AED |
+| REMOV | 100 AED | — |
+
+Source of truth: `LabPriceSeeder.php` and `TreatmentSeeder.php`.

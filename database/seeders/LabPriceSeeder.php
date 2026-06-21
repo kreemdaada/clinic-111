@@ -8,6 +8,13 @@ use App\Models\LabPrice;
 use App\Models\Treatment;
 use Illuminate\Database\Seeder;
 
+/**
+ * Default lab unit prices (AED) and Dr Riyad overrides for ZIR / IMPL-ZIR.
+ *
+ * REMOV = 100 AED. Prices consumed by LabJobCalculationService via LabPriceResolver.
+ *
+ * @see database/seeders/README.md
+ */
 class LabPriceSeeder extends Seeder
 {
     public function run(): void

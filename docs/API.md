@@ -121,24 +121,24 @@ curl -X POST /api/daily-reports/import \
   -F "report_date=2026-01-15"
 ```
 
-**Response `201`:**
+**Response `201` (no warnings):**
 
 ```json
 {
   "message": "Daily report imported and calculated successfully.",
   "data": {
     "id": 1,
-    "report_date": "2026-01-15",
+    "report_date": "2026-01-01",
     "source_type": "excel_upload",
-    "source_file_name": "daily-report.xlsx",
+    "source_file_name": "daily report january 2026.xlsm",
     "status": "calculated",
     "daily_work_rows": [
       {
         "id": 1,
         "doctor": { "id": 2, "code": "RIYAD", "name": "Dr Riyad" },
         "work_date": "2026-01-15",
-        "patient_name": "John Doe",
-        "treatment_text": "ZIR 4 + POST 2",
+        "excel_row_number": 25,
+        "treatment_text": "ZIR x 4 + POST x 2",
         "paid_total_aed": "3025.00",
         "payments": [
           {
@@ -164,6 +164,10 @@ curl -X POST /api/daily-reports/import \
 }
 ```
 
+**Response `201` (with parser warnings):** `"status": "needs_review"` and message *"Daily report imported with parser warnings requiring review."*
+
+**Privacy:** Responses never include `patient_name`, `mrn`, or `file_number`.
+
 **Errors:**
 
 | Code | Condition |
@@ -183,7 +187,52 @@ curl -X POST /api/daily-reports/import \
 
 **Request:** No body. `{id}` is the daily report ID.
 
-**Response `200`:** Same structure as import response `data` object.
+**Response `200`:** Same structure as import response `data` object (no patient identifiers).
+
+**Errors:**
+
+| Code | Condition |
+|---|---|
+| `401` | Not authenticated |
+| `403` | Insufficient role |
+| `404` | Report not found |
+
+---
+
+### GET /api/daily-reports/{id}/validation-summary
+
+**Purpose:** Parser and lab-pricing warnings for an imported report.
+
+**Role:** `admin`, `accountant`, `viewer`
+
+**Response `200`:**
+
+```json
+{
+  "data": {
+    "total_rows": 120,
+    "parsed_items": 96,
+    "warnings_count": 4,
+    "warnings": [
+      {
+        "excel_row": 25,
+        "doctor": "Dr Riyad",
+        "treatment_text": "zircon 2",
+        "message": "Invalid format. Use ZIR x 2"
+      }
+    ]
+  }
+}
+```
+
+**Warning types (stored in `daily_report_import_warnings.warning_code`):**
+
+| Code | Meaning |
+|---|---|
+| `invalid_format` | Text does not match `CODE x QUANTITY` |
+| `missing_quantity` | Code without quantity |
+| `unknown_treatment_code` | Code not in `treatments` table |
+| `lab_price_not_found` | Lab-cost treatment with no matching price |
 
 **Errors:**
 
@@ -351,6 +400,12 @@ GET /api/monthly-income?month=2026-01
 ---
 
 ## What Changed
+
+**Updated — 2026-06-19**
+
+- Added `GET /api/daily-reports/{id}/validation-summary`
+- Removed patient PII from report JSON; added `excel_row_number`
+- Documented `needs_review` import status
 
 **Initial documentation — 2026-06-19**
 

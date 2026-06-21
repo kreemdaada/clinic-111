@@ -8,43 +8,55 @@ Step-by-step descriptions of every major process in the system.
 
 ### Overview
 
-An accountant uploads a daily Excel file. The system parses it, creates all database records, and runs the full calculation pipeline inside a single database transaction.
+An accountant uploads a daily Excel file. The system extracts rows, applies privacy rules, validates treatments, calculates lab jobs, and sets report status — inside a single database transaction. The uploaded Excel file is deleted after success (configurable).
 
 ### Web UI (drag & drop — recommended)
 
 1. Start server: `./bin/serve`
 2. Login at `/login` with `accountant@clinic.test` / `password`
 3. Drag Excel file onto the import page (or click to browse)
-4. Optionally set report date to first day of month (e.g. `2026-01-01` for January workbook)
+4. Report month is resolved from the filename (e.g. `daily report january 2026.xlsm`)
 5. After import, view results at `/imports/{id}` and logs at `/logs`
+6. If parser warnings exist, status is `needs_review` — check `GET /api/daily-reports/{id}/validation-summary`
 
 ### Treatment text rules
 
 Staff who fill the daily Excel must use **`CODE x QUANTITY`** in **UPPERCASE** (e.g. `ZIR x 2 + POST x 1`).  
 See **`docs/TREATMENT_RULES.md`** and web page **`/docs/treatment-rules`**.
 
+Invalid lines produce warnings (not silent skips): unknown code, missing quantity, invalid format, missing lab price.
+
 ### Steps (API / curl)
 
-1. **User authenticates** — obtains Sanctum API token via `POST /api/login`.
+1. **User authenticates** — Sanctum token via `POST /api/login`.
 2. **User uploads Excel** — `POST /api/daily-reports/import` with `multipart/form-data`.
-3. **Validation** — `ImportDailyReportRequest` checks file type (`.xlsx`, `.xlsm`), size, and optional `report_date`.
-4. **Approved report guard** — if an approved report exists for the same date, import is rejected.
-5. **File storage** — file saved to private disk (`storage/app/daily-reports/`), not public.
+3. **Validation** — file type (`.xlsx`, `.xlsm`), size limit.
+4. **Approved report guard** — rejected if an approved report exists for the same month anchor.
+5. **File storage** — saved to private disk (`storage/app/daily-reports/`).
 6. **`DailyReportImportService::import()` begins DB transaction.**
-7. **Create `daily_report`** — status = `uploaded`, source = `excel_upload`.
-8. **`ExcelDailyReportParser` reads file** — detects header row, maps columns, extracts rows. Original cell data stored in `raw_data_json`.
+7. **Create `daily_report`** — status = `uploaded`.
+8. **`ExcelDailyReportParser`** — reads day sheets 1–31, maps columns, extracts rows. Patient name/MRN/file read **in memory only**.
 9. **For each parsed row:**
-   - Resolve doctor by code or name match against `doctors` table.
-   - Calculate `paid_total_aed` via `PaymentCalculationService`.
-   - Create `daily_work_row`.
-   - Create `payments` rows for DHS, USD, VISA (skip zero amounts).
+   - Resolve doctor by code or name.
+   - Compute `paid_total_aed` via `PaymentCalculationService`.
+   - Hash patient identifiers → `patient_reference_hash` (HMAC-SHA256, dedicated env key).
+   - Sanitize PII from `raw_data_json`.
+   - Store `excel_row_number` for traceability.
+   - Create `daily_work_row` + `payments`.
 10. **Update status** → `parsed`.
-11. **`TreatmentParserService::parseAndPersist()`** — for each row, parse `treatment_text` → create `work_items`.
-12. **`LabJobCalculationService::calculateForReport()`** — for each work item with lab cost, resolve price → create `lab_jobs`.
-13. **Update status** → `calculated`.
-14. **`ImportActivityLogger`** — writes to `import` log channel (`storage/logs/import-*.log`) and `audit_logs` table.
-15. **Transaction commits** — return full report JSON.
-16. **On failure** — transaction rolls back, report status set to `failed`.
+11. **`TreatmentImportValidationService::validateAndPersist()`** — per row:
+    - Split `treatment_text` on `+` (and ` | ` patient segments).
+    - Emit warnings for invalid format / unknown code / missing quantity.
+    - Create **`work_items` for all valid known treatments** (CF, REMOV, ZIR, …).
+12. **`LabJobCalculationService::calculateForReport()`** — for work items where `has_lab_cost = true`, resolve price → create `lab_jobs`. Non-lab treatments (CF, RCT, …) skip lab job.
+13. **Collect lab-price warnings** — work items with lab cost but no matching `lab_price`.
+14. **Persist warnings** → `daily_report_import_warnings`.
+15. **Reconciliation** — `IncomeReconciliationService::validateReport()`.
+16. **Final status** → `calculated` if no warnings, else `needs_review`.
+17. **Extraction log** — structured import log written.
+18. **Transaction commits** — return report JSON (no patient names).
+19. **Delete uploaded Excel** — when `ACCOUNTING_DELETE_UPLOAD_AFTER_IMPORT=true` (default).
+20. **On failure** — rollback, status = `failed`.
 
 ### Sequence Diagram
 
@@ -54,57 +66,64 @@ sequenceDiagram
     participant API as DailyReportController
     participant Import as DailyReportImportService
     participant Excel as ExcelDailyReportParser
+    participant Privacy as PatientReferenceHasher
     participant Pay as PaymentCalculationService
-    participant Parse as TreatmentParserService
+    participant Valid as TreatmentImportValidationService
     participant Lab as LabJobCalculationService
     participant DB as Database
 
     User->>API: POST /api/daily-reports/import
-    API->>Import: import(file, report_date)
+    API->>Import: import(file)
     Import->>DB: BEGIN TRANSACTION
     Import->>DB: CREATE daily_report (uploaded)
-    Import->>Excel: parse(filePath)
+    Import->>Excel: parseWithDiagnostics(path)
     Excel-->>Import: parsed rows[]
 
     loop Each row
-        Import->>DB: CREATE daily_work_row
+        Import->>Privacy: hash(name, mrn, file) in memory
+        Import->>DB: CREATE daily_work_row (no PII)
         Import->>Pay: calculateTotalCollectedAed()
         Import->>Pay: createPaymentsForWorkRow()
-        Pay->>DB: CREATE payments
     end
 
     Import->>DB: UPDATE status = parsed
-    Import->>Parse: parseAndPersist(each row)
-    Parse->>DB: CREATE work_items
-
+    loop Each row
+        Import->>Valid: validateAndPersist(row)
+        Valid->>DB: CREATE work_items (all valid codes)
+    end
     Import->>Lab: calculateForReport()
-    Lab->>DB: CREATE lab_jobs
-
-    Import->>DB: UPDATE status = calculated
+    Lab->>DB: CREATE lab_jobs (has_lab_cost only)
+    Import->>DB: CREATE import_warnings
+    Import->>DB: UPDATE status = calculated | needs_review
     Import->>DB: COMMIT
+    Import->>Import: delete uploaded file
     Import-->>API: DailyReport
-    API-->>User: 201 JSON response
+    API-->>User: 201 JSON
 ```
 
 ### Data Flow Diagram
 
 ```
-Excel file
+Excel file (deleted after import)
     ↓
-daily_reports          (1 per import)
+ExcelDailyReportParser     ← extract only (doctor, amounts, treatment_text, row#)
+    ↓                        patient fields: memory only → HMAC hash
+daily_reports              (1 per import)
     ↓
-daily_work_rows        (1 per Excel row)
+daily_work_rows            (patient_reference_hash, excel_row_number, sanitized raw_data_json)
     ↓                    ↓
 payments               treatment_text
 (collected $)              ↓
-                       work_items
-                       (parsed codes)
+              TreatmentImportValidationService
+              (warnings → daily_report_import_warnings)
                             ↓
-                       lab_jobs
-                       (lab costs)
+                       work_items          ← ALL valid treatments
+                       (CF, REMOV, ZIR, …)
                             ↓
-                    monthly_income
-                    (aggregated view)
+                       lab_jobs            ← ONLY has_lab_cost = true
+                       (MC, ZIR, REMOV, …)
+                            ↓
+                    monthly_income / Income Excel export
 ```
 
 ---
@@ -113,42 +132,70 @@ payments               treatment_text
 
 ### Steps
 
-1. User calls `GET /api/daily-reports/{id}`.
-2. Controller loads report with nested relations:
-   - `dailyWorkRows.doctor`
-   - `dailyWorkRows.payments`
-   - `dailyWorkRows.workItems.treatment`
-   - `dailyWorkRows.workItems.labJob.lab`
-3. JSON response returned with full calculated data.
+1. `GET /api/daily-reports/{id}` — full report with work items and lab jobs (no patient names).
+2. `GET /api/daily-reports/{id}/validation-summary` — parser warning counts and messages.
+3. Web UI: `/imports/{id}` for staff review.
+
+Loaded relations:
+
+- `dailyWorkRows.doctor`
+- `dailyWorkRows.payments`
+- `dailyWorkRows.workItems.treatment`
+- `dailyWorkRows.workItems.labJob.lab`
 
 ---
 
-## 3. Treatment Parsing
+## 3. Treatment Parsing vs Import Validation
 
-Runs automatically during import (step 11 above). Can also be triggered independently via `TreatmentParserService::parseAndPersist()`.
+Two layers — do not confuse them.
 
-### Steps
+### A. Extractor (`ExcelDailyReportParser`)
 
-1. Read `daily_work_row.treatment_text`.
-2. Load all active treatment codes from database.
-3. Sort codes longest-first (so `IMPL-ZIR` matches before `IMPL`).
-4. Apply regex patterns to detect `CODE`, `CODE x N`, `CODE N`.
-5. For each match, create `ParsedTreatmentItemDto`.
-6. If code found but quantity unclear → quantity = 1, confidence = 80, warning set.
-7. Persist as `work_items` linked to treatment_id.
+Reads Excel cells. Does **not** parse treatment codes. Output includes `treatment_text` as raw string plus payment columns and `raw_row_number`.
 
-### Example
+### B. Parser (`TreatmentParserService::parse()`)
+
+Pure function: `treatment_text` → `ParsedTreatmentItemDto[]`.
+
+- Splits on ` | ` (patient segments) and `+` (multiple procedures).
+- Longest code match first (`IMPL-ZIR` before `IMPL`).
+- Supports tooth notation (`CF 876`, `MC CR 8765|5678`).
+- Used by validation and unit tests; does not write to DB alone during import.
+
+### C. Import validation (`TreatmentImportValidationService`)
+
+Runs during import after rows are saved.
+
+| Check | Warning code |
+|---|---|
+| Unknown treatment code | `unknown_treatment_code` |
+| Missing quantity | `missing_quantity` |
+| Invalid format (e.g. `zircon 2`) | `invalid_format` |
+| Lab cost but no lab price | `lab_price_not_found` |
+
+**Persistence rule:**
 
 ```
-Input:  "ZIR 4 + POST 2"
-Output: work_items: ZIR qty 4, POST qty 2
+valid known treatment  →  work_item  (always)
+has_lab_cost = true    →  lab_job    (via LabJobCalculationService)
+has_lab_cost = false   →  no lab_job (CF, AF, RCT, RE-RCT, REPAIR, …)
+```
+
+**Example:**
+
+```
+Input:  "ZIR x 2 + CF x 3 + zircon 2"
+Output: work_items: ZIR×2, CF×3
+        warning: invalid_format on "zircon 2"
+        lab_jobs: ZIR×2 only (CF has no lab cost)
+        status: needs_review
 ```
 
 ---
 
 ## 4. Lab Job Calculation
 
-Runs automatically during import (step 12 above).
+Runs automatically during import after work items are created.
 
 ### Steps
 
@@ -156,10 +203,17 @@ Runs automatically during import (step 12 above).
 2. For each work item:
    - Skip if `treatment.has_lab_cost = false`.
    - Resolve lab via doctor's `default_lab_id`.
-   - Resolve unit price via `LabPriceResolver` (doctor-specific → default).
-   - Convert price to AED if needed.
-   - Calculate `total_cost_aed = quantity × unit_cost`.
+   - Resolve unit price via `LabPriceResolver`.
+   - `total_cost_aed = quantity × unit_cost`.
    - Create `lab_job` with status `calculated`.
+
+### Example
+
+```
+REMOV x 2  →  lab_job: 2 × 100 = 200 AED JOB
+CF x 3     →  work_item only, no lab_job
+ZIR x 4 Dr Riyad  →  lab_job: 4 × 400 = 1600 AED
+```
 
 ---
 
@@ -167,70 +221,13 @@ Runs automatically during import (step 12 above).
 
 On-demand via `GET /api/monthly-income?month=YYYY-MM`.
 
-### Steps
-
-1. Validate month format (`YYYY-MM`).
-2. For each active doctor:
-   - Sum `payments.amount_aed` where `paid_at` in month → TOTAL.
-   - Sum `lab_jobs.total_cost_aed` where `work_date` in month → LAB COST.
-   - Calculate NET TOTAL = TOTAL - LAB COST.
-   - If percentage doctor → DOCTOR INCOME = NET TOTAL × percentage.
-   - If fixed doctor → DOCTOR INCOME = SUM(fixed_fee × quantity) from work_items.
-   - CLINIC INCOME = NET TOTAL - DOCTOR INCOME.
-   - Count work_items by treatment code.
-3. Return array of `MonthlyIncomeSummaryDto`.
-
-### Sequence Diagram
-
-```mermaid
-sequenceDiagram
-    actor User
-    participant API as MonthlyIncomeController
-    participant Calc as MonthlyIncomeCalculationService
-    participant DB as Database
-
-    User->>API: GET /api/monthly-income?month=2026-01
-    API->>Calc: calculateForMonth("2026-01")
-
-    loop Each active doctor
-        Calc->>DB: SUM payments (month)
-        Calc->>DB: SUM lab_jobs (month)
-        Calc->>Calc: NET = TOTAL - LAB
-        alt percentage doctor
-            Calc->>Calc: INCOME = NET × %
-        else fixed doctor
-            Calc->>DB: work_items + doctor_fixed_fees
-            Calc->>Calc: INCOME = SUM(fee × qty)
-        end
-    end
-
-    Calc-->>API: MonthlyIncomeSummaryDto[]
-    API-->>User: JSON response
-```
+Same as before — aggregates `payments`, `lab_jobs`, and `work_items` per doctor for the calendar month.
 
 ---
 
 ## 6. Authentication
 
-### Login
-
-1. `POST /api/login` with email + password.
-2. Credentials validated via `LoginRequest`.
-3. Sanctum token created and returned.
-4. Rate limited: 10 requests per minute.
-
-### Authenticated Requests
-
-All other endpoints require header:
-
-```
-Authorization: Bearer {token}
-```
-
-### Logout
-
-1. `POST /api/logout`
-2. Current access token deleted.
+Unchanged — Sanctum bearer tokens, rate-limited login.
 
 ---
 
@@ -242,27 +239,38 @@ Authorization: Bearer {token}
 | List doctors/treatments/labs | ✓ | ✓ | ✓ |
 | Import daily report | ✓ | ✓ | ✗ |
 | View daily report | ✓ | ✓ | ✓ |
+| View validation summary | ✓ | ✓ | ✓ |
 | View monthly income | ✓ | ✓ | ✓ |
-
-Enforced by `EnsureUserHasRole` middleware (`role:admin,accountant,...`).
 
 ---
 
-## 8. V2 Manual Entry (Planned)
+## 8. Environment Variables (import / privacy)
 
-Not implemented in V1, but the schema supports it:
+| Variable | Purpose |
+|---|---|
+| `ACCOUNTING_PATIENT_REFERENCE_HMAC_KEY` | Dedicated secret for patient reference hashing (**required**, not `APP_KEY`) |
+| `ACCOUNTING_DELETE_UPLOAD_AFTER_IMPORT` | Delete Excel after successful import (default `true`) |
+| `ACCOUNTING_USD_EXCHANGE_RATE` | USD → AED (default `3.65`) |
 
-1. Create `daily_report` with `source_type = manual_entry`.
-2. Create `daily_work_rows` via web form (same fields as Excel import).
-3. Call same services: `PaymentCalculationService` → `TreatmentParserService` → `LabJobCalculationService`.
-4. No Excel parser involved.
+---
+
+## 9. V2 Manual Entry (Planned)
+
+Same pipeline after row creation: `TreatmentImportValidationService` → `LabJobCalculationService`. No Excel parser.
 
 ---
 
 ## What Changed
 
+**Updated — 2026-06-19**
+
+- Privacy-safe import: HMAC patient reference, no plain-text PII in DB or API
+- `TreatmentImportValidationService` with warnings and `needs_review` status
+- `GET /api/daily-reports/{id}/validation-summary`
+- All valid treatments → `work_items`; lab jobs only when `has_lab_cost`
+- Upload file deleted after successful import
+- Extractor vs parser vs validation documented separately
+
 **Initial documentation — 2026-06-19**
 
-Created:
-
-- `docs/WORKFLOWS.md` — import, parse, calculate, monthly report, auth workflows with Mermaid diagrams
+Created import, parse, calculate, monthly report, and auth workflows with Mermaid diagrams.

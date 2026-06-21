@@ -1,5 +1,13 @@
 <?php
 
+/**
+ * Parsed treatment lines from treatment_text (all valid codes).
+ *
+ * lab_jobs (000009) are created only when treatments.has_lab_cost = true.
+ *
+ * @see database/migrations/README.md
+ */
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;

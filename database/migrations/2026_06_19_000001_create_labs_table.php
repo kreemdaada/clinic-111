@@ -1,5 +1,7 @@
 <?php
 
+/** @see database/migrations/README.md — labs table */
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;

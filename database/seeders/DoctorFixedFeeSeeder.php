@@ -7,6 +7,11 @@ use App\Models\DoctorFixedFee;
 use App\Models\Treatment;
 use Illuminate\Database\Seeder;
 
+/**
+ * Fixed per-procedure fees for Dr Wa (IMPL, BG, SINUS).
+ *
+ * @see database/seeders/README.md
+ */
 class DoctorFixedFeeSeeder extends Seeder
 {
     public function run(): void

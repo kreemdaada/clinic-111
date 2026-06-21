@@ -6,6 +6,14 @@ use App\Models\Treatment;
 use App\Support\LabCostTreatmentCatalog;
 use Illuminate\Database\Seeder;
 
+/**
+ * Seeds treatment catalog: lab-cost codes (JOB) and clinical-only codes.
+ *
+ * Lab-cost: MC, ZIR, POST, REMOV (100 AED), IMPL, … — see LabCostTreatmentCatalog.
+ * All valid parsed codes create work_items; lab_jobs only when has_lab_cost = true.
+ *
+ * @see database/seeders/README.md
+ */
 class TreatmentSeeder extends Seeder
 {
     public function run(): void

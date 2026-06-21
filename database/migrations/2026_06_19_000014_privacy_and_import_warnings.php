@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Privacy + import validation schema.
+ *
+ * - Removes plain-text patient_name, mrn, file_number from daily_work_rows
+ * - Adds patient_reference_hash, excel_row_number
+ * - Creates daily_report_import_warnings
+ *
+ * @see database/migrations/README.md
+ */
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
