@@ -25,6 +25,7 @@ Full developer documentation is in the [`docs/`](./docs/) folder:
 | [SERVICES.md](./docs/SERVICES.md) | Service class reference |
 | [API.md](./docs/API.md) | REST API endpoints |
 | [DECISIONS.md](./docs/DECISIONS.md) | Architectural decision log |
+| [LEARNING_ROADMAP.md](./docs/LEARNING_ROADMAP.md) | **Start here** — step-by-step guide for new developers |
 | [TREATMENT_RULES.md](./docs/TREATMENT_RULES.md) | Treatment text format for Excel staff |
 
 Additional README files:

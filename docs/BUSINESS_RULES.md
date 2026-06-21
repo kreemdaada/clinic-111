@@ -275,7 +275,7 @@ Treatment counts are grouped by treatment code for the month.
 
 **Updated — 2026-06-21**
 
-- MC lab cost corrected: 405 → **105 AED**
+- MC lab cost corrected: → **105 AED**
 - Doctor renamed: Dr Riyadh → **Dr Riyad** (code: `RIYAD`)
 - Treatment names updated: RE-RCT, REMOV, ABT descriptions
 - Documented lab deduction rule for percentage doctors
