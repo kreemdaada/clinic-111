@@ -63,10 +63,10 @@ ParsedTreatmentItemDto: ZIR, quantity 4, confidence 100
 ParsedTreatmentItemDto: POST, quantity 2, confidence 100
 ```
 
-**Warnings:**
+**Warnings (import validation only):**
 
-- Unknown treatment codes are silently skipped (not in database).
-- Known code with unclear quantity → quantity = 1, confidence = 80, warning message set.
+- Unknown codes, invalid format, and missing quantity → `daily_report_import_warnings` (not silent skip).
+- `TreatmentParserService::parse()` alone does not emit DB warnings; use `TreatmentImportValidationService` during import.
 
 **Supported patterns:**
 
@@ -81,7 +81,42 @@ ParsedTreatmentItemDto: POST, quantity 2, confidence 100
 | Method | Description |
 |---|---|
 | `parse(string $text)` | Returns array of DTOs (no DB write) |
-| `parseAndPersist(DailyWorkRow $row)` | Parses and creates work_items |
+| `parseAndPersist(DailyWorkRow $row)` | Parses and creates work_items for all known codes |
+
+---
+
+### `TreatmentImportValidationService`
+
+**Path:** `app/Services/Import/TreatmentImportValidationService.php`
+
+**Purpose:** Validate `treatment_text` during import, emit warnings, persist valid work items.
+
+**Methods:**
+
+| Method | Description |
+|---|---|
+| `validateAndPersist(DailyWorkRow $row)` | Returns `TreatmentImportResultDto` (count + warnings) |
+| `collectLabPriceWarnings(DailyWorkRow $row)` | Warnings when lab-cost item has no `lab_job` |
+
+**Persistence:** All valid known treatments → `work_items`. Lab jobs created separately.
+
+---
+
+### `PatientReferenceHasher` / `ImportRowPrivacySanitizer`
+
+**Path:** `app/Support/PatientReferenceHasher.php`, `app/Support/ImportRowPrivacySanitizer.php`
+
+**Purpose:** Privacy during import — HMAC patient reference, strip PII from `raw_data_json`.
+
+**Requires:** `ACCOUNTING_PATIENT_REFERENCE_HMAC_KEY` in `.env` (dedicated secret, not `APP_KEY`).
+
+---
+
+### `DailyReportValidationSummaryService`
+
+**Path:** `app/Services/Import/DailyReportValidationSummaryService.php`
+
+**Purpose:** Build validation summary payload for `GET /api/daily-reports/{id}/validation-summary`.
 
 ---
 
@@ -194,20 +229,20 @@ import(UploadedFile $file, ?string $reportDate = null): DailyReport
 1. Store file privately
 2. Begin transaction
 3. Create daily_report
-4. Parse Excel → create daily_work_rows + payments
-5. Parse treatments → work_items
-6. Calculate lab jobs
-7. Audit log
-8. Commit
+4. Parse Excel → hash patient ref → sanitize raw JSON → create daily_work_rows + payments
+5. Validate treatments → work_items + import_warnings
+6. Calculate lab jobs (has_lab_cost only)
+7. Set status `calculated` or `needs_review`
+8. Extraction log + audit
+9. Commit; delete uploaded file (default)
 
 **Business rules:**
 
-- Approved reports for same date cannot be overwritten
-- Approved reports cannot be reprocessed
-- Failed imports roll back entire transaction
-- Doctor resolved by code or name from database (never hardcoded)
+- Approved reports for same month cannot be overwritten
+- Patient name/MRN/file never persisted or returned in API
+- Invalid treatments produce warnings, not silent drops
 
-**Dependencies:** `ExcelDailyReportParser`, `PaymentCalculationService`, `TreatmentParserService`, `LabJobCalculationService`, `AuditLogService`
+**Dependencies:** `ExcelDailyReportParser`, `PaymentCalculationService`, `TreatmentImportValidationService`, `LabJobCalculationService`, `PatientReferenceHasher`, `ImportRowPrivacySanitizer`, `ImportExtractionLogService`
 
 ---
 
@@ -215,35 +250,35 @@ import(UploadedFile $file, ?string $reportDate = null): DailyReport
 
 **Path:** `app/Services/Import/ExcelDailyReportParser.php`
 
-**Purpose:** Read Excel files and extract structured row data. Isolated for easy replacement in V2.
+**Purpose:** Read Excel files and extract structured row data. **Does not parse treatment codes** — only reads the `treatment_text` cell as a string.
 
 **Input:** File path (string)
 
-**Output:**
+**Output (in memory, before privacy sanitization):**
 
 ```php
 [
     [
-        'doctor' => 'JACK',
-        'work_date' => '2026-01-15',
-        'patient_name' => 'John Doe',
-        'treatment_text' => 'ZIR 4 + POST 2',
+        'doctor' => 'DR Jack',
+        'sheet_day' => 15,
+        'raw_row_number' => 25,
+        'patient_name' => '...',  // memory only — never persisted
+        'mrn' => '...',
+        'file_number' => '...',
+        'treatment_text' => 'ZIR x 4 + POST x 2',
         'dhs_amount' => 1000,
         'usd_amount' => 0,
         'visa_amount' => 200,
-        'raw_cells' => [...],  // full row for audit
+        'raw_cells' => [...],
     ],
-    // ...
 ]
 ```
 
 **Business rules:**
 
+- Clinic 111 layout: sheets `1`–`31`, header row 3, doctor row 2
 - Reads calculated cell values only (not formulas)
-- Sanitizes string values (strip tags, trim)
-- Detects header row by looking for DOCTOR/DR column
-- Maps common column name aliases (DHS, USD, VISA, TREATMENT, etc.)
-- Skips empty rows
+- Skips empty rows; emits diagnostic events for unresolved doctors
 
 **Dependencies:** PhpSpreadsheet
 
@@ -309,9 +344,20 @@ Readonly DTO returned by monthly income calculation. Has `toArray()` for JSON se
 
 Readonly DTO for a single parsed treatment line before persistence.
 
+### `ImportParseWarningDto` / `TreatmentImportResultDto`
+
+**Path:** `app/DTOs/ImportParseWarningDto.php`, `app/DTOs/TreatmentImportResultDto.php`
+
+Import validation warning and per-row persist result.
+
 ---
 
 ## What Changed
+
+**Updated — 2026-06-19**
+
+- Documented `TreatmentImportValidationService`, privacy helpers, validation summary
+- Updated import pipeline and work_item persistence rules
 
 **Initial documentation — 2026-06-19**
 

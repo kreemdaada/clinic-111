@@ -67,21 +67,23 @@ IMPL-ZIR x 1     ✓
 | `ZIR 2` without `x` | Quantity may be inferred incorrectly |
 | `ZIR×2` (no spaces) | Prefer `ZIR x 2` with spaces |
 
-**Rule:** For lab treatments (MC, ZIR, POST, IMPL, IMPL-CR, IMPL-ZIR, ABT) always use:
+**Rule:** For lab-cost treatments (MC, ZIR, POST, IMPL, IMPL-CR, IMPL-ZIR, ABT, **REMOV**) always use:
 
 ```
 CODE x QUANTITY
 ```
 
+Invalid lines (e.g. `zircon 2` instead of `ZIR x 2`) produce import warnings and set the report to **needs_review**.
+
 ---
 
-## Other treatments (no JOB)
+## Clinical treatments (work_item, usually no JOB)
 
-These are **not** lab treatments. They do **not** go into column G or H–P:
+These create **work items** but typically **no lab job** (column G):
 
-CF, AF, SxP, RCT, EXO, REPAIR, REMOV, …
+CF, AF, SxP, RCT, RE-RCT, REPAIR, EXO, …
 
-They can stay in free text for notes, but they must **not** replace the lab format above when JOB is needed.
+**REMOV** is different: it has lab cost (**100 AED**) and appears in Income columns H–P **and** in JOB.
 
 ---
 
@@ -97,8 +99,8 @@ They can stay in free text for notes, but they must **not** replace the lab form
 
 ## After import — verify
 
-1. Open **Extraction log** for the imported month
-2. Check rows with ⚠ **Issues**
+1. Check **`GET /api/daily-reports/{id}/validation-summary`** (or web import review) for parser warnings
+2. Open **Extraction log** for the imported month
 3. Compare **JOB** and **Income columns** with the Original Income file
 
-See also: `docs/BUSINESS_RULES.md` (accounting formulas), `docs/WORKFLOWS.md` (import steps).
+See also: `docs/BUSINESS_RULES.md`, `docs/WORKFLOWS.md` (extractor → parser → validation pipeline).

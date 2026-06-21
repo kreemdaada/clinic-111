@@ -192,11 +192,12 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | `status` | string | See status enum below |
 | `created_at`, `updated_at` | timestamps | |
 
-**Status values:** `uploaded`, `parsed`, `calculated`, `approved`, `failed`
+**Status values:** `uploaded`, `parsed`, `calculated`, `needs_review`, `approved`, `failed`
 
 **Relationships:**
 
 - `hasMany` daily_work_rows
+- `hasMany` import_warnings (`daily_report_import_warnings`)
 
 **Example data:**
 
@@ -216,9 +217,8 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | `daily_report_id` | FK → daily_reports | |
 | `doctor_id` | FK → doctors | |
 | `work_date` | date | Date work was performed |
-| `patient_name` | string nullable | Accounting traceability only |
-| `mrn` | string nullable | Medical record number |
-| `file_number` | string nullable | Clinic file number |
+| `patient_reference_hash` | string(64) nullable | HMAC-SHA256 of name\|mrn\|file — no plain-text PII |
+| `excel_row_number` | unsigned int nullable | Source Excel row for traceability |
 | `treatment_text` | text nullable | Raw text parsed into work_items |
 | `total_cost` | decimal(12,2) | Treatment value (not used for TOTAL) |
 | `discount_amount` | decimal(12,2) | |
@@ -230,7 +230,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | `balance_dhs` | decimal(12,2) | Outstanding DHS balance |
 | `balance_usd` | decimal(12,2) | Outstanding USD balance |
 | `crown_count` | integer | Crown count from Excel |
-| `raw_data_json` | json nullable | Full original row for audit |
+| `raw_data_json` | json nullable | Sanitized parsed row (PII keys redacted) |
 | `created_at`, `updated_at` | timestamps | |
 
 **Relationships:**
@@ -244,7 +244,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 
 ### `work_items`
 
-**Purpose:** Parsed treatment items extracted from `treatment_text`.
+**Purpose:** Parsed treatment items extracted from `treatment_text`. Created for **every valid known treatment code**, not only lab-cost codes.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -252,15 +252,15 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | `daily_work_row_id` | FK → daily_work_rows | |
 | `treatment_id` | FK → treatments | |
 | `quantity` | integer | Default 1 |
-| `confidence` | integer | 100 = certain; lower = uncertain parse |
-| `warning_message` | text nullable | e.g. quantity unclear |
+| `confidence` | integer | 100 = certain; lower = inferred from tooth notation |
+| `warning_message` | text nullable | Parser note (e.g. quantity inferred) |
 | `created_at`, `updated_at` | timestamps | |
 
 **Relationships:**
 
 - `belongsTo` dailyWorkRow
 - `belongsTo` treatment
-- `hasOne` labJob
+- `hasOne` labJob (only when treatment `has_lab_cost = true` and price resolved)
 
 **Example data:**
 
@@ -268,6 +268,29 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 |---|---|---|
 | ZIR | 4 | 100 |
 | POST | 2 | 100 |
+
+---
+
+### `daily_report_import_warnings`
+
+**Purpose:** Parser and lab-pricing warnings from import. Drives `needs_review` status.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | bigint PK | |
+| `daily_report_id` | FK → daily_reports | |
+| `daily_work_row_id` | FK nullable → daily_work_rows | |
+| `excel_row_number` | unsigned int nullable | Source row |
+| `doctor_code` | string nullable | Doctor display name/code for review UI |
+| `treatment_text` | text nullable | Full row treatment text |
+| `warning_code` | string | `invalid_format`, `missing_quantity`, `unknown_treatment_code`, `lab_price_not_found` |
+| `message` | text | Human-readable message |
+| `created_at`, `updated_at` | timestamps | |
+
+**Relationships:**
+
+- `belongsTo` dailyReport
+- `belongsTo` dailyWorkRow (nullable)
 
 ---
 
@@ -354,12 +377,14 @@ labs ──────────────┬──────────
   │                         │                     │
   │                         │                     │
 daily_reports ── daily_work_rows ── work_items ────┘
-                      │    │            │
-                      │    │            └── lab_jobs ── labs
-                      │    │
-                      │    └── payments
-                      │
-                      └── doctors
+      │                │    │            │
+      │                │    │            └── lab_jobs ── labs
+      │                │    │
+      │                │    └── payments
+      │                │
+      │                └── doctors
+      │
+      └── daily_report_import_warnings
 
 doctor_fixed_fees ── doctors + treatments
 ```
@@ -367,6 +392,13 @@ doctor_fixed_fees ── doctors + treatments
 ---
 
 ## What Changed
+
+**Updated — 2026-06-21 (privacy + validation)**
+
+- `daily_work_rows`: `patient_reference_hash`, `excel_row_number`; PII columns removed
+- `daily_report_import_warnings` table
+- `needs_review` report status
+- `work_items` documented for all valid treatments
 
 **Updated — 2026-06-19**
 
@@ -382,4 +414,4 @@ Created:
 
 Migrations:
 
-- `2026_06_19_000001` through `2026_06_19_000012`
+- `2026_06_21_000001` through `2026_06_21_000014`

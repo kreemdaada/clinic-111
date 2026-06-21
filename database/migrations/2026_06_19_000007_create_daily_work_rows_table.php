@@ -1,5 +1,13 @@
 <?php
 
+/**
+ * Daily work rows — one Excel patient/payment line per report.
+ *
+ * After 000014: patient_reference_hash replaces plain-text PII fields.
+ *
+ * @see database/migrations/README.md
+ */
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;

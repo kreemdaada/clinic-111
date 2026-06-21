@@ -7,6 +7,11 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
+/**
+ * Default API users: admin, accountant, viewer (password: `password`).
+ *
+ * @see database/seeders/README.md
+ */
 class UserSeeder extends Seeder
 {
     public function run(): void

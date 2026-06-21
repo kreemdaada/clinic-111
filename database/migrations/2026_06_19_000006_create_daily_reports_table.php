@@ -1,5 +1,13 @@
 <?php
 
+/**
+ * Imported daily/monthly accounting reports and pipeline status.
+ *
+ * Status: uploaded → parsed → calculated | needs_review → approved | failed
+ *
+ * @see database/migrations/README.md
+ */
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;

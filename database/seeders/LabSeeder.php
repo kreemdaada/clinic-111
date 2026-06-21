@@ -5,6 +5,11 @@ namespace Database\Seeders;
 use App\Models\Lab;
 use Illuminate\Database\Seeder;
 
+/**
+ * MAIN_LAB and RIYADH_LAB reference labs.
+ *
+ * @see database/seeders/README.md
+ */
 class LabSeeder extends Seeder
 {
     public function run(): void

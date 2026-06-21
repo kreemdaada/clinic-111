@@ -6,6 +6,14 @@ use App\Models\Doctor;
 use App\Models\DoctorIncomeExportProfile;
 use Illuminate\Database\Seeder;
 
+/**
+ * Original Income Excel sheet names and treatment column letters per doctor.
+ *
+ * Treatment counts include codes in profile (e.g. REMOV) regardless of lab-cost flag.
+ * JOB column sums lab_jobs only.
+ *
+ * @see database/seeders/README.md
+ */
 class DoctorIncomeExportProfileSeeder extends Seeder
 {
     public function run(): void

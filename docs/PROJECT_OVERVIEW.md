@@ -27,8 +27,8 @@ All business rules (doctors, treatments, lab prices, commission rules) are store
 
 ## Main Workflows
 
-1. **Daily Excel Import** — Upload Excel → parse rows → create payments → parse treatments → calculate lab jobs.
-2. **Daily Report Review** — View a calculated daily report with rows, payments, work items, and lab jobs.
+1. **Daily Excel Import** — Upload Excel → extract rows → privacy hash → validate treatments → work items → lab jobs → review warnings if needed.
+2. **Daily Report Review** — View calculated report, validation summary, extraction logs (no patient names in API).
 3. **Monthly Income Report** — Aggregate payments and lab costs per doctor for a calendar month.
 
 See [WORKFLOWS.md](./WORKFLOWS.md) for step-by-step details.
@@ -46,18 +46,20 @@ See [WORKFLOWS.md](./WORKFLOWS.md) for step-by-step details.
                            │
 ┌──────────────────────────▼──────────────────────────────────┐
 │                     Service Layer                           │
-│  Import: DailyReportImportService, ExcelDailyReportParser   │
+│  Import: DailyReportImportService, ExcelDailyReportParser,   │
+│          TreatmentImportValidationService, ImportExtractionLog│
 │  Accounting: PaymentCalculation, TreatmentParser,           │
 │              LabJobCalculation, MonthlyIncomeCalculation    │
-│  Support: LabPriceResolver, MoneyCalculator                 │
-│  Audit: AuditLogService                                     │
+│  Export: DoctorsIncomeExcelExportService, ExportProfiles    │
+│  Support: LabPriceResolver, MoneyCalculator, PatientHash    │
+│  Audit: AuditLogService, ImportActivityLogger               │
 └──────────────────────────┬──────────────────────────────────┘
                            │
 ┌──────────────────────────▼──────────────────────────────────┐
 │                   Eloquent Models / DB                      │
 │  doctors | labs | treatments | lab_prices | doctor_fixed_fees│
 │  daily_reports | daily_work_rows | work_items | lab_jobs    │
-│  payments | audit_logs | users                              │
+│  payments | daily_report_import_warnings | audit_logs      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -84,7 +86,7 @@ See [WORKFLOWS.md](./WORKFLOWS.md) for step-by-step details.
 | **USD** | Cash payment in US dollars | Converted to AED using exchange rate |
 | **VISA** | Card payment (stored in AED) | — |
 | **treatment_text** | Raw free-text field from Excel describing procedures | Structured treatment codes |
-| **work_item** | Parsed treatment line (code + quantity) | Excel row |
+| **work_item** | Parsed treatment line (code + quantity) — all valid codes | Only lab-cost codes |
 | **lab_job** | Calculated lab cost for one work item | External lab work order |
 | **daily_work_row** | One accounting row from the daily report | A patient medical record |
 | **commission_type** | `percentage` or `fixed` — how doctor income is calculated | Lab commission |
@@ -110,14 +112,17 @@ After `php artisan migrate --seed`, the system includes:
 
 - **Labs:** `MAIN_LAB`, `RIYADH_LAB`
 - **Doctors:** `JACK` (35%), `RIYAD` (35%, Riyad lab), `PURIYA` (25%), `WA` (fixed fees)
-- **Treatments:** MC (105 AED), ZIR, IMPL-CR, IMPL-ZIR, POST, ABT, IMPL (with lab cost); CF, AF, RCT, RE-RCT, REPAIR, REMOV, BG, SINUS (without lab cost)
+- **Treatments with lab cost (JOB):** MC (105 AED), ZIR, IMPL-CR, IMPL-ZIR, POST, ABT, IMPL, REMOV (100 AED)
+- **Treatments without lab cost (work_item only):** CF, AF, RCT, RE-RCT, REPAIR, BG, SINUS, …
 - **Users:** admin, accountant, viewer (see README)
+
+See also: `database/seeders/README.md`
 
 ---
 
 ## Privacy Note
 
-The system stores accounting-related patient references (`patient_name`, `mrn`, `file_number`) for traceability only. It does **not** store medical records.
+Patient name, MRN, and file number are **never stored or exposed** in API responses. During import they are read in memory only and replaced with `patient_reference_hash` (HMAC-SHA256 using `ACCOUNTING_PATIENT_REFERENCE_HMAC_KEY`). Uploaded Excel files are deleted after successful import by default.
 
 ---
 
@@ -127,14 +132,23 @@ The system stores accounting-related patient references (`patient_name`, `mrn`, 
 |---|---|
 | [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) | All tables, fields, relationships |
 | [BUSINESS_RULES.md](./BUSINESS_RULES.md) | All accounting formulas |
-| [WORKFLOWS.md](./WORKFLOWS.md) | Step-by-step process flows |
+| [WORKFLOWS.md](./WORKFLOWS.md) | Import pipeline: extractor → parser → validation |
+| [TREATMENT_RULES.md](./TREATMENT_RULES.md) | Excel treatment text format for staff |
 | [SERVICES.md](./SERVICES.md) | Service class reference |
 | [API.md](./API.md) | REST API endpoints |
 | [DECISIONS.md](./DECISIONS.md) | Architectural decision log |
+| [../tests/Unit/README.md](../tests/Unit/README.md) | Unit test map |
+| [../database/migrations/README.md](../database/migrations/README.md) | Migrations |
+| [../database/seeders/README.md](../database/seeders/README.md) | Seeders |
 
 ---
 
 ## What Changed
+
+**Updated — 2026-06-19**
+
+- Privacy-safe import, validation warnings, work_items for all valid treatments
+- Architecture diagram updated with validation + export services
 
 **Initial documentation — 2026-06-19**
 

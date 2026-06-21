@@ -7,6 +7,11 @@ use App\Models\Doctor;
 use App\Models\Lab;
 use Illuminate\Database\Seeder;
 
+/**
+ * Active doctors with commission type, percentage, and default lab.
+ *
+ * @see database/seeders/README.md
+ */
 class DoctorSeeder extends Seeder
 {
     public function run(): void

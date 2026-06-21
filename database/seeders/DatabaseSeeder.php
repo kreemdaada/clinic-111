@@ -5,6 +5,11 @@ namespace Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
+/**
+ * Root seeder — runs all reference data in dependency order.
+ *
+ * @see database/seeders/README.md
+ */
 class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;

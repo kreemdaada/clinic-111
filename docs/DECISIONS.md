@@ -134,9 +134,9 @@ Date: YYYY-MM-DD
 
 ## ADR-013: Store Raw Excel Data for Audit
 
-**Decision:** Every imported row stores the full parsed row in `daily_work_rows.raw_data_json`.
+**Decision:** Every imported row stores a **sanitized** parsed row in `daily_work_rows.raw_data_json` (patient identifier keys removed, PII cells redacted).
 
-**Reason:** Enables debugging import issues, supports audit requirements, and allows re-parsing if the parser improves.
+**Reason:** Enables debugging import issues and supports audit requirements without retaining plain-text patient names.
 
 **Date:** 2026-06-19
 
@@ -172,7 +172,52 @@ Date: YYYY-MM-DD
 
 ---
 
+## ADR-017: Patient Privacy — HMAC Reference, No Plain-Text PII
+
+**Decision:** Do not persist `patient_name`, `mrn`, or `file_number`. During import, read them in memory only, store `patient_reference_hash` (HMAC-SHA256), sanitize `raw_data_json`, and never return patient identifiers in API responses. Use dedicated `ACCOUNTING_PATIENT_REFERENCE_HMAC_KEY`, not `APP_KEY`.
+
+**Reason:** Accounting traceability without storing reversible patient identifiers. GDPR-aligned minimization for a non-clinical system.
+
+**Date:** 2026-06-19
+
+---
+
+## ADR-018: Work Items for All Valid Treatments
+
+**Decision:** Every valid parsed treatment code creates a `work_item`. `lab_jobs` are created only when `treatments.has_lab_cost = true`.
+
+**Reason:** CF, RCT, REPAIR, and REMOV (among others) affect treatment counts and doctor income context even when they do not all follow the same JOB rules. REMOV has lab cost (100 AED) and creates both work_item and lab_job.
+
+**Date:** 2026-06-19
+
+---
+
+## ADR-019: Import Validation Warnings and needs_review Status
+
+**Decision:** `TreatmentImportValidationService` emits explicit warnings (`invalid_format`, `missing_quantity`, `unknown_treatment_code`, `lab_price_not_found`). Reports with warnings get status `needs_review` instead of `calculated`. Expose summary via `GET /api/daily-reports/{id}/validation-summary`.
+
+**Reason:** Invalid treatments must not be silently ignored. Staff need a review queue before approving a month.
+
+**Date:** 2026-06-19
+
+---
+
+## ADR-020: Delete Uploaded Excel After Successful Import
+
+**Decision:** Remove uploaded Excel from private storage after successful import unless `ACCOUNTING_DELETE_UPLOAD_AFTER_IMPORT=false`.
+
+**Reason:** Uploaded files contain patient names; minimize retention once data is extracted and sanitized in the database.
+
+**Date:** 2026-06-19
+
+---
+
 ## What Changed
+
+**Updated — 2026-06-19**
+
+- ADR-017 through ADR-020 — privacy, work items, validation, file retention
+- ADR-013 note: `raw_data_json` is sanitized (PII redacted), not a full copy of patient fields
 
 **Updated — 2026-06-19**
 

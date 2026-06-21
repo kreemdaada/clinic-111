@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * Per-doctor Original Income Excel layout (sheet name, column letters).
+ *
+ * @see database/migrations/README.md
+ */
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
