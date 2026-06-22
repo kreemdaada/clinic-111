@@ -20,8 +20,8 @@ class DoctorFixedFeeSeeder extends Seeder
 
         $fixedFees = [
             'IMPL' => ['fee_amount' => 500, 'currency' => 'AED'],
-            'BG' => ['fee_amount' => 300, 'currency' => 'USD'],
-            'SINUS' => ['fee_amount' => 200, 'currency' => 'USD'],
+            'BG' => ['fee_amount' => 200, 'currency' => 'USD'],
+            'SINUS' => ['fee_amount' => 300, 'currency' => 'USD'],
         ];
 
         foreach ($fixedFees as $treatmentCode => $feeData) {

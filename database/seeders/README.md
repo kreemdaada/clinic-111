@@ -16,7 +16,8 @@ Order is defined in `DatabaseSeeder` — labs and doctors must exist before pric
 | `DoctorSeeder` | JACK, RIYAD, PURIYA, WA with commission settings |
 | `TreatmentSeeder` | Treatment catalog; `has_lab_cost` flag drives lab_jobs |
 | `LabPriceSeeder` | Default lab unit costs + Dr Riyad overrides |
-| `DoctorFixedFeeSeeder` | Dr Wa fixed fees (IMPL, BG, SINUS) |
+| `DoctorLabBillingSeeder` | Per-doctor JOB rules (Puriya: MC/ZIR/POST/REMOV; Wa: none) |
+| `DoctorFixedFeeSeeder` | Dr Wa: IMPL 500 AED, BG 200 USD, SINUS 300 USD |
 | `DoctorIncomeExportProfileSeeder` | Original Income Excel sheet/column layout per doctor |
 | `UserSeeder` | admin, accountant, viewer test users |
 
@@ -26,7 +27,7 @@ Order is defined in `DatabaseSeeder` — labs and doctors must exist before pric
 
 **Without lab cost (work_item only):** CF, RCF, SXP, AF, RCT, RE-RCT, REPAIR, EXO, APICO, BG, SINUS, …
 
-All valid parsed treatments create `work_items`. Only `has_lab_cost = true` creates `lab_jobs`.
+All valid parsed treatments create `work_items`. `lab_jobs` require `has_lab_cost` **and** a `doctor_lab_billings` row with `bill_lab_job = true`.
 
 ## Lab price highlights
 

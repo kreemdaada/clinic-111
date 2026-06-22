@@ -14,12 +14,13 @@ use Illuminate\Support\Collection;
 /**
  * Calculates JOB (lab cost) as SUM(quantity × unit_cost) per work item.
  *
- * Only runs for treatments with `has_lab_cost = true`. Creates `lab_jobs` rows.
+ * Only runs when {@see LabBillingResolver} allows billing for doctor + treatment.
  */
 class LabJobCalculationService
 {
     public function __construct(
         private readonly LabPriceResolver $labPriceResolver,
+        private readonly LabBillingResolver $labBillingResolver,
     ) {}
 
     /**
@@ -78,12 +79,12 @@ class LabJobCalculationService
         }
 
         $treatment = $workItem->treatment;
+        $doctor = $dailyWorkRow->doctor;
 
-        if (! $treatment->has_lab_cost) {
+        if (! $this->labBillingResolver->shouldBillLabJob($doctor, $treatment)) {
             return;
         }
 
-        $doctor = $dailyWorkRow->doctor;
         $lab = $this->labPriceResolver->resolveLabForDoctor($doctor, $activeLabs);
         $labPrice = $this->labPriceResolver->resolve(
             $doctor,

@@ -172,8 +172,32 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | treatment | fee_amount | currency |
 |---|---|---|
 | IMPL | 500.00 | AED |
-| BG | 300.00 | USD |
-| SINUS | 200.00 | USD |
+| BG | 200.00 | USD |
+| SINUS | 300.00 | USD |
+
+---
+
+### `doctor_lab_billings`
+
+**Purpose:** Per-doctor rule whether a lab-cost treatment generates JOB (lab deduction).
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | bigint PK | |
+| `doctor_id` | FK → doctors | |
+| `treatment_id` | FK → treatments | |
+| `bill_lab_job` | boolean | `true` = create `lab_job` and deduct from NET |
+| `created_at`, `updated_at` | timestamps | |
+
+**Unique constraint:** `(doctor_id, treatment_id)`
+
+**Seeded rules:**
+
+| doctor | bill_lab_job |
+|---|---|
+| JACK, RIYAD | All `has_lab_cost` treatments |
+| PURIYA | MC, ZIR, POST, REMOV only |
+| WA | No rows — no lab jobs |
 
 ---
 

@@ -191,15 +191,7 @@ class ImportRowDiagnosticsBuilder
                 $issues[] = [
                     'severity' => 'warning',
                     'code' => 'low_confidence',
-                    'message' => "{$treatment['code']}×{$treatment['quantity']}: ".($treatment['warning_message'] ?? 'low confidence'),
-                ];
-            }
-
-            if ($treatment['counts_for_job'] && ! ($treatment['persisted'] ?? false)) {
-                $issues[] = [
-                    'severity' => 'error',
-                    'code' => 'lab_not_persisted',
-                    'message' => "{$treatment['code']}×{$treatment['quantity']} parsed as JOB but not saved to database.",
+                    'message' => "{$treatment['code']}×{$treatment['quantity']}: " . ($treatment['warning_message'] ?? 'low confidence'),
                 ];
             }
 
@@ -226,18 +218,6 @@ class ImportRowDiagnosticsBuilder
                 'code' => 'job_without_payment',
                 'message' => "JOB {$labTotal} AED but TOTAL payment is 0.",
             ];
-        }
-
-        if ($ignoredTreatments !== [] && bccomp($labTotal, '0', 2) === 0) {
-            foreach ($ignoredTreatments as $ignored) {
-                if (($ignored['confidence'] ?? 100) < 80) {
-                    $issues[] = [
-                        'severity' => 'info',
-                        'code' => 'ignored_treatment_noted',
-                        'message' => "{$ignored['code']}×{$ignored['quantity']} (no JOB) — ".($ignored['warning_message'] ?? 'parsed from text'),
-                    ];
-                }
-            }
         }
 
         return $issues;

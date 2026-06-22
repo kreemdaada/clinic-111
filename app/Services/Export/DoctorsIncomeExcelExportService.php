@@ -7,6 +7,7 @@ use App\Models\DailyReport;
 use App\Models\DailyWorkRow;
 use App\Models\Doctor;
 use App\Services\Accounting\IncomeReconciliationService;
+use App\Services\Accounting\WaelFixedFeeCalculator;
 use App\Support\MoneyCalculator;
 use App\Support\ReportMonthResolver;
 use Carbon\Carbon;
@@ -37,6 +38,7 @@ class DoctorsIncomeExcelExportService
     public function __construct(
         private readonly IncomeReconciliationService $incomeReconciliationService,
         private readonly DoctorIncomeExportProfileService $exportProfileService,
+        private readonly WaelFixedFeeCalculator $waelFixedFeeCalculator,
         private readonly string $defaultUsdExchangeRate = '3.65',
     ) {}
 
@@ -85,7 +87,7 @@ class DoctorsIncomeExcelExportService
         $templatePath = resource_path(self::TEMPLATE_PATH);
 
         if (! is_file($templatePath)) {
-            throw new RuntimeException('Income Excel template not found at '.self::TEMPLATE_PATH);
+            throw new RuntimeException('Income Excel template not found at ' . self::TEMPLATE_PATH);
         }
 
         $spreadsheet = IOFactory::load($templatePath);
@@ -127,7 +129,7 @@ class DoctorsIncomeExcelExportService
         }
 
         $fileName = $this->buildFileName($monthStart);
-        $relativePath = 'exports/'.$fileName;
+        $relativePath = 'exports/' . $fileName;
         $absolutePath = Storage::path($relativePath);
 
         if (! is_dir(dirname($absolutePath))) {
@@ -150,11 +152,21 @@ class DoctorsIncomeExcelExportService
     public function downloadResponse(DailyReport $dailyReport): BinaryFileResponse
     {
         $absolutePath = $this->exportForReport($dailyReport);
-        $downloadName = basename($absolutePath);
+        $downloadName = $this->downloadFileName($dailyReport);
 
         return response()->download($absolutePath, $downloadName, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ])->deleteFileAfterSend(false);
+    }
+
+    /**
+     * Human-readable filename for the Server Income Excel download.
+     */
+    public function downloadFileName(DailyReport $dailyReport): string
+    {
+        $monthStart = ReportMonthResolver::requireFromFilename($dailyReport->source_file_name);
+
+        return $this->buildFileName($monthStart);
     }
 
     /**
@@ -213,25 +225,25 @@ class DoctorsIncomeExcelExportService
             $date = $monthStart->copy()->day($day);
             $dateKey = $date->toDateString();
 
-            $sheet->setCellValue('A'.$row, Date::PHPToExcel($date));
+            $sheet->setCellValue('A' . $row, Date::PHPToExcel($date));
 
             if (! array_key_exists($dateKey, $dailyData)) {
-                $sheet->setCellValue($paymentColumns['usd_to_aed'].$row, 0);
-                $sheet->setCellValue($paymentColumns['total'].$row, 0);
+                $sheet->setCellValue($paymentColumns['usd_to_aed'] . $row, 0);
+                $sheet->setCellValue($paymentColumns['total'] . $row, 0);
 
                 continue;
             }
 
             $dayData = $dailyData[$dateKey];
 
-            $this->setNumericCell($sheet, $paymentColumns['dhs'].$row, $dayData['dhs']);
-            $this->setNumericCell($sheet, $paymentColumns['usd'].$row, $dayData['usd']);
-            $this->setNumericCell($sheet, $paymentColumns['usd_to_aed'].$row, $dayData['usd_to_aed']);
-            $this->setNumericCell($sheet, $paymentColumns['visa'].$row, $dayData['visa']);
-            $this->setNumericCell($sheet, $paymentColumns['total'].$row, $dayData['total']);
+            $this->setNumericCell($sheet, $paymentColumns['dhs'] . $row, $dayData['dhs']);
+            $this->setNumericCell($sheet, $paymentColumns['usd'] . $row, $dayData['usd']);
+            $this->setNumericCell($sheet, $paymentColumns['usd_to_aed'] . $row, $dayData['usd_to_aed']);
+            $this->setNumericCell($sheet, $paymentColumns['visa'] . $row, $dayData['visa']);
+            $this->setNumericCell($sheet, $paymentColumns['total'] . $row, $dayData['total']);
 
             if (! $paymentsOnly) {
-                $this->setNumericCell($sheet, $paymentColumns['job'].$row, $dayData['job']);
+                $this->setNumericCell($sheet, $paymentColumns['job'] . $row, $dayData['job']);
                 $labCostTotal = MoneyCalculator::add($labCostTotal, $dayData['job']);
 
                 foreach ($dayData['treatments'] as $code => $quantity) {
@@ -240,7 +252,7 @@ class DoctorsIncomeExcelExportService
                     }
 
                     $column = $treatmentColumns[$code];
-                    $sheet->setCellValue($column.$row, $quantity);
+                    $sheet->setCellValue($column . $row, $quantity);
 
                     if (! array_key_exists($code, $treatmentTotals)) {
                         $treatmentTotals[$code] = 0;
@@ -255,22 +267,22 @@ class DoctorsIncomeExcelExportService
             }
         }
 
-        $sheet->setCellValue('A'.$totalRow, 'TOTAL');
-        $this->setNumericCell($sheet, $paymentColumns['dhs'].$totalRow, $columnTotals['dhs']);
-        $this->setNumericCell($sheet, $paymentColumns['usd'].$totalRow, $columnTotals['usd']);
-        $this->setNumericCell($sheet, $paymentColumns['usd_to_aed'].$totalRow, $columnTotals['usd_to_aed']);
-        $this->setNumericCell($sheet, $paymentColumns['visa'].$totalRow, $columnTotals['visa']);
-        $this->setNumericCell($sheet, $paymentColumns['total'].$totalRow, $columnTotals['total']);
+        $sheet->setCellValue('A' . $totalRow, 'TOTAL');
+        $this->setNumericCell($sheet, $paymentColumns['dhs'] . $totalRow, $columnTotals['dhs']);
+        $this->setNumericCell($sheet, $paymentColumns['usd'] . $totalRow, $columnTotals['usd']);
+        $this->setNumericCell($sheet, $paymentColumns['usd_to_aed'] . $totalRow, $columnTotals['usd_to_aed']);
+        $this->setNumericCell($sheet, $paymentColumns['visa'] . $totalRow, $columnTotals['visa']);
+        $this->setNumericCell($sheet, $paymentColumns['total'] . $totalRow, $columnTotals['total']);
 
         if (! $paymentsOnly) {
-            $this->setNumericCell($sheet, $paymentColumns['job'].$totalRow, $labCostTotal);
+            $this->setNumericCell($sheet, $paymentColumns['job'] . $totalRow, $labCostTotal);
 
             foreach ($treatmentTotals as $code => $quantity) {
                 if (! array_key_exists($code, $treatmentColumns)) {
                     continue;
                 }
 
-                $sheet->setCellValue($treatmentColumns[$code].$totalRow, $quantity);
+                $sheet->setCellValue($treatmentColumns[$code] . $totalRow, $quantity);
             }
         }
 
@@ -310,15 +322,15 @@ class DoctorsIncomeExcelExportService
 
         foreach ($summaryRows as $index => $summaryRow) {
             $rowNumber = $summaryStart + $index;
-            $sheet->setCellValue('A'.$rowNumber, $summaryRow['label']);
+            $sheet->setCellValue('A' . $rowNumber, $summaryRow['label']);
 
             if ($summaryRow['value'] === null) {
-                $sheet->setCellValue('B'.$rowNumber, null);
+                $sheet->setCellValue('B' . $rowNumber, null);
 
                 continue;
             }
 
-            $this->setNumericCell($sheet, 'B'.$rowNumber, $summaryRow['value']);
+            $this->setNumericCell($sheet, 'B' . $rowNumber, $summaryRow['value']);
         }
 
         if ($doctor->commission_type !== CommissionType::Percentage) {
@@ -335,15 +347,15 @@ class DoctorsIncomeExcelExportService
         $commissionLabel = bcdiv($commissionPercentage, '100', 2);
 
         if ($profile['summary_shows_net_total']) {
-            $sheet->setCellValue('A'.($summaryStart + 6), 'NET TOTAL');
-            $this->setNumericCell($sheet, 'B'.($summaryStart + 6), $netTotal);
-            $sheet->setCellValue('A'.($summaryStart + 7), $commissionLabel);
-            $this->setNumericCell($sheet, 'B'.($summaryStart + 7), $doctorIncome);
+            $sheet->setCellValue('A' . ($summaryStart + 6), 'NET TOTAL');
+            $this->setNumericCell($sheet, 'B' . ($summaryStart + 6), $netTotal);
+            $sheet->setCellValue('A' . ($summaryStart + 7), $commissionLabel);
+            $this->setNumericCell($sheet, 'B' . ($summaryStart + 7), $doctorIncome);
 
             return;
         }
 
-        $this->setNumericCell($sheet, 'B'.($summaryStart + 7), $doctorIncome);
+        $this->setNumericCell($sheet, 'B' . ($summaryStart + 7), $doctorIncome);
     }
 
     /**
@@ -395,53 +407,53 @@ class DoctorsIncomeExcelExportService
             $date = $monthStart->copy()->day($day);
             $dateKey = $date->toDateString();
 
-            $sheet->setCellValue('M'.$row, Date::PHPToExcel($date));
+            $sheet->setCellValue('M' . $row, Date::PHPToExcel($date));
 
             if (! array_key_exists($dateKey, $dailyData)) {
-                $sheet->setCellValue('D'.$row, 0);
-                $sheet->setCellValue('G'.$row, 0);
+                $sheet->setCellValue('D' . $row, 0);
+                $sheet->setCellValue('G' . $row, 0);
 
                 continue;
             }
 
             $dayData = $dailyData[$dateKey];
 
-            $this->setNumericCell($sheet, 'B'.$row, $dayData['aed']);
-            $this->setNumericCell($sheet, 'C'.$row, $dayData['usd']);
-            $this->setNumericCell($sheet, 'D'.$row, $dayData['usd_to_aed']);
-            $this->setNumericCell($sheet, 'F'.$row, $dayData['visa']);
-            $this->setNumericCell($sheet, 'G'.$row, $dayData['daily_total']);
-            $this->setNumericCell($sheet, 'N'.$row, $dayData['surg_cash']);
-            $this->setNumericCell($sheet, 'P'.$row, $dayData['impl']);
-            $this->setNumericCell($sheet, 'Q'.$row, $dayData['bg']);
-            $this->setNumericCell($sheet, 'R'.$row, $dayData['sinus']);
+            $this->setNumericCell($sheet, 'B' . $row, $dayData['aed']);
+            $this->setNumericCell($sheet, 'C' . $row, $dayData['usd']);
+            $this->setNumericCell($sheet, 'D' . $row, $dayData['usd_to_aed']);
+            $this->setNumericCell($sheet, 'F' . $row, $dayData['visa']);
+            $this->setNumericCell($sheet, 'G' . $row, $dayData['daily_total']);
+            $this->setNumericCell($sheet, 'N' . $row, $dayData['surg_cash']);
+            $this->setNumericCell($sheet, 'P' . $row, $dayData['impl']);
+            $this->setNumericCell($sheet, 'Q' . $row, $dayData['bg']);
+            $this->setNumericCell($sheet, 'R' . $row, $dayData['sinus']);
 
             foreach ($totals as $key => $value) {
                 $totals[$key] = MoneyCalculator::add($value, $dayData[$key]);
             }
         }
 
-        $sheet->setCellValue('A'.$totalRow, 'TOTAL');
-        $this->setNumericCell($sheet, 'B'.$totalRow, $totals['aed']);
-        $this->setNumericCell($sheet, 'C'.$totalRow, $totals['usd']);
-        $this->setNumericCell($sheet, 'D'.$totalRow, $totals['usd_to_aed']);
-        $this->setNumericCell($sheet, 'F'.$totalRow, $totals['visa']);
-        $this->setNumericCell($sheet, 'G'.$totalRow, $totals['daily_total']);
-        $this->setNumericCell($sheet, 'H'.$totalRow, 0);
-        $this->setNumericCell($sheet, 'N'.$totalRow, $totals['surg_cash']);
-        $this->setNumericCell($sheet, 'P'.$totalRow, $totals['impl']);
-        $this->setNumericCell($sheet, 'Q'.$totalRow, $totals['bg']);
-        $this->setNumericCell($sheet, 'R'.$totalRow, $totals['sinus']);
+        $sheet->setCellValue('A' . $totalRow, 'TOTAL');
+        $this->setNumericCell($sheet, 'B' . $totalRow, $totals['aed']);
+        $this->setNumericCell($sheet, 'C' . $totalRow, $totals['usd']);
+        $this->setNumericCell($sheet, 'D' . $totalRow, $totals['usd_to_aed']);
+        $this->setNumericCell($sheet, 'F' . $totalRow, $totals['visa']);
+        $this->setNumericCell($sheet, 'G' . $totalRow, $totals['daily_total']);
+        $this->setNumericCell($sheet, 'H' . $totalRow, 0);
+        $this->setNumericCell($sheet, 'N' . $totalRow, $totals['surg_cash']);
+        $this->setNumericCell($sheet, 'P' . $totalRow, $totals['impl']);
+        $this->setNumericCell($sheet, 'Q' . $totalRow, $totals['bg']);
+        $this->setNumericCell($sheet, 'R' . $totalRow, $totals['sinus']);
 
         $summaryBase = $totalRow + 2;
-        $this->setNumericCell($sheet, 'B'.$summaryBase, $totals['aed']);
-        $this->setNumericCell($sheet, 'B'.($summaryBase + 1), $totals['usd_to_aed']);
-        $this->setNumericCell($sheet, 'B'.($summaryBase + 2), $totals['visa']);
-        $this->setNumericCell($sheet, 'B'.($summaryBase + 3), $totals['daily_total']);
-        $this->setNumericCell($sheet, 'B'.($summaryBase + 4), 0);
-        $this->setNumericCell($sheet, 'B'.($summaryBase + 5), $totals['daily_total']);
-        $this->setNumericCell($sheet, 'B'.($summaryBase + 8), $totals['surg_cash']);
-        $this->setNumericCell($sheet, 'B'.($summaryBase + 10), $totals['surg_cash']);
+        $this->setNumericCell($sheet, 'B' . $summaryBase, $totals['aed']);
+        $this->setNumericCell($sheet, 'B' . ($summaryBase + 1), $totals['usd_to_aed']);
+        $this->setNumericCell($sheet, 'B' . ($summaryBase + 2), $totals['visa']);
+        $this->setNumericCell($sheet, 'B' . ($summaryBase + 3), $totals['daily_total']);
+        $this->setNumericCell($sheet, 'B' . ($summaryBase + 4), 0);
+        $this->setNumericCell($sheet, 'B' . ($summaryBase + 5), $totals['daily_total']);
+        $this->setNumericCell($sheet, 'B' . ($summaryBase + 8), $totals['surg_cash']);
+        $this->setNumericCell($sheet, 'B' . ($summaryBase + 10), $totals['surg_cash']);
     }
 
     /**
@@ -566,40 +578,46 @@ class DoctorsIncomeExcelExportService
 
             foreach ($workRow->workItems as $workItem) {
                 $code = $workItem->treatment->code;
-                $fixedFee = null;
-
-                if (array_key_exists($code, $fixedFeesByCode)) {
-                    $fixedFee = $fixedFeesByCode[$code];
-                }
+                $fixedFee = $fixedFeesByCode[$code] ?? null;
 
                 if ($fixedFee === null) {
                     continue;
                 }
 
-                $feeAed = MoneyCalculator::convertToAed(
-                    (string) $fixedFee->fee_amount,
-                    $fixedFee->currency,
+                $line = $this->waelFixedFeeCalculator->calculateLine(
+                    $workRow,
+                    $workItem,
+                    $fixedFee,
                     $this->defaultUsdExchangeRate,
                 );
 
-                $lineTotal = MoneyCalculator::multiply($feeAed, $workItem->quantity);
-                $daily[$dateKey]['surg_cash'] = MoneyCalculator::add($daily[$dateKey]['surg_cash'], $lineTotal);
-
-                if ($code === 'IMPL') {
-                    $daily[$dateKey]['impl'] = MoneyCalculator::add($daily[$dateKey]['impl'], $lineTotal);
+                if ($line === null) {
+                    continue;
                 }
 
-                if ($code === 'BG') {
-                    $daily[$dateKey]['bg'] = MoneyCalculator::add(
-                        $daily[$dateKey]['bg'],
-                        MoneyCalculator::multiply((string) $fixedFee->fee_amount, $workItem->quantity),
+                $daily[$dateKey]['surg_cash'] = MoneyCalculator::add(
+                    $daily[$dateKey]['surg_cash'],
+                    $line['amount_aed'],
+                );
+
+                if ($line['export_bucket'] === 'impl') {
+                    $daily[$dateKey]['impl'] = MoneyCalculator::add(
+                        $daily[$dateKey]['impl'],
+                        $line['payout_amount'],
                     );
                 }
 
-                if ($code === 'SINUS') {
+                if ($line['export_bucket'] === 'bg') {
+                    $daily[$dateKey]['bg'] = MoneyCalculator::add(
+                        $daily[$dateKey]['bg'],
+                        $line['payout_amount'],
+                    );
+                }
+
+                if ($line['export_bucket'] === 'sinus') {
                     $daily[$dateKey]['sinus'] = MoneyCalculator::add(
                         $daily[$dateKey]['sinus'],
-                        MoneyCalculator::multiply((string) $fixedFee->fee_amount, $workItem->quantity),
+                        $line['payout_amount'],
                     );
                 }
             }
@@ -654,7 +672,7 @@ class DoctorsIncomeExcelExportService
     {
         foreach (['Q', 'R', 'S', 'T'] as $column) {
             for ($row = $startRow; $row <= $endRow; $row++) {
-                $sheet->setCellValue($column.$row, null);
+                $sheet->setCellValue($column . $row, null);
             }
         }
     }
@@ -672,7 +690,7 @@ class DoctorsIncomeExcelExportService
         for ($row = $startRow; $row <= $endRow; $row++) {
             for ($columnIndex = 1; $columnIndex <= \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($lastColumn); $columnIndex++) {
                 $column = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($columnIndex);
-                $sheet->setCellValue($column.$row, null);
+                $sheet->setCellValue($column . $row, null);
             }
         }
     }

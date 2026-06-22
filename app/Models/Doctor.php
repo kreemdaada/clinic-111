@@ -71,6 +71,14 @@ class Doctor extends Model
     }
 
     /**
+     * Per-treatment lab JOB rules (`bill_lab_job` drives {@see LabBillingResolver}).
+     */
+    public function doctorLabBillings(): HasMany
+    {
+        return $this->hasMany(DoctorLabBilling::class);
+    }
+
+    /**
      * Server Income Excel layout (sheet name, column map, layout type).
      */
     public function incomeExportProfile(): HasOne
