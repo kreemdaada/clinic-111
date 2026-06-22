@@ -56,6 +56,7 @@ class TreatmentParserService
         'EXO' => 'EXO',
         'APICO' => 'APICO',
         'APICECTOMY' => 'APICO',
+        'SINUC' => 'SINUS',
     ];
 
     /** @var array<int, string> */

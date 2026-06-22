@@ -172,8 +172,8 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | treatment | fee_amount | currency |
 |---|---|---|
 | IMPL | 500.00 | AED |
-| BG | 300.00 | USD |
-| SINUS | 200.00 | USD |
+| BG | 200.00 | USD |
+| SINUS | 300.00 | USD |
 
 ---
 

@@ -16,7 +16,7 @@ Order is defined in `DatabaseSeeder` — labs and doctors must exist before pric
 | `DoctorSeeder` | JACK, RIYAD, PURIYA, WA with commission settings |
 | `TreatmentSeeder` | Treatment catalog; `has_lab_cost` flag drives lab_jobs |
 | `LabPriceSeeder` | Default lab unit costs + Dr Riyad overrides |
-| `DoctorFixedFeeSeeder` | Dr Wa fixed fees (IMPL, BG, SINUS) |
+| `DoctorFixedFeeSeeder` | Dr Wa: IMPL 500 AED, BG 200 USD, SINUS 300 USD |
 | `DoctorIncomeExportProfileSeeder` | Original Income Excel sheet/column layout per doctor |
 | `UserSeeder` | admin, accountant, viewer test users |
 

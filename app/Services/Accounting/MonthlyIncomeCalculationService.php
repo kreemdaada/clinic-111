@@ -29,6 +29,7 @@ class MonthlyIncomeCalculationService
      * @param  string  $defaultUsdExchangeRate  USD→AED rate for fixed-fee currency conversion.
      */
     public function __construct(
+        private readonly WaelFixedFeeCalculator $waelFixedFeeCalculator,
         private readonly string $defaultUsdExchangeRate = '3.65',
     ) {}
 
@@ -177,32 +178,16 @@ class MonthlyIncomeCalculationService
                     ->where('doctor_id', $doctor->id)
                     ->whereBetween('work_date', [$monthStart->toDateString(), $monthEnd->toDateString()]);
             })
-            ->with('treatment')
+            ->with(['treatment', 'dailyWorkRow'])
             ->get();
 
-        $fixedFeesByTreatmentId = $doctor->doctorFixedFees->keyBy('treatment_id');
-        $totalIncome = '0.00';
+        $fixedFeesByTreatmentId = $doctor->doctorFixedFees->keyBy('treatment_id')->all();
 
-        foreach ($workItems as $workItem) {
-            $fixedFee = $fixedFeesByTreatmentId->get($workItem->treatment_id);
-
-            if ($fixedFee === null) {
-                continue;
-            }
-
-            $feeAmountAed = MoneyCalculator::convertToAed(
-                (string) $fixedFee->fee_amount,
-                $fixedFee->currency,
-                $this->defaultUsdExchangeRate,
-            );
-
-            $totalIncome = MoneyCalculator::add(
-                $totalIncome,
-                MoneyCalculator::multiply($feeAmountAed, $workItem->quantity),
-            );
-        }
-
-        return $totalIncome;
+        return $this->waelFixedFeeCalculator->sumIncomeAed(
+            $workItems,
+            $fixedFeesByTreatmentId,
+            $this->defaultUsdExchangeRate,
+        );
     }
 
     /**

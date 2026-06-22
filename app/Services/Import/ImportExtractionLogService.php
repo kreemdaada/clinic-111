@@ -494,6 +494,10 @@ class ImportExtractionLogService
 
         foreach ($this->document['imported_rows'] as $row) {
             foreach ($row['issues'] ?? [] as $issue) {
+                if (in_array($issue['code'] ?? '', ['lab_not_persisted', 'ignored_treatment_noted'], true)) {
+                    continue;
+                }
+
                 $severity = (string) ($issue['severity'] ?? 'warning');
                 if (array_key_exists($severity, $summary)) {
                     $summary[$severity]++;

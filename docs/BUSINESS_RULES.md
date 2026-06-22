@@ -138,17 +138,37 @@ This means lab expenses reduce the doctor's income share (not the clinic's colle
 DOCTOR INCOME = SUM(fixed_fee_amount_aed × work_item.quantity)
 ```
 
-Fixed fees come from `doctor_fixed_fees` matched by `doctor_id` + `treatment_id`. USD fees are converted to AED using the default exchange rate.
+Fixed fees come from `doctor_fixed_fees` matched by `doctor_id` + `treatment_id`. For Dr Wa, BG/SINUS payout currency follows the patient row payment (see below); monthly totals may still use AED equivalents for USD lines.
 
 #### Dr Wa Fixed Fees (seeded)
 
-| Treatment | Code | Fee | Currency |
+| Treatment | Code | Fee | Payout rule |
 |---|---|---|---|
-| Implant | IMPL | 500 | AED |
-| Bone Graft | BG | 300 | USD |
-| Sinus Lift | SINUS | 200 | USD |
+| Implant | IMPL | 500 AED | Always AED |
+| Bone Graft | BG | 200 USD / unit | USD if row has USD cash; else **(200 × qty) × exchange rate AED** |
+| Sinus Lift | SINUS / SINUC | 300 USD / unit | USD if row has USD cash; else **(300 × qty) × exchange rate AED** |
 
-No percentage calculation is used for Dr Wa.
+Dr Wa earns income **only** from IMPL, BG, and SINUS work items — no percentage commission, no lab JOB.
+
+Income = **fee × quantity** per treatment line. BG/SINUS: patient pays USD → Wa gets USD; patient pays AED → Wa gets **USD fee converted to AED** (default rate 3.65). IMPL is always AED.
+
+**Example — patient paid USD cash (`BG x2`, `IMPL x1`, `SINUS x1` on one row):**
+
+| Treatment | Calculation | Dr Wa receives |
+|-----------|-------------|----------------|
+| BG × 2 | 200 × 2 | **400 USD** |
+| IMPL × 1 | 500 × 1 | **500 AED** |
+| SINUS × 1 | 300 × 1 | **300 USD** |
+
+**Same treatments, patient paid AED (Daily TOTAL in DHS, no USD cash, rate 3.65):**
+
+| Treatment | Calculation | Dr Wa receives |
+|-----------|-------------|----------------|
+| BG × 2 | 400 × 3.65 | **1,460 AED** |
+| IMPL × 1 | 500 × 1 | **500 AED** |
+| SINUS × 1 | 300 × 3.65 | **1,095 AED** |
+
+**Single BG × 1 paid in AED:** 200 × 3.65 = **730 AED** (what the customer pays in AED terms; Wa receives the same in AED).
 
 ---
 
@@ -172,6 +192,8 @@ CLINIC INCOME = NET TOTAL - DOCTOR INCOME
 | ABT | Abutment | 511 AED | — |
 | IMPL | Implant | 1,000 AED | — |
 | REMOV | Removable Tooth | 100 AED | — |
+
+Dr Wa fixed fees (not lab prices): IMPL **500 AED**, BG **200 USD**, SINUS **300 USD**.
 
 Dr Riyad uses lab `RIYADH_LAB`; all other doctors default to `MAIN_LAB`.
 

@@ -42,8 +42,6 @@ class ImportController extends Controller
 
         return view('imports.index', [
             'recentReports' => $recentReports,
-            'uploadMaxFilesize' => ini_get('upload_max_filesize'),
-            'postMaxSize' => ini_get('post_max_size'),
         ]);
     }
 

@@ -48,7 +48,16 @@
     .extraction-treatment-tag--job { background: #dcfce7; color: #166534; }
     .extraction-treatment-tag--no-job { background: #f1f5f9; color: #64748b; }
     .extraction-legend { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; }
-    .extraction-actions { margin-bottom: 1rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+    .extraction-actions { margin-bottom: 1rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+    .extraction-toggle-btn {
+        padding: 0.35rem 0.75rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        background: #fff;
+        font-size: 0.85rem;
+        cursor: pointer;
+    }
+    .extraction-toggle-btn:hover { background: #f1f5f9; }
     .extraction-scroll { overflow-x: auto; }
     .extraction-section-title { font-size: 1.1rem; margin-bottom: 1rem; }
     .extraction-section-title--compact { margin-bottom: 0.25rem; }
@@ -95,14 +104,41 @@
     </div>
 @else
     @php
-        $issueSummary = $log['issue_summary'] ?? ['error' => 0, 'warning' => 0, 'info' => 0];
+        $issueSummary = ['error' => 0, 'warning' => 0, 'info' => 0];
+        $hiddenIssueCodes = ['lab_not_persisted', 'ignored_treatment_noted'];
+
+        foreach ($log['imported_rows'] ?? [] as $importedRow) {
+            foreach ($importedRow['issues'] ?? [] as $issue) {
+                if (in_array($issue['code'] ?? '', $hiddenIssueCodes, true)) {
+                    continue;
+                }
+                $severity = (string) ($issue['severity'] ?? 'warning');
+                if (array_key_exists($severity, $issueSummary)) {
+                    $issueSummary[$severity]++;
+                }
+            }
+        }
+
+        $issueSummary['error'] += count($unresolvedRows);
+        $issueSummary['warning'] += count($log['skipped_rows'] ?? []);
+
+        foreach ($log['reconciliation_issues'] ?? [] as $issue) {
+            $severity = (string) ($issue['severity'] ?? 'warning');
+            if (array_key_exists($severity, $issueSummary)) {
+                $issueSummary[$severity]++;
+            }
+        }
     @endphp
 
     <div class="extraction-issue-bar">
         <span class="extraction-issue-pill extraction-issue-pill--error">{{ $issueSummary['error'] ?? 0 }} Fehler</span>
         <span class="extraction-issue-pill extraction-issue-pill--warning">{{ $issueSummary['warning'] ?? 0 }} Warnungen</span>
         <span class="extraction-issue-pill extraction-issue-pill--info">{{ $issueSummary['info'] ?? 0 }} Info</span>
-        <span class="extraction-muted" style="align-self:center;">Klicke auf eine Zeile für Zahlung · JOB · Behandlungen · Issues</span>
+        <span class="extraction-muted" style="align-self:center;">Klicke auf eine Zeile für Details</span>
+        <span style="margin-left:auto;display:flex;gap:0.5rem;">
+            <button type="button" class="extraction-toggle-btn" id="extraction-expand-all">Alle aufklappen</button>
+            <button type="button" class="extraction-toggle-btn" id="extraction-collapse-all">Alle einklappen</button>
+        </span>
     </div>
 
     @if (count($unresolvedRows) > 0)
@@ -201,7 +237,12 @@
                 @php
                     $isImported = ($row['work_row_id'] ?? null) !== null;
                     $diag = is_array($row['diagnostics'] ?? null) ? $row['diagnostics'] : null;
-                    $issueCount = count($row['issues'] ?? []);
+                    $visibleIssues = array_values(array_filter(
+                        $row['issues'] ?? [],
+                        fn ($issue) => in_array($issue['severity'] ?? '', ['error', 'warning'], true)
+                            && ! in_array($issue['code'] ?? '', ['lab_not_persisted', 'ignored_treatment_noted'], true),
+                    ));
+                    $issueCount = count($visibleIssues);
                 @endphp
                 <details @class(['extraction-detail', $issueCount > 0 ? 'extraction-has-issues' : null])>
                     <summary>
@@ -280,7 +321,7 @@
 
                         @if ($diag && ($diag['treatments_ignored'] ?? []) !== [])
                             <p class="extraction-small" style="margin-top:0.75rem;">
-                                <strong>Ignoriert (kein JOB, nicht in H–P):</strong>
+                                <strong>Ohne Lab-Kosten (kein JOB):</strong>
                                 @foreach ($diag['treatments_ignored'] as $t)
                                     <span class="extraction-treatment-tag extraction-treatment-tag--no-job">{{ $t['code'] }}×{{ $t['quantity'] }}</span>
                                 @endforeach
@@ -289,8 +330,8 @@
 
                         @if ($issueCount > 0)
                             <div style="margin-top:0.75rem;">
-                                <h4 class="extraction-muted" style="margin-bottom:0.35rem;">Issues</h4>
-                                @foreach ($row['issues'] as $issue)
+                                <h4 class="extraction-muted" style="margin-bottom:0.35rem;">Hinweise</h4>
+                                @foreach ($visibleIssues as $issue)
                                     <div @class([
                                         'extraction-issue-line',
                                         'extraction-issue-line--'.($issue['severity'] ?? 'warning'),
@@ -347,3 +388,26 @@
     @endif
 @endif
 @endsection
+
+@push('scripts')
+<script>
+(function () {
+    const expandAll = document.getElementById('extraction-expand-all');
+    const collapseAll = document.getElementById('extraction-collapse-all');
+
+    if (!expandAll || !collapseAll) {
+        return;
+    }
+
+    const details = () => document.querySelectorAll('.extraction-detail');
+
+    expandAll.addEventListener('click', () => {
+        details().forEach(el => { el.open = true; });
+    });
+
+    collapseAll.addEventListener('click', () => {
+        details().forEach(el => { el.open = false; });
+    });
+})();
+</script>
+@endpush

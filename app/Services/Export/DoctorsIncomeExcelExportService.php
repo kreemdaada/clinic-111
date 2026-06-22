@@ -7,6 +7,7 @@ use App\Models\DailyReport;
 use App\Models\DailyWorkRow;
 use App\Models\Doctor;
 use App\Services\Accounting\IncomeReconciliationService;
+use App\Services\Accounting\WaelFixedFeeCalculator;
 use App\Support\MoneyCalculator;
 use App\Support\ReportMonthResolver;
 use Carbon\Carbon;
@@ -37,6 +38,7 @@ class DoctorsIncomeExcelExportService
     public function __construct(
         private readonly IncomeReconciliationService $incomeReconciliationService,
         private readonly DoctorIncomeExportProfileService $exportProfileService,
+        private readonly WaelFixedFeeCalculator $waelFixedFeeCalculator,
         private readonly string $defaultUsdExchangeRate = '3.65',
     ) {}
 
@@ -566,40 +568,46 @@ class DoctorsIncomeExcelExportService
 
             foreach ($workRow->workItems as $workItem) {
                 $code = $workItem->treatment->code;
-                $fixedFee = null;
-
-                if (array_key_exists($code, $fixedFeesByCode)) {
-                    $fixedFee = $fixedFeesByCode[$code];
-                }
+                $fixedFee = $fixedFeesByCode[$code] ?? null;
 
                 if ($fixedFee === null) {
                     continue;
                 }
 
-                $feeAed = MoneyCalculator::convertToAed(
-                    (string) $fixedFee->fee_amount,
-                    $fixedFee->currency,
+                $line = $this->waelFixedFeeCalculator->calculateLine(
+                    $workRow,
+                    $workItem,
+                    $fixedFee,
                     $this->defaultUsdExchangeRate,
                 );
 
-                $lineTotal = MoneyCalculator::multiply($feeAed, $workItem->quantity);
-                $daily[$dateKey]['surg_cash'] = MoneyCalculator::add($daily[$dateKey]['surg_cash'], $lineTotal);
-
-                if ($code === 'IMPL') {
-                    $daily[$dateKey]['impl'] = MoneyCalculator::add($daily[$dateKey]['impl'], $lineTotal);
+                if ($line === null) {
+                    continue;
                 }
 
-                if ($code === 'BG') {
-                    $daily[$dateKey]['bg'] = MoneyCalculator::add(
-                        $daily[$dateKey]['bg'],
-                        MoneyCalculator::multiply((string) $fixedFee->fee_amount, $workItem->quantity),
+                $daily[$dateKey]['surg_cash'] = MoneyCalculator::add(
+                    $daily[$dateKey]['surg_cash'],
+                    $line['amount_aed'],
+                );
+
+                if ($line['export_bucket'] === 'impl') {
+                    $daily[$dateKey]['impl'] = MoneyCalculator::add(
+                        $daily[$dateKey]['impl'],
+                        $line['payout_amount'],
                     );
                 }
 
-                if ($code === 'SINUS') {
+                if ($line['export_bucket'] === 'bg') {
+                    $daily[$dateKey]['bg'] = MoneyCalculator::add(
+                        $daily[$dateKey]['bg'],
+                        $line['payout_amount'],
+                    );
+                }
+
+                if ($line['export_bucket'] === 'sinus') {
                     $daily[$dateKey]['sinus'] = MoneyCalculator::add(
                         $daily[$dateKey]['sinus'],
-                        MoneyCalculator::multiply((string) $fixedFee->fee_amount, $workItem->quantity),
+                        $line['payout_amount'],
                     );
                 }
             }
