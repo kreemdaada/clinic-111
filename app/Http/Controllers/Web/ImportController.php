@@ -46,19 +46,21 @@ class ImportController extends Controller
     }
 
     /**
-     * Accept uploaded Excel, import, and immediately download Server Income Excel.
+     * Accept uploaded Excel, run import, then show extraction log with download preview.
      *
      * On failure redirects back with validation/error message (no partial DB state).
      *
      * @param  ImportDailyReportRequest  $request  Validated `.xlsx` / `.xlsm` file.
-     * @return BinaryFileResponse|RedirectResponse Excel download or back() with errors.
+     * @return RedirectResponse Extraction log page or back() with errors.
      */
-    public function store(ImportDailyReportRequest $request): BinaryFileResponse|RedirectResponse
+    public function store(ImportDailyReportRequest $request): RedirectResponse
     {
         try {
             $dailyReport = $this->importService->import($request->file('file'));
 
-            return $this->incomeExporter->downloadResponse($dailyReport);
+            return redirect()
+                ->route('logs.extraction', $dailyReport)
+                ->with('import_complete', true);
         } catch (Throwable $exception) {
             return back()
                 ->withErrors(['file' => $exception->getMessage()]);

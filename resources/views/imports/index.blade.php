@@ -37,7 +37,7 @@
 
 @section('content')
 <h1 class="page-title">Import Daily Report</h1>
-<p class="page-subtitle">Upload your daily Excel — the Server Income file downloads automatically.</p>
+<p class="page-subtitle">Upload your daily Excel — review the extraction log, then download the Server Income file.</p>
 
 @if ($errors->any())
     <div class="alert alert-error">
@@ -96,8 +96,8 @@
                     </td>
                     <td>{{ $report->dailyWorkRows()->count() }}</td>
                     <td>
-                        <a href="{{ route('imports.income', $report) }}">Income Excel</a>
-                        · <a href="{{ route('logs.extraction', $report) }}">Extraction log</a>
+                        <a href="{{ route('logs.extraction', $report) }}">Extraction log</a>
+                        · <a href="{{ route('imports.income', $report) }}">Income Excel</a>
                     </td>
                 </tr>
             @endforeach

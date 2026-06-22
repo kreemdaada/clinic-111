@@ -47,7 +47,18 @@ LAB COST =
     SUM(work_item.quantity × lab_price.unit_cost)
 ```
 
-Stored as `lab_jobs.total_cost_aed` per work item. Only treatments where `treatments.has_lab_cost = true` generate lab jobs.
+Stored as `lab_jobs.total_cost_aed` per work item. A lab job is created only when `treatments.has_lab_cost = true` **and** `doctor_lab_billings.bill_lab_job = true` for that doctor and treatment.
+
+### Lab JOB eligibility (per doctor)
+
+| Doctor | bill_lab_job treatments |
+|---|---|
+| Dr Jack | All lab-cost codes (MC, ZIR, IMPL-CR, …) |
+| Dr Riyad | All lab-cost codes (ZIR / IMPL-ZIR use Riyad lab prices) |
+| Dr Puriya | **MC, ZIR, POST, REMOV only** |
+| Dr Wa | **None** — fixed fees only (IMPL, BG, SINUS) |
+
+Table: `doctor_lab_billings` (`doctor_id`, `treatment_id`, `bill_lab_job`). No row = no JOB.
 
 ### Lab Price Resolution
 

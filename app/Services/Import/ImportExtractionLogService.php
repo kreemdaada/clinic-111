@@ -5,6 +5,7 @@ namespace App\Services\Import;
 use App\Models\DailyReport;
 use App\Models\DailyWorkRow;
 use App\Services\Accounting\TreatmentParserService;
+use App\Support\ExtractionLogDoctorGrouper;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -119,7 +120,7 @@ class ImportExtractionLogService
     private function terminalExtractedPreview(array $event): void
     {
         $this->terminal(sprintf(
-            '[PARSE] %s | Tag %s | Excel-Zeile %s | DHS=%s USD=%s VISA=%s TOTAL=%s',
+            '[PARSE] %s | Day %s | Excel row %s | DHS=%s USD=%s VISA=%s TOTAL=%s',
             $event['doctor_label'] ?? '?',
             $event['sheet_day'] ?? '?',
             $event['excel_row'] ?? '?',
@@ -128,7 +129,7 @@ class ImportExtractionLogService
             $event['visa_aed'] ?? '0',
             $this->formatPaymentTotal($event),
         ));
-        $this->terminal('        TEXT: '.$this->truncateTreatmentText((string) ($event['treatment_text'] ?? ''), 120));
+        $this->terminal('        TEXT: ' . $this->truncateTreatmentText((string) ($event['treatment_text'] ?? ''), 120));
     }
 
     /**
@@ -276,7 +277,7 @@ class ImportExtractionLogService
 
         $treatments = array_merge(
             $diagnostics['treatments_lab'] ?? [],
-            array_map(fn (array $t): array => array_merge($t, ['counts_for_job' => false]), $diagnostics['treatments_ignored'] ?? []),
+            array_map(fn(array $t): array => array_merge($t, ['counts_for_job' => false]), $diagnostics['treatments_ignored'] ?? []),
         );
 
         $patch = [
@@ -318,10 +319,11 @@ class ImportExtractionLogService
     public function finalize(DailyReport $dailyReport): string
     {
         $this->document['finished_at'] = now()->toIso8601String();
-        $this->document['doctor_totals'] = $this->buildDoctorTotals();
+        $this->document['doctor_totals'] = ExtractionLogDoctorGrouper::knownDoctorTotals($this->document);
+        $this->document['unknown_doctor_errors'] = ExtractionLogDoctorGrouper::unknownDoctorErrors($this->document);
         $this->document['issue_summary'] = $this->buildIssueSummary();
 
-        $relativePath = 'import-extractions/report-'.$dailyReport->id.'.json';
+        $relativePath = 'import-extractions/report-' . $dailyReport->id . '.json';
         Storage::disk('local')->put($relativePath, json_encode($this->document, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
         $absolutePath = Storage::disk('local')->path($relativePath);
@@ -350,6 +352,14 @@ class ImportExtractionLogService
             ]);
         }
 
+        foreach ($this->document['unknown_doctor_errors'] as $unknownDoctor) {
+            $this->terminal(sprintf(
+                '[IMPORT UNKNOWN] %s: %d error row(s)',
+                $unknownDoctor['label'] ?? 'Unknown',
+                count($unknownDoctor['rows'] ?? []),
+            ));
+        }
+
         $summary = $this->document['issue_summary'];
         $this->terminal(sprintf(
             '[IMPORT] --- Issues: %d errors, %d warnings, %d info ---',
@@ -359,8 +369,8 @@ class ImportExtractionLogService
         ));
 
         $this->terminal('[IMPORT] --- Done ---');
-        $this->terminal('[IMPORT] JSON log: '.$absolutePath);
-        $this->terminal('[IMPORT] Web UI: /logs/extraction/'.$dailyReport->id);
+        $this->terminal('[IMPORT] JSON log: ' . $absolutePath);
+        $this->terminal('[IMPORT] Web UI: /logs/extraction/' . $dailyReport->id);
 
         return $absolutePath;
     }
@@ -373,7 +383,7 @@ class ImportExtractionLogService
      */
     public function getLogPath(DailyReport $dailyReport): ?string
     {
-        $relativePath = 'import-extractions/report-'.$dailyReport->id.'.json';
+        $relativePath = 'import-extractions/report-' . $dailyReport->id . '.json';
 
         if (! Storage::disk('local')->exists($relativePath)) {
             return null;
@@ -390,7 +400,7 @@ class ImportExtractionLogService
      */
     public function loadForReport(DailyReport $dailyReport): ?array
     {
-        $relativePath = 'import-extractions/report-'.$dailyReport->id.'.json';
+        $relativePath = 'import-extractions/report-' . $dailyReport->id . '.json';
 
         if (! Storage::disk('local')->exists($relativePath)) {
             return null;
@@ -414,7 +424,7 @@ class ImportExtractionLogService
         $flags = $row['flags'] ?? [];
 
         $this->terminal(sprintf(
-            '[IMPORT] === %s (%s) | Tag %s | Excel-Zeile %s ===',
+            '[IMPORT] === %s (%s) | Day %s | Excel row %s ===',
             $row['doctor_code'] ?? '?',
             $row['doctor_label'] ?? '?',
             $row['sheet_day'] ?? '?',
@@ -423,21 +433,21 @@ class ImportExtractionLogService
 
         $paymentOk = $diag === null || ($diag['payments']['payment_ok'] ?? true);
         $this->terminal(sprintf(
-            '  ZAHLUNG  DHS=%s | USD=%s (→%s AED) | VISA=%s | TOTAL=%s%s',
+            '  PAYMENT  DHS=%s | USD=%s (→%s AED) | VISA=%s | TOTAL=%s%s',
             $row['dhs_aed'] ?? '0.00',
             $row['usd'] ?? '0.00',
             $row['usd_to_aed'] ?? '0.00',
             $row['visa_aed'] ?? '0.00',
             $row['paid_total_aed'] ?? '0.00',
-            $paymentOk ? '' : ' ⚠ TOTAL stimmt nicht',
+            $paymentOk ? '' : ' ⚠ TOTAL mismatch',
         ));
 
-        $this->terminal('  TEXT     '.($row['treatment_text'] ?? '-'));
+        $this->terminal('  TEXT     ' . ($row['treatment_text'] ?? '-'));
 
         if ($diag !== null && ($diag['job']['lines'] ?? []) !== []) {
             foreach ($diag['job']['lines'] as $line) {
                 $this->terminal(sprintf(
-                    '  JOB      %s ×%d @ %s AED = %s AED → Income Spalte %s',
+                    '  JOB      %s ×%d @ %s AED = %s AED → Income column %s',
                     $line['code'],
                     $line['quantity'],
                     $line['unit_cost_aed'],
@@ -447,19 +457,19 @@ class ImportExtractionLogService
             }
             $this->terminal(sprintf('  JOB SUM  %s AED', $diag['job']['total_aed'] ?? '0.00'));
         } else {
-            $this->terminal('  JOB      — (kein Lab-JOB für Income H–P)');
+            $this->terminal('  JOB      — (no lab JOB for Income H–P)');
         }
 
         if ($diag !== null && ($diag['treatments_ignored'] ?? []) !== []) {
             $parts = [];
             foreach ($diag['treatments_ignored'] as $t) {
-                $parts[] = ($t['code'] ?? '?').'×'.($t['quantity'] ?? 0);
+                $parts[] = ($t['code'] ?? '?') . '×' . ($t['quantity'] ?? 0);
             }
-            $this->terminal('  IGNORED  '.implode(', ', $parts).' (SxP/CF/RCT — kein JOB)');
+            $this->terminal('  IGNORED  ' . implode(', ', $parts) . ' (no JOB — e.g. CF/RCT/SxP)');
         }
 
         if ($flags !== []) {
-            $this->terminal('  FLAGS    '.implode(', ', $flags));
+            $this->terminal('  FLAGS    ' . implode(', ', $flags));
         }
 
         foreach ($row['issues'] ?? [] as $issue) {
@@ -534,7 +544,7 @@ class ImportExtractionLogService
         }
 
         if (strlen($text) > $maxLength) {
-            return substr($text, 0, $maxLength - 3).'...';
+            return substr($text, 0, $maxLength - 3) . '...';
         }
 
         return $text;
@@ -558,7 +568,7 @@ class ImportExtractionLogService
     private function terminalSkippedRow(array $event): void
     {
         $this->terminal(sprintf(
-            '[SKIP %s] %s | Tag %s | Excel-Zeile %s | DHS=%s USD=%s VISA=%s | G=%s',
+            '[SKIP %s] %s | Day %s | Excel row %s | DHS=%s USD=%s VISA=%s | G=%s',
             strtoupper((string) ($event['reason'] ?? 'unknown')),
             $event['doctor_label'] ?? '?',
             $event['sheet_day'] ?? '?',
@@ -603,7 +613,7 @@ class ImportExtractionLogService
     private function detectFlags(?string $treatmentText, mixed $gCell): array
     {
         $flags = [];
-        $haystack = strtoupper(trim((string) $treatmentText.' '.(string) $gCell));
+        $haystack = strtoupper(trim((string) $treatmentText . ' ' . (string) $gCell));
 
         if ($haystack === '') {
             return $flags;
@@ -638,7 +648,7 @@ class ImportExtractionLogService
      */
     private function rowKey(int $sheetDay, string $doctor, int $excelRow): string
     {
-        return $sheetDay.'|'.strtoupper(trim($doctor)).'|'.$excelRow;
+        return $sheetDay . '|' . strtoupper(trim($doctor)) . '|' . $excelRow;
     }
 
     /**
@@ -667,80 +677,5 @@ class ImportExtractionLogService
         }
 
         return false;
-    }
-
-    /**
-     * Aggregate per-doctor totals from imported, skipped, and unresolved rows.
-     *
-     * @return array<string, array<string, mixed>> Doctor code → totals (paid, job, counts).
-     */
-    private function buildDoctorTotals(): array
-    {
-        $totals = [];
-
-        foreach ($this->document['imported_rows'] as $row) {
-            $doctorCode = (string) ($row['doctor_code'] ?? 'UNKNOWN');
-
-            if (! array_key_exists($doctorCode, $totals)) {
-                $totals[$doctorCode] = [
-                    'doctor_label' => $row['doctor_label'] ?? $doctorCode,
-                    'day_count' => 0,
-                    'paid_total_aed' => '0.00',
-                    'lab_total_aed' => '0.00',
-                    'skipped_rows_on_sheet' => 0,
-                    'issue_count' => 0,
-                ];
-            }
-
-            $totals[$doctorCode]['day_count']++;
-            $totals[$doctorCode]['paid_total_aed'] = bcadd(
-                $totals[$doctorCode]['paid_total_aed'],
-                (string) ($row['paid_total_aed'] ?? '0'),
-                2,
-            );
-            $totals[$doctorCode]['lab_total_aed'] = bcadd(
-                $totals[$doctorCode]['lab_total_aed'],
-                (string) ($row['lab_total_aed'] ?? '0'),
-                2,
-            );
-            $totals[$doctorCode]['issue_count'] += count($row['issues'] ?? []);
-        }
-
-        foreach ($this->document['skipped_rows'] as $row) {
-            $doctorCode = (string) ($row['doctor_code'] ?? $row['doctor_label'] ?? 'UNKNOWN');
-
-            if (! array_key_exists($doctorCode, $totals)) {
-                $totals[$doctorCode] = [
-                    'doctor_label' => $row['doctor_label'] ?? $doctorCode,
-                    'day_count' => 0,
-                    'paid_total_aed' => '0.00',
-                    'lab_total_aed' => '0.00',
-                    'skipped_rows_on_sheet' => 0,
-                ];
-            }
-
-            $totals[$doctorCode]['skipped_rows_on_sheet']++;
-        }
-
-        foreach ($this->document['unresolved_rows'] as $row) {
-            $doctorCode = (string) ($row['doctor_label'] ?? 'UNKNOWN');
-
-            if (! array_key_exists($doctorCode, $totals)) {
-                $totals[$doctorCode] = [
-                    'doctor_label' => $row['doctor_label'] ?? $doctorCode,
-                    'day_count' => 0,
-                    'paid_total_aed' => '0.00',
-                    'lab_total_aed' => '0.00',
-                    'skipped_rows_on_sheet' => 0,
-                    'unresolved_rows' => 0,
-                ];
-            }
-
-            $totals[$doctorCode]['unresolved_rows'] = ($totals[$doctorCode]['unresolved_rows'] ?? 0) + 1;
-        }
-
-        ksort($totals);
-
-        return $totals;
     }
 }

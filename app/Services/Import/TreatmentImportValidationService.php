@@ -8,6 +8,7 @@ use App\DTOs\TreatmentImportResultDto;
 use App\Models\DailyWorkRow;
 use App\Models\Treatment;
 use App\Models\WorkItem;
+use App\Services\Accounting\LabBillingResolver;
 use App\Services\Accounting\TreatmentParserService;
 use Illuminate\Support\Collection;
 
@@ -18,6 +19,7 @@ class TreatmentImportValidationService
 {
     public function __construct(
         private readonly TreatmentParserService $treatmentParserService,
+        private readonly LabBillingResolver $labBillingResolver,
     ) {}
 
     /**
@@ -121,7 +123,9 @@ class TreatmentImportValidationService
         $warnings = [];
 
         foreach ($dailyWorkRow->workItems as $workItem) {
-            if (! $workItem->treatment->has_lab_cost) {
+            $doctor = $dailyWorkRow->doctor;
+
+            if ($doctor === null || ! $this->labBillingResolver->shouldBillLabJob($doctor, $workItem->treatment)) {
                 continue;
             }
 

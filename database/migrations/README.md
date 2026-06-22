@@ -26,6 +26,7 @@ php artisan migrate --seed
 | `000012` | `audit_logs` | Import and sensitive action audit trail |
 | `000013` | `doctor_income_export_profiles` | Server Income Excel layout per doctor |
 | `000014` | privacy + warnings | Removes plain-text PII; adds `patient_reference_hash`, `daily_report_import_warnings` |
+| `000015` | `doctor_lab_billings` | Per-doctor JOB rules (Puriya subset; Wa none) |
 
 ## Privacy migration (`000014`)
 

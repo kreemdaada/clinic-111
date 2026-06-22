@@ -256,8 +256,7 @@
     <header class="topbar">
         <a href="{{ route('imports.index') }}" class="topbar-brand">Clinic 111 Accounting</a>
         <nav class="topbar-nav">
-            <a href="{{ route('imports.index') }}" @class(['active'=> request()->routeIs('imports.*')])>Import</a>
-            <a href="{{ route('logs.index') }}" @class(['active'=> request()->routeIs('logs.*')])>Logs</a>
+            <a href="{{ route('imports.index') }}" @class(['active'=> request()->routeIs('imports.*') || request()->routeIs('logs.*')])>Import</a>
             <span class="topbar-user">{{ auth()->user()->email }} ({{ auth()->user()->role->value }})</span>
             <form method="POST" action="{{ route('logout') }}" style="display:inline;">
                 @csrf

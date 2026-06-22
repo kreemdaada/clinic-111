@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
-use App\Models\AuditLog;
 use App\Models\DailyReport;
-use App\Services\Import\ImportActivityLogger;
+use App\Services\Export\DoctorsIncomeExcelExportService;
 use App\Services\Import\ImportExtractionLogService;
+use App\Support\DoctorCodeResolver;
+use App\Support\ExtractionLogDoctorGrouper;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -17,40 +19,17 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
  */
 class LogController extends Controller
 {
-    /**
-     * @param  ImportActivityLogger  $importActivityLogger  Reads tail of `storage/logs/import.log`.
-     * @param  ImportExtractionLogService  $importExtractionLogService  Loads JSON extraction logs per report.
-     */
     public function __construct(
-        private readonly ImportActivityLogger $importActivityLogger,
         private readonly ImportExtractionLogService $importExtractionLogService,
+        private readonly DoctorsIncomeExcelExportService $incomeExporter,
     ) {}
 
     /**
-     * Show combined audit log, file log tail, and recent report list.
-     *
-     * @return View Renders `logs.index` with last 50 audit entries and 20 reports.
+     * Logs index redirects to the import page (open extraction log per report from there).
      */
-    public function index(): View
+    public function index(): RedirectResponse
     {
-        $auditLogs = AuditLog::query()
-            ->with('user')
-            ->latest('id')
-            ->limit(50)
-            ->get();
-
-        $recentReports = DailyReport::query()
-            ->latest('id')
-            ->limit(20)
-            ->get();
-
-        $fileLogLines = $this->importActivityLogger->getRecentFileLogLines(100);
-
-        return view('logs.index', [
-            'auditLogs' => $auditLogs,
-            'recentReports' => $recentReports,
-            'fileLogLines' => $fileLogLines,
-        ]);
+        return redirect()->route('imports.index');
     }
 
     /**
@@ -67,11 +46,21 @@ class LogController extends Controller
         $log = $this->importExtractionLogService->loadForReport($dailyReport);
 
         $importedByDoctor = [];
+        $doctorTotals = [];
+        $unknownDoctorErrors = [];
 
         if ($log !== null) {
             foreach ($log['imported_rows'] ?? [] as $row) {
-                $doctorCode = (string) ($row['doctor_code'] ?? 'UNKNOWN');
-                $importedByDoctor[$doctorCode][] = $row;
+                $resolved = DoctorCodeResolver::resolve(
+                    isset($row['doctor_code']) ? (string) $row['doctor_code'] : null,
+                    isset($row['doctor_label']) ? (string) $row['doctor_label'] : null,
+                );
+
+                if (! $resolved['is_known']) {
+                    continue;
+                }
+
+                $importedByDoctor[$resolved['code']][] = $row;
             }
 
             ksort($importedByDoctor);
@@ -88,17 +77,15 @@ class LogController extends Controller
                 });
                 $importedByDoctor[$doctorCode] = $rows;
             }
+
+            $doctorTotals = ExtractionLogDoctorGrouper::knownDoctorTotals($log);
+            $unknownDoctorErrors = $log['unknown_doctor_errors']
+                ?? ExtractionLogDoctorGrouper::unknownDoctorErrors($log);
         }
 
-        $skippedByDoctor = [];
         $unresolvedRows = [];
 
         if ($log !== null) {
-            foreach ($log['skipped_rows'] ?? [] as $row) {
-                $doctorKey = (string) ($row['doctor_label'] ?? 'UNKNOWN');
-                $skippedByDoctor[$doctorKey][] = $row;
-            }
-
             $unresolvedRows = $log['unresolved_rows'] ?? [];
 
             usort($unresolvedRows, function (array $a, array $b): int {
@@ -112,12 +99,18 @@ class LogController extends Controller
             });
         }
 
+        $doctorCodes = array_keys($importedByDoctor);
+
         return view('logs.extraction', [
             'dailyReport' => $dailyReport,
             'log' => $log,
             'importedByDoctor' => $importedByDoctor,
-            'skippedByDoctor' => $skippedByDoctor,
+            'doctorTotals' => $doctorTotals,
+            'doctorCodes' => $doctorCodes,
+            'unknownDoctorErrors' => $unknownDoctorErrors,
             'unresolvedRows' => $unresolvedRows,
+            'incomeDownloadFileName' => $this->incomeExporter->downloadFileName($dailyReport),
+            'showImportComplete' => session()->pull('import_complete', false),
         ]);
     }
 
