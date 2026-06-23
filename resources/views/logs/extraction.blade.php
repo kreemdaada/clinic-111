@@ -2,355 +2,253 @@
 
 @section('title', 'Extraction Log')
 
-@php
-$doctorClass = fn (string $code): string => 'extraction-doctor--'.strtolower(preg_replace('/[^a-z0-9]+/i', '-', $code) ?? $code);
-@endphp
-
 @push('styles')
 <style>
-    .extraction-doctor-badge {
-        padding: 0.2rem 0.6rem;
-        border-radius: 999px;
-        font-size: 0.8rem;
+    .extraction-page-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1.25rem;
+    }
+
+    .extraction-page-header .page-title {
+        margin-bottom: 0.35rem;
+    }
+
+    .extraction-page-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 1rem;
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+    }
+
+    .extraction-page-meta strong {
+        color: var(--text);
+        font-weight: 500;
+    }
+
+    .extraction-toolbar {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .extraction-banner {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0.875rem 1rem;
+        border-radius: var(--radius);
+        border: 1px solid #bbf7d0;
+        background: var(--success-soft);
+        margin-bottom: 1rem;
+        font-size: 0.875rem;
+        color: #166534;
+    }
+
+    .extraction-banner strong {
+        display: block;
+        margin-bottom: 0.15rem;
+        color: var(--success);
+    }
+
+    .extraction-export-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.25rem;
+        flex-wrap: wrap;
+    }
+
+    .extraction-export-preview {
+        flex: 1;
+        min-width: 220px;
+        padding: 0.75rem 0.9rem;
+        background: var(--surface-muted);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+    }
+
+    .extraction-export-filename {
+        font-size: 0.9rem;
         font-weight: 600;
-        border: 1px solid transparent;
+        color: var(--text);
+        word-break: break-word;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     }
 
-    .extraction-doctor--jack {
-        background: #dbeafe;
-        border-color: #2563eb;
-        color: #1e3a8a;
+    .extraction-export-meta {
+        margin-top: 0.25rem;
+        font-size: 0.75rem;
+        color: var(--text-muted);
     }
 
-    .extraction-doctor--puriya {
-        background: #f3e8ff;
-        border-color: #9333ea;
-        color: #581c87;
-    }
-
-    .extraction-doctor--riyad {
-        background: #dcfce7;
-        border-color: #16a34a;
-        color: #14532d;
-    }
-
-    .extraction-doctor--wa {
-        background: #ffedd5;
-        border-color: #ea580c;
-        color: #7c2d12;
-    }
-
-    .extraction-doctor--unknown {
-        background: #fee2e2;
-        border-color: #dc2626;
-        color: #7f1d1d;
-    }
-
-    .extraction-card {
-        border-left: 4px solid transparent;
-    }
-
-    .extraction-card.extraction-doctor--jack {
-        border-left-color: #2563eb;
-    }
-
-    .extraction-card.extraction-doctor--puriya {
-        border-left-color: #9333ea;
-    }
-
-    .extraction-card.extraction-doctor--riyad {
-        border-left-color: #16a34a;
-    }
-
-    .extraction-card.extraction-doctor--wa {
-        border-left-color: #ea580c;
-    }
-
-    .extraction-card.extraction-doctor--unknown {
-        border-left-color: #dc2626;
-    }
-
-    .extraction-row--not-imported {
-        background: #fef2f2 !important;
-    }
-
-    .extraction-unresolved-card {
-        border: 2px solid #dc2626;
-        background: #fef2f2;
-    }
-
-    .extraction-unresolved-title {
-        font-size: 1.1rem;
-        margin-bottom: 0.5rem;
-        color: #991b1b;
-    }
-
-    .extraction-unresolved-note {
-        font-size: 0.85rem;
-        color: #7f1d1d;
+    .extraction-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 0.75rem;
         margin-bottom: 1rem;
     }
 
-    .extraction-unresolved-label {
-        color: #991b1b;
+    .extraction-metric {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 0.75rem 0.9rem;
+    }
+
+    .extraction-metric-label {
+        font-size: 0.6875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-subtle);
+        margin-bottom: 0.25rem;
+    }
+
+    .extraction-metric-value {
+        font-size: 1.25rem;
         font-weight: 600;
+        color: var(--text);
+        line-height: 1.2;
     }
 
-    .extraction-unresolved-row {
-        background: #fff;
+    .extraction-metric--error .extraction-metric-value {
+        color: var(--danger);
     }
 
-    .extraction-flag {
-        background: #fef3c7;
-        padding: 0.1rem 0.35rem;
-        border-radius: 4px;
-        margin-right: 0.25rem;
+    .extraction-metric--warning .extraction-metric-value {
+        color: var(--warning);
+    }
+
+    .extraction-metric--info .extraction-metric-value {
+        color: var(--info);
+    }
+
+    .extraction-toolbar-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+
+    .extraction-toolbar-hint {
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+    }
+
+    .extraction-doctor-tabs {
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        padding: 0.25rem;
+        background: var(--surface-muted);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        margin-bottom: 1rem;
+    }
+
+    .extraction-doctor-tab {
+        appearance: none;
+        cursor: pointer;
+        font: inherit;
         font-size: 0.75rem;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+        padding: 0.4rem 0.75rem;
+        border-radius: calc(var(--radius-sm) - 2px);
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--text-muted);
+        transition: background 0.15s, color 0.15s, border-color 0.15s;
     }
 
-    .extraction-flag--error {
-        background: #fecaca;
+    .extraction-doctor-tab:hover {
+        color: var(--text);
+        background: var(--surface);
     }
 
-    .extraction-reason {
-        color: #991b1b;
+    .extraction-doctor-tab.is-active {
+        background: var(--surface);
+        color: var(--text);
+        border-color: var(--border-strong);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .extraction-summary-row {
+        cursor: pointer;
+        transition: background 0.12s;
+    }
+
+    .extraction-summary-row:hover td {
+        background: var(--surface-muted);
+    }
+
+    .extraction-summary-row.is-selected td {
+        background: var(--accent-soft);
+    }
+
+    .extraction-doctor-code {
+        font-weight: 600;
+        color: var(--text);
+        font-size: 0.8125rem;
     }
 
     .extraction-muted {
-        font-size: 0.8rem;
-        color: #64748b;
+        font-size: 0.75rem;
+        color: var(--text-muted);
     }
 
     .extraction-small {
         font-size: 0.75rem;
     }
 
-    .extraction-treatment-text {
-        font-size: 0.75rem;
-        max-width: 260px;
+    .extraction-unresolved-card {
+        border-left: 3px solid var(--danger);
     }
 
-    .extraction-treatment-tag {
-        padding: 0.1rem 0.25rem;
-        border-radius: 3px;
-        margin-right: 0.25rem;
-        font-size: 0.75rem;
-        display: inline-block;
-    }
-
-    .extraction-treatment-tag--job {
-        background: #dcfce7;
-        color: #166534;
-    }
-
-    .extraction-treatment-tag--no-job {
-        background: #f1f5f9;
-        color: #64748b;
-    }
-
-    .extraction-legend {
-        display: flex;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-        margin-bottom: 1rem;
-    }
-
-    .extraction-actions {
-        margin-bottom: 1rem;
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-        align-items: center;
-    }
-
-    .import-result-card {
-        border: 1px solid #bbf7d0;
-        background: #f0fdf4;
-        margin-bottom: 1.25rem;
-    }
-
-    .import-result-card h2 {
-        font-size: 1.1rem;
-        margin-bottom: 0.5rem;
-        color: #166534;
-    }
-
-    .import-download-preview {
-        margin: 0.75rem 0 1rem;
-        padding: 0.85rem 1rem;
-        background: #fff;
-        border: 1px dashed #86efac;
-        border-radius: 8px;
-    }
-
-    .import-download-filename {
-        font-size: 1.05rem;
+    .extraction-unresolved-title {
+        font-size: 0.95rem;
         font-weight: 600;
-        color: #14532d;
-        word-break: break-word;
+        margin-bottom: 0.35rem;
+        color: var(--text);
     }
 
-    .import-download-meta {
-        margin-top: 0.35rem;
-        font-size: 0.85rem;
-        color: #64748b;
+    .extraction-unresolved-note {
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+        margin-bottom: 1rem;
+        max-width: 72ch;
     }
 
-    .extraction-toggle-btn {
-        padding: 0.35rem 0.75rem;
-        border: 1px solid #cbd5e1;
-        border-radius: 6px;
-        background: #fff;
-        font-size: 0.85rem;
-        cursor: pointer;
-    }
-
-    .extraction-toggle-btn:hover {
-        background: #f1f5f9;
+    .extraction-unresolved-label {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 0.5rem;
     }
 
     .extraction-scroll {
         overflow-x: auto;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
     }
 
-    .extraction-section-title {
-        font-size: 1.1rem;
-        margin-bottom: 1rem;
+    .extraction-scroll table {
+        margin: 0;
     }
 
-    .extraction-section-title--compact {
-        margin-bottom: 0.25rem;
+    .extraction-scroll th {
+        background: var(--surface-subtle);
     }
 
-    .extraction-section-note {
-        font-size: 0.85rem;
-        color: #64748b;
-        margin-bottom: 1rem;
-    }
-
-    .extraction-doctor-subtitle {
-        font-weight: 400;
-        font-size: 0.9rem;
-        color: #64748b;
-    }
-
-    .extraction-issue-bar {
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-        margin-bottom: 1.25rem;
-    }
-
-    .extraction-issue-pill {
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        font-size: 0.85rem;
-        font-weight: 600;
-    }
-
-    .extraction-issue-pill--error {
-        background: #fee2e2;
-        color: #991b1b;
-        border: 1px solid #fecaca;
-    }
-
-    .extraction-issue-pill--warning {
-        background: #fef3c7;
-        color: #92400e;
-        border: 1px solid #fde68a;
-    }
-
-    .extraction-issue-pill--info {
-        background: #e0f2fe;
-        color: #0369a1;
-        border: 1px solid #bae6fd;
-    }
-
-    .extraction-detail {
-        margin-bottom: 0.75rem;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        background: #fff;
-    }
-
-    .extraction-detail summary {
-        cursor: pointer;
-        padding: 0.75rem 1rem;
-        font-weight: 600;
-        list-style: none;
-    }
-
-    .extraction-detail summary::-webkit-details-marker {
-        display: none;
-    }
-
-    .extraction-detail-body {
-        padding: 0 1rem 1rem;
-        border-top: 1px solid #e2e8f0;
-    }
-
-    .extraction-detail-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 1rem;
-        margin-bottom: 1rem;
-    }
-
-    .extraction-detail-box {
-        background: #f8fafc;
-        border-radius: 6px;
-        padding: 0.75rem;
-        font-size: 0.8rem;
-    }
-
-    .extraction-detail-box h4 {
-        margin: 0 0 0.5rem;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        color: #64748b;
-        letter-spacing: 0.04em;
-    }
-
-    .extraction-issue-line {
-        font-size: 0.8rem;
-        margin-bottom: 0.35rem;
-    }
-
-    .extraction-issue-line--error {
-        color: #991b1b;
-    }
-
-    .extraction-issue-line--warning {
-        color: #92400e;
-    }
-
-    .extraction-issue-line--info {
-        color: #0369a1;
-    }
-
-    .extraction-has-issues summary {
-        border-left: 4px solid #dc2626;
-    }
-
-    .extraction-summary-row {
-        cursor: pointer;
-    }
-
-    .extraction-summary-row:hover td {
-        background: #f8fafc;
-    }
-
-    .extraction-summary-row.is-selected td {
-        background: #eff6ff;
-    }
-
-    .extraction-doctor-tab {
-        cursor: pointer;
-        font: inherit;
-    }
-
-    .extraction-doctor-tab.is-active {
-        box-shadow: 0 0 0 2px #2563eb;
+    .extraction-row--not-imported {
+        background: var(--danger-soft) !important;
     }
 
     .extraction-doctor-panel {
@@ -361,53 +259,429 @@ $doctorClass = fn (string $code): string => 'extraction-doctor--'.strtolower(pre
         display: block;
     }
 
+    .extraction-panel-header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .extraction-panel-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--text);
+        margin: 0;
+    }
+
+    .extraction-doctor-subtitle {
+        font-weight: 400;
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+    }
+
+    .extraction-section-note {
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+        margin: 0;
+    }
+
     .extraction-pick-doctor {
         text-align: center;
-        padding: 2rem 1rem;
-        color: #64748b;
+        padding: 2.5rem 1rem;
+        color: var(--text-muted);
+        font-size: 0.875rem;
+        border-style: dashed;
+    }
+
+    .extraction-detail {
+        margin-bottom: 0.5rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--surface);
+        overflow: hidden;
+    }
+
+    .extraction-detail summary {
+        cursor: pointer;
+        padding: 0;
+        list-style: none;
+        background: var(--surface);
+        transition: background 0.12s;
+    }
+
+    .extraction-detail summary:hover {
+        background: var(--surface-muted);
+    }
+
+    .extraction-row-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        padding: 0.8rem 1rem;
+    }
+
+    .extraction-row-head-main {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        flex-wrap: wrap;
+        min-width: 0;
+    }
+
+    .extraction-row-day {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 3.25rem;
+        padding: 0.25rem 0.55rem;
+        border-radius: var(--radius-sm);
+        background: var(--surface-subtle);
+        border: 1px solid var(--border);
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text);
+    }
+
+    .extraction-row-amounts {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+        flex-wrap: wrap;
+    }
+
+    .extraction-row-amount {
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+    }
+
+    .extraction-row-amount strong {
+        color: var(--text);
+        font-weight: 600;
+    }
+
+    .extraction-row-badges {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        flex-wrap: wrap;
+    }
+
+    .extraction-row-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.15rem 0.45rem;
+        border-radius: 999px;
+        font-size: 0.6875rem;
+        font-weight: 500;
+        border: 1px solid var(--border);
+        background: var(--surface-subtle);
+        color: var(--text-muted);
+    }
+
+    .extraction-row-badge--warning {
+        background: var(--warning-soft);
+        color: var(--warning);
+        border-color: #fde68a;
+    }
+
+    .extraction-row-badge--error {
+        background: var(--danger-soft);
+        color: var(--danger);
+        border-color: #fecaca;
+    }
+
+    .extraction-row-ref {
+        font-size: 0.75rem;
+        color: var(--text-subtle);
+        white-space: nowrap;
+    }
+
+    .extraction-kv {
+        display: grid;
+        gap: 0.4rem;
+        margin: 0;
+    }
+
+    .extraction-kv-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .extraction-kv-row dt {
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+        font-weight: 400;
+    }
+
+    .extraction-kv-row dd {
+        margin: 0;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--text);
+        text-align: right;
+    }
+
+    .extraction-kv-row--total {
+        margin-top: 0.35rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .extraction-kv-row--total dt,
+    .extraction-kv-row--total dd {
+        font-weight: 600;
+        color: var(--text);
+    }
+
+    .extraction-treatment-block {
+        font-size: 0.8125rem;
+        line-height: 1.45;
+        color: var(--text);
+        word-break: break-word;
+    }
+
+    .extraction-source-list {
+        display: grid;
+        gap: 0.35rem;
+        font-size: 0.8125rem;
+    }
+
+    .extraction-source-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .extraction-source-item span:first-child {
+        color: var(--text-muted);
+    }
+
+    .extraction-source-item span:last-child {
+        color: var(--text);
+        font-weight: 500;
+        text-align: right;
+    }
+
+    .extraction-subsection-title {
+        margin: 0.75rem 0 0.5rem;
+        font-size: 0.6875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-subtle);
+    }
+
+    .extraction-job-wrap {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+        background: var(--surface);
+    }
+
+    .extraction-job-wrap table {
+        margin: 0;
+    }
+
+    .extraction-job-total td {
+        background: var(--surface-subtle);
+        font-weight: 600;
+    }
+
+    .extraction-empty-note {
+        margin: 0;
+        padding: 0.75rem 0.9rem;
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+    }
+
+    .extraction-detail summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .extraction-detail-body {
+        padding: 0.9rem;
+        border-top: 1px solid var(--border);
+        background: var(--surface-muted);
+    }
+
+    .extraction-detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .extraction-detail-box {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 0.75rem;
+        font-size: 0.8125rem;
+        color: var(--text);
+    }
+
+    .extraction-detail-box h4 {
+        margin: 0 0 0.5rem;
+        font-size: 0.6875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        color: var(--text-subtle);
+        letter-spacing: 0.04em;
+    }
+
+    .extraction-flag {
+        display: inline-block;
+        background: var(--surface-subtle);
+        color: var(--text-muted);
+        border: 1px solid var(--border);
+        padding: 0.1rem 0.35rem;
+        border-radius: 4px;
+        margin-right: 0.25rem;
+        font-size: 0.6875rem;
+    }
+
+    .extraction-flag--error {
+        background: var(--danger-soft);
+        color: var(--danger);
+        border-color: #fecaca;
+    }
+
+    .extraction-treatment-text {
+        font-size: 0.8125rem;
+        max-width: 280px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .extraction-treatment-tag {
+        display: inline-block;
+        padding: 0.1rem 0.35rem;
+        border-radius: 4px;
+        margin-right: 0.25rem;
+        font-size: 0.6875rem;
+        border: 1px solid var(--border);
+        background: var(--surface-subtle);
+        color: var(--text-muted);
+    }
+
+    .extraction-treatment-tag--job {
+        background: var(--success-soft);
+        color: var(--success);
+        border-color: #bbf7d0;
+    }
+
+    .extraction-issue-line {
+        font-size: 0.8125rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .extraction-issue-line--error {
+        color: var(--danger);
+    }
+
+    .extraction-issue-line--warning {
+        color: var(--warning);
+    }
+
+    .extraction-issue-line--info {
+        color: var(--info);
+    }
+
+    .extraction-has-issues {
+        border-left: 3px solid var(--warning);
+    }
+
+    .extraction-has-issues summary {
+        background: var(--warning-soft);
+    }
+
+    .extraction-toggle-btn {
+        padding: 0.35rem 0.65rem;
+        border: 1px solid var(--border-strong);
+        border-radius: var(--radius-sm);
+        background: var(--surface);
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: background 0.12s, color 0.12s;
+    }
+
+    .extraction-toggle-btn:hover {
+        background: var(--surface-subtle);
+        color: var(--text);
+    }
+
+    .extraction-reason {
+        color: var(--danger);
+    }
+
+    .extraction-section-title {
         font-size: 0.95rem;
+        font-weight: 600;
+        margin-bottom: 0.35rem;
+        color: var(--text);
     }
 </style>
 @endpush
 
 @section('content')
-<h1 class="page-title">Extraction Log</h1>
-<p class="page-subtitle">
-    Report #{{ $dailyReport->id }} — {{ $dailyReport->report_date->format('F Y') }} —
-    {{ $dailyReport->source_file_name }}
-</p>
+<div class="extraction-page-header">
+    <div>
+        <h1 class="page-title">Extraction Log</h1>
+        <div class="extraction-page-meta">
+            <span>Report <strong>#{{ $dailyReport->id }}</strong></span>
+            <span>{{ $dailyReport->report_date->format('F Y') }}</span>
+            <span>{{ $dailyReport->source_file_name }}</span>
+        </div>
+    </div>
+    <div class="extraction-toolbar">
+        <a href="{{ route('imports.index') }}" class="btn btn-ghost">← Back</a>
+        @if ($log !== null)
+        <a href="{{ route('logs.extraction.download', $dailyReport) }}" class="btn btn-secondary">Download JSON</a>
+        @endif
+    </div>
+</div>
 
 @if ($showImportComplete)
-<div class="card import-result-card">
-    <h2>Import complete</h2>
-    <p>Your daily report was imported successfully. Review the extraction log below, then download the Server Income Excel when ready.</p>
+<div class="extraction-banner">
+    <div>
+        <strong>Import complete</strong>
+        Review the extraction log below, then download the Server Income Excel when ready.
+    </div>
 </div>
 @endif
 
 @if ($log !== null)
 <div class="card">
-    <h2 style="font-size:1.1rem;margin-bottom:0.5rem;">Server Income export</h2>
-    <p class="extraction-section-note" style="margin-bottom:0.75rem;">Monthly income Excel for all doctors — generated from this import.</p>
-    <div class="import-download-preview">
-        <div class="import-download-filename">{{ $incomeDownloadFileName }}</div>
-        <div class="import-download-meta">
-            {{ $dailyReport->dailyWorkRows()->count() }} work rows · status: {{ $dailyReport->status->value }}
+    <div class="extraction-export-card">
+        <div>
+            <h2 class="card-title">Server Income export</h2>
+            <p class="card-description">Monthly income Excel for all doctors — generated from this import.</p>
+            <div class="extraction-export-preview" style="margin-top:0.75rem;">
+                <div class="extraction-export-filename">{{ $incomeDownloadFileName }}</div>
+                <div class="extraction-export-meta">
+                    {{ $dailyReport->dailyWorkRows()->count() }} work rows · {{ $dailyReport->status->value }}
+                </div>
+            </div>
         </div>
+        <a href="{{ route('imports.income', $dailyReport) }}" class="btn btn-primary">Download Income Excel</a>
     </div>
-    <a href="{{ route('imports.income', $dailyReport) }}" class="btn btn-primary">Download Income Excel</a>
 </div>
 @endif
 
-<div class="extraction-actions">
-    <a href="{{ route('imports.index') }}">← Back to import</a>
-    @if ($log !== null)
-    <a href="{{ route('logs.extraction.download', $dailyReport) }}">Download JSON</a>
-    @endif
-</div>
-
 @if ($log === null)
 <div class="card">
-    <p class="empty">No extraction log for this report. Re-import the daily report to generate one.</p>
+    <p class="extraction-muted">No extraction log for this report. Re-import the daily report to generate one.</p>
 </div>
 @else
 @php
@@ -439,12 +713,24 @@ $issueSummary[$severity]++;
 }
 @endphp
 
-<div class="extraction-issue-bar">
-    <span class="extraction-issue-pill extraction-issue-pill--error">{{ $issueSummary['error'] ?? 0 }} errors</span>
-    <span class="extraction-issue-pill extraction-issue-pill--warning">{{ $issueSummary['warning'] ?? 0 }} warnings</span>
-    <span class="extraction-issue-pill extraction-issue-pill--info">{{ $issueSummary['info'] ?? 0 }} info</span>
-    <span class="extraction-muted" style="align-self:center;">Click a row for details</span>
-    <span style="margin-left:auto;display:flex;gap:0.5rem;">
+<div class="extraction-metrics">
+    <div class="extraction-metric extraction-metric--error">
+        <div class="extraction-metric-label">Errors</div>
+        <div class="extraction-metric-value">{{ $issueSummary['error'] ?? 0 }}</div>
+    </div>
+    <div class="extraction-metric extraction-metric--warning">
+        <div class="extraction-metric-label">Warnings</div>
+        <div class="extraction-metric-value">{{ $issueSummary['warning'] ?? 0 }}</div>
+    </div>
+    <div class="extraction-metric extraction-metric--info">
+        <div class="extraction-metric-label">Info</div>
+        <div class="extraction-metric-value">{{ $issueSummary['info'] ?? 0 }}</div>
+    </div>
+</div>
+
+<div class="extraction-toolbar-row">
+    <span class="extraction-toolbar-hint">Select a doctor to view daily rows and expand for details.</span>
+    <span style="display:flex;gap:0.5rem;">
         <button type="button" class="extraction-toggle-btn" id="extraction-expand-all">Expand all</button>
         <button type="button" class="extraction-toggle-btn" id="extraction-collapse-all">Collapse all</button>
     </span>
@@ -468,7 +754,7 @@ $issueSummary[$severity]++;
                 <thead>
                     <tr>
                         <th>Day</th>
-                        <th>Excel row</th>
+                        <th>Row in file</th>
                         <th>DHS</th>
                         <th>USD</th>
                         <th>Visa</th>
@@ -501,13 +787,13 @@ $issueSummary[$severity]++;
 
 <div class="card">
     <h2 class="extraction-section-title">Summary by doctor</h2>
-    <p class="extraction-section-note" style="margin-top:0;">Click a doctor in the table or a badge below to view their daily rows.</p>
-    <div class="extraction-legend" id="extraction-doctor-tabs">
+    <p class="extraction-section-note" style="margin-bottom:1rem;">Click a row or tab to filter daily rows.</p>
+    <div class="extraction-doctor-tabs" id="extraction-doctor-tabs">
         @foreach ($doctorCodes as $code)
-        <button type="button" @class(['extraction-doctor-badge', 'extraction-doctor-tab', $doctorClass($code)])
-            data-doctor-select="{{ $code }}">{{ $code }}</button>
+        <button type="button" class="extraction-doctor-tab" data-doctor-select="{{ $code }}">{{ $code }}</button>
         @endforeach
     </div>
+    <div class="extraction-scroll">
     <table>
         <thead>
             <tr>
@@ -516,15 +802,15 @@ $issueSummary[$severity]++;
                 <th>Skipped rows</th>
                 <th>Unresolved</th>
                 <th>Total paid (AED)</th>
-                <th>Total JOB (AED)</th>
+                <th>Total lab cost (AED)</th>
                 <th>Issues</th>
             </tr>
         </thead>
         <tbody>
             @forelse ($doctorTotals as $code => $totals)
-            <tr @class(['extraction-summary-row', $doctorClass($code)]) data-doctor-select="{{ $code }}">
+            <tr class="extraction-summary-row" data-doctor-select="{{ $code }}">
                 <td>
-                    <strong>{{ $code }}</strong><br>
+                    <span class="extraction-doctor-code">{{ $code }}</span><br>
                     <span class="extraction-muted">{{ $totals['doctor_label'] ?? '' }}</span>
                 </td>
                 <td>{{ $totals['day_count'] ?? 0 }}</td>
@@ -541,6 +827,7 @@ $issueSummary[$severity]++;
             @endforelse
         </tbody>
     </table>
+    </div>
 </div>
 
 <div id="extraction-pick-doctor" class="card extraction-pick-doctor">
@@ -554,19 +841,20 @@ $issueSummary[$severity]++;
 @if (count($rows) === 0)
     @continue
 @endif
-<div @class(['card', 'extraction-card', 'extraction-doctor-panel', $doctorClass($doctorCode)])
-    data-doctor-panel="{{ $doctorCode }}" hidden>
-    <h2 @class(['extraction-section-title', 'extraction-section-title--compact', $doctorClass($doctorCode)])>
-        {{ $doctorCode }}
-        @if (!empty($rows[0]['doctor_label']))
-        <span class="extraction-doctor-subtitle">— {{ $rows[0]['doctor_label'] }}</span>
-        @elseif (!empty($doctorTotals[$doctorCode]['doctor_label']))
-        <span class="extraction-doctor-subtitle">— {{ $doctorTotals[$doctorCode]['doctor_label'] }}</span>
+<div class="card extraction-doctor-panel" data-doctor-panel="{{ $doctorCode }}" hidden>
+    <div class="extraction-panel-header">
+        <h2 class="extraction-panel-title">
+            {{ $doctorCode }}
+            @if (!empty($rows[0]['doctor_label']))
+            <span class="extraction-doctor-subtitle">— {{ $rows[0]['doctor_label'] }}</span>
+            @elseif (!empty($doctorTotals[$doctorCode]['doctor_label']))
+            <span class="extraction-doctor-subtitle">— {{ $doctorTotals[$doctorCode]['doctor_label'] }}</span>
+            @endif
+        </h2>
+        @if (count($rows) > 0)
+        <span class="extraction-section-note">{{ count($rows) }} rows</span>
         @endif
-    </h2>
-    @if (count($rows) > 0)
-    <p class="extraction-section-note">{{ count($rows) }} rows — expand for details</p>
-    @endif
+    </div>
 
     @foreach ($rows as $row)
     @php
@@ -581,56 +869,92 @@ $issueSummary[$severity]++;
     @endphp
     <details @class(['extraction-detail', $issueCount> 0 ? 'extraction-has-issues' : null])>
         <summary>
-            Day {{ $row['sheet_day'] ?? '—' }} | Excel {{ $row['excel_row'] ?? '—' }}
-            | TOTAL {{ $row['paid_total_aed'] ?? '0.00' }} AED
-            | JOB {{ $row['lab_total_aed'] ?? '0.00' }} AED
-            @if ($issueCount > 0)
-            | ⚠ {{ $issueCount }} issue(s)
-            @endif
-            @if (!$isImported)
-            | not imported
-            @endif
+            <div class="extraction-row-head">
+                <div class="extraction-row-head-main">
+                    <span class="extraction-row-day">Day {{ $row['sheet_day'] ?? '—' }}</span>
+                    <div class="extraction-row-amounts">
+                        <span class="extraction-row-amount">Paid <strong>{{ $row['paid_total_aed'] ?? '0.00' }}</strong> AED</span>
+                        <span class="extraction-row-amount">Lab <strong>{{ $row['lab_total_aed'] ?? '0.00' }}</strong> AED</span>
+                    </div>
+                    <div class="extraction-row-badges">
+                        @if ($issueCount > 0)
+                        <span class="extraction-row-badge extraction-row-badge--warning">{{ $issueCount }} {{ $issueCount === 1 ? 'issue' : 'issues' }}</span>
+                        @endif
+                        @if (!$isImported)
+                        <span class="extraction-row-badge extraction-row-badge--error">Not imported</span>
+                        @endif
+                    </div>
+                </div>
+                <span class="extraction-row-ref">Row {{ $row['excel_row'] ?? '—' }}</span>
+            </div>
         </summary>
         <div class="extraction-detail-body">
             <div class="extraction-detail-grid">
                 <div class="extraction-detail-box">
-                    <h4>Payment (columns B–F)</h4>
-                    DHS: {{ $row['dhs_aed'] ?? '0.00' }}<br>
-                    USD: {{ $row['usd'] ?? '0.00' }} → {{ $row['usd_to_aed'] ?? '0.00' }} AED<br>
-                    VISA: {{ $row['visa_aed'] ?? '0.00' }}<br>
-                    <strong>TOTAL: {{ $row['paid_total_aed'] ?? '0.00' }} AED</strong>
+                    <h4>Patient payment</h4>
+                    <dl class="extraction-kv">
+                        <div class="extraction-kv-row">
+                            <dt>Cash (AED)</dt>
+                            <dd>{{ $row['dhs_aed'] ?? '0.00' }}</dd>
+                        </div>
+                        <div class="extraction-kv-row">
+                            <dt>Cash (USD)</dt>
+                            <dd>{{ $row['usd'] ?? '0.00' }} <span class="extraction-muted">(→ {{ $row['usd_to_aed'] ?? '0.00' }} AED)</span></dd>
+                        </div>
+                        <div class="extraction-kv-row">
+                            <dt>Card (Visa)</dt>
+                            <dd>{{ $row['visa_aed'] ?? '0.00' }}</dd>
+                        </div>
+                        <div class="extraction-kv-row extraction-kv-row--total">
+                            <dt>Total paid</dt>
+                            <dd>{{ $row['paid_total_aed'] ?? '0.00' }} AED</dd>
+                        </div>
+                    </dl>
                     @if ($diag && !($diag['payments']['payment_ok'] ?? true))
-                    <br><span class="extraction-issue-line extraction-issue-line--error">⚠ TOTAL ≠ DHS+USD+VISA</span>
+                    <p class="extraction-issue-line extraction-issue-line--error" style="margin-top:0.5rem;margin-bottom:0;">
+                        Payment total does not match cash + card amounts.
+                    </p>
                     @endif
                 </div>
                 <div class="extraction-detail-box">
-                    <h4>Extracted from daily report</h4>
-                    Sheet: {{ $row['sheet_name'] ?? '—' }}<br>
-                    Doctor label: {{ $row['doctor_label'] ?? '—' }}<br>
-                    Column G: {{ $row['g_cell'] ?? '—' }}<br>
-                    Flags:
-                    @forelse ($row['flags'] ?? [] as $flag)
-                    <span class="extraction-flag">{{ $flag }}</span>
-                    @empty
-                    —
-                    @endforelse
+                    <h4>Source</h4>
+                    <div class="extraction-source-list">
+                        <div class="extraction-source-item">
+                            <span>Calendar day</span>
+                            <span>{{ $row['sheet_day'] ?? '—' }}</span>
+                        </div>
+                        <div class="extraction-source-item">
+                            <span>Doctor in Excel</span>
+                            <span>{{ $row['doctor_label'] ?? '—' }}</span>
+                        </div>
+                        @if (!empty($row['flags']))
+                        <div class="extraction-source-item">
+                            <span>Flags</span>
+                            <span>
+                                @foreach ($row['flags'] as $flag)
+                                <span class="extraction-flag">{{ $flag }}</span>
+                                @endforeach
+                            </span>
+                        </div>
+                        @endif
+                    </div>
                 </div>
                 <div class="extraction-detail-box">
-                    <h4>Treatment-Text</h4>
-                    {{ $row['treatment_text'] ?? '—' }}
+                    <h4>Treatments</h4>
+                    <div class="extraction-treatment-block">{{ $row['treatment_text'] ?? '—' }}</div>
                 </div>
             </div>
 
             @if ($diag && ($diag['job']['lines'] ?? []) !== [])
+            <h4 class="extraction-subsection-title">Lab costs</h4>
+            <div class="extraction-job-wrap">
             <table>
                 <thead>
                     <tr>
-                        <th>Code</th>
+                        <th>Treatment</th>
                         <th>Qty</th>
-                        <th>Unit (AED)</th>
-                        <th>Line JOB</th>
-                        <th>Income column</th>
-                        <th>Confidence</th>
+                        <th>Unit price (AED)</th>
+                        <th>Line total (AED)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -640,36 +964,34 @@ $issueSummary[$severity]++;
                         <td>{{ $jobLine['quantity'] }}</td>
                         <td>{{ $jobLine['unit_cost_aed'] }}</td>
                         <td>{{ $jobLine['line_total_aed'] }}</td>
-                        <td>{{ $jobLine['export_column'] ?? '—' }}</td>
-                        <td>{{ $jobLine['confidence'] ?? '—' }}</td>
                     </tr>
                     @endforeach
-                    <tr>
-                        <td colspan="3"><strong>JOB total (column G)</strong></td>
-                        <td colspan="3"><strong>{{ $diag['job']['total_aed'] ?? '0.00' }} AED</strong></td>
+                    <tr class="extraction-job-total">
+                        <td colspan="3">Total lab cost</td>
+                        <td>{{ $diag['job']['total_aed'] ?? '0.00' }} AED</td>
                     </tr>
                 </tbody>
             </table>
+            </div>
             @else
-            <p class="extraction-muted">No lab JOB for Income columns G / H–P</p>
+            <p class="extraction-empty-note">No lab costs for this row.</p>
             @endif
 
             @if ($diag && ($diag['treatments_ignored'] ?? []) !== [])
-            <p class="extraction-small" style="margin-top:0.75rem;">
-                <strong>No lab cost (no JOB):</strong>
+            <p class="extraction-small" style="margin-top:0.75rem;margin-bottom:0;">
+                <strong>Treatments without lab cost:</strong>
                 @foreach ($diag['treatments_ignored'] as $t)
-                <span class="extraction-treatment-tag extraction-treatment-tag--no-job">{{ $t['code'] }}×{{ $t['quantity'] }}</span>
+                <span class="extraction-treatment-tag">{{ $t['code'] }}×{{ $t['quantity'] }}</span>
                 @endforeach
             </p>
             @endif
 
             @if ($issueCount > 0)
             <div style="margin-top:0.75rem;">
-                <h4 class="extraction-muted" style="margin-bottom:0.35rem;">Notes</h4>
+                <h4 class="extraction-subsection-title">Notes</h4>
                 @foreach ($visibleIssues as $issue)
-                <div @class([ 'extraction-issue-line' , 'extraction-issue-line--' .($issue['severity'] ?? 'warning' ),
-                    ])>
-                    [{{ strtoupper($issue['severity'] ?? 'warn') }}] {{ $issue['message'] ?? '' }}
+                <div @class(['extraction-issue-line', 'extraction-issue-line--' . ($issue['severity'] ?? 'warning')])>
+                    {{ $issue['message'] ?? '' }}
                 </div>
                 @endforeach
             </div>

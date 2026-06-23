@@ -14,8 +14,8 @@
         cursor: pointer;
     }
     .dropzone.dragover {
-        border-color: #2563eb;
-        background: #eff6ff;
+        border-color: var(--accent);
+        background: var(--accent-soft);
     }
     .dropzone-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
     .dropzone-title { font-weight: 600; font-size: 1.05rem; margin-bottom: 0.25rem; }
@@ -73,7 +73,8 @@
 
 @if ($recentReports->isNotEmpty())
 <div class="card">
-    <h2 style="font-size:1.1rem;margin-bottom:1rem;">Recent imports</h2>
+    <h2 class="card-title" style="margin-bottom:1rem;">Recent imports</h2>
+    <div class="extraction-scroll">
     <table>
         <thead>
             <tr>
@@ -96,13 +97,16 @@
                     </td>
                     <td>{{ $report->dailyWorkRows()->count() }}</td>
                     <td>
-                        <a href="{{ route('logs.extraction', $report) }}">Extraction log</a>
-                        · <a href="{{ route('imports.income', $report) }}">Income Excel</a>
+                        <div class="table-actions">
+                            <a href="{{ route('logs.extraction', $report) }}" class="btn btn-secondary btn-sm">Extraction log</a>
+                            <a href="{{ route('imports.income', $report) }}" class="btn btn-secondary btn-sm">Income Excel</a>
+                        </div>
                     </td>
                 </tr>
             @endforeach
         </tbody>
     </table>
+    </div>
 </div>
 @endif
 @endsection
