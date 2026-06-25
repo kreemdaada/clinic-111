@@ -135,7 +135,15 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | `currency` | string(3) | Default `AED` |
 | `valid_from` | date nullable | Price effective start |
 | `valid_to` | date nullable | Price effective end |
+| `is_active` | boolean | Default `true`; soft deactivate instead of delete |
 | `created_at`, `updated_at` | timestamps | |
+
+**Admin rules (Milestone 03):**
+
+- Never physically delete price rows
+- Only one **active** price per lab + treatment + doctor scope + overlapping validity period
+- Inactive prices remain in DB for historical `lab_jobs.lab_price_id` references
+- General price: `doctor_id IS NULL`; doctor override: `doctor_id` set
 
 **Relationships:**
 
@@ -470,6 +478,7 @@ doctor_fixed_fees ── doctors + treatments
 
 **Updated — 2026-06-26**
 
+- `lab_prices.is_active` admin rules and overlap validation (Milestone 03 — Lab Price Administration)
 - `treatments.description` column and admin rules (Milestone 02)
 
 **Updated — 2026-06-25**

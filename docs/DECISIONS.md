@@ -212,6 +212,44 @@ Milestone 02 — Treatments Administration
 
 ---
 
+## ADR-023
+
+### Title
+
+Admin-Managed Lab Price Catalog
+
+### Status
+
+Accepted
+
+### Context
+
+Lab unit prices were seeded in `LabPriceSeeder` and partially editable via a minimal admin page. Milestone 03 requires full UI/API administration without changing `LabPriceResolver` or accounting calculations.
+
+### Decision
+
+- `LabPriceManagementService` owns create, update, activate, deactivate, and duplicate
+- `LabPriceOverlapValidator` enforces one active price per lab + treatment + doctor scope + validity period
+- General prices (`doctor_id IS NULL`) and doctor overrides managed from `/lab-prices` and `/api/admin/lab-prices`
+- Soft deactivate only; historical `lab_jobs.lab_price_id` references preserved
+
+### Consequences
+
+- Administrators can change lab costs without code deploy
+- `LabPriceResolver` and `LabJobCalculationService` unchanged
+- Duplicate creates inactive copy — admin adjusts validity before activation
+- Ready for future `clinic_id` scoping without hardcoding a single catalog
+
+### Related Milestone
+
+Milestone 03 — Laboratory Price Administration
+
+### Date
+
+2026-06-26
+
+---
+
 # ADR Index
 
 | ADR     | Title                               | Status   |
@@ -238,6 +276,7 @@ Milestone 02 — Treatments Administration
 | ADR-020 | Delete Uploaded Excel Files         | Accepted |
 | ADR-021 | Laboratory Soft Deactivate          | Accepted |
 | ADR-022 | Database-Driven Treatment Catalog   | Accepted |
+| ADR-023 | Admin-Managed Lab Price Catalog     | Accepted |
 
 ---
 
@@ -245,7 +284,7 @@ Milestone 02 — Treatments Administration
 
 The following architectural topics are expected to receive future ADRs.
 
-ADR-023
+ADR-024
 
 Doctor Fixed Fee Administration
 

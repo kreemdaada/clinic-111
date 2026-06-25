@@ -38,10 +38,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/{lab}/activate', [LabAdminController::class, 'activate']);
     });
 
-    Route::middleware('role:admin')->prefix('lab-prices')->group(function () {
+    Route::middleware('role:admin')->prefix('admin/lab-prices')->group(function () {
+        Route::get('/', [LabPriceAdminController::class, 'index']);
         Route::post('/', [LabPriceAdminController::class, 'store']);
         Route::put('/{labPrice}', [LabPriceAdminController::class, 'update']);
         Route::delete('/{labPrice}', [LabPriceAdminController::class, 'destroy']);
+        Route::post('/{labPrice}/activate', [LabPriceAdminController::class, 'activate']);
+        Route::post('/{labPrice}/duplicate', [LabPriceAdminController::class, 'duplicate']);
     });
 
     Route::middleware('role:admin')->prefix('admin/treatments')->group(function () {

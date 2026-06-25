@@ -39,6 +39,9 @@ enum AuditAction: string
     /** A lab price row was deactivated. */
     case LabPriceDeactivated = 'lab_price_deactivated';
 
+    /** A lab price row was reactivated. */
+    case LabPriceActivated = 'lab_price_activated';
+
     /** An approved or locked report was unlocked by an admin. */
     case ReportUnlocked = 'report_unlocked';
 

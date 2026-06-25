@@ -74,7 +74,7 @@ class ProductionAccessControlTest extends TestCase
 
         $this->actingAsRole('accountant');
 
-        $this->putJson("/api/lab-prices/{$labPrice->id}", ['unit_cost' => 999])
+        $this->putJson("/api/admin/lab-prices/{$labPrice->id}", ['unit_cost' => 999])
             ->assertForbidden();
     }
 
@@ -98,7 +98,7 @@ class ProductionAccessControlTest extends TestCase
 
         $this->actingAsRole('admin');
 
-        $this->putJson("/api/lab-prices/{$labPrice->id}", ['unit_cost' => 123.45])
+        $this->putJson("/api/admin/lab-prices/{$labPrice->id}", ['unit_cost' => 123.45])
             ->assertOk()
             ->assertJsonPath('data.unit_cost', '123.45');
     }

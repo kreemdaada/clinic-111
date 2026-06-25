@@ -244,8 +244,9 @@ Unchanged — Sanctum bearer tokens, rate-limited login.
 | Manage users (`/admin/users`) | ✓ | ✗ | ✗ |
 | Manage laboratories (`/labs`) | ✓ | ✗ | ✗ |
 | Manage treatments (`/treatments`) | ✓ | ✗ | ✗ |
+| Manage lab prices (`/lab-prices`) | ✓ | ✗ | ✗ |
 | Approve / unlock reports | ✓ | ✗ | ✗ |
-| Manage doctors / lab prices | ✓ | ✗ | ✗ |
+| Manage doctors | ✓ | ✗ | ✗ |
 
 ---
 
@@ -309,7 +310,44 @@ sequenceDiagram
 
 ---
 
-## 10. User Administration (admin only)
+## 10. Lab Price Administration (admin only)
+
+```mermaid
+sequenceDiagram
+    actor Admin
+    participant UI as /lab-prices
+    participant Svc as LabPriceManagementService
+    participant DB as lab_prices + audit_logs
+
+    Admin->>UI: Create price (lab + treatment + optional doctor)
+    UI->>Svc: create()
+    Svc->>DB: overlap check
+    Svc->>DB: INSERT lab_prices
+    Svc->>DB: audit lab_price_created
+
+    Admin->>UI: Duplicate price
+    UI->>Svc: duplicate()
+    Svc->>DB: INSERT inactive copy
+
+    Admin->>UI: Deactivate price
+    UI->>Svc: deactivate()
+    Svc->>DB: is_active = false
+    Svc->>DB: audit lab_price_deactivated
+
+    Note over DB: Historical lab_jobs keep lab_price_id
+```
+
+**Rules:**
+
+- Lab prices never physically deleted
+- General price: `doctor_id IS NULL`; doctor override: `doctor_id` set
+- Only one active price per lab + treatment + doctor + overlapping validity period
+- `LabPriceResolver` unchanged — reads active rows with date validity
+- Seed data in `LabPriceSeeder` is initial data only, not runtime logic
+
+---
+
+## 11. User Administration (admin only)
 
 ```mermaid
 sequenceDiagram
@@ -349,7 +387,7 @@ sequenceDiagram
 
 ---
 
-## 11. Environment Variables (import / privacy)
+## 12. Environment Variables (import / privacy)
 
 | Variable | Purpose |
 |---|---|
@@ -359,7 +397,7 @@ sequenceDiagram
 
 ---
 
-## 12. V2 Manual Entry (Planned)
+## 13. V2 Manual Entry (Planned)
 
 Same pipeline after row creation: `TreatmentImportValidationService` → `LabJobCalculationService`. No Excel parser.
 
@@ -373,6 +411,7 @@ Same pipeline after row creation: `TreatmentImportValidationService` → `LabJob
 
 **Updated — 2026-06-26**
 
+- Lab price administration workflow (Milestone 03)
 - Treatment administration workflow (Milestone 02)
 - Database-driven `LabCostTreatmentCatalog`
 
