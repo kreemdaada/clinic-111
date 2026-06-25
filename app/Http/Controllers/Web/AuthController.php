@@ -51,6 +51,17 @@ class AuthController extends Controller
                 ->withErrors(['email' => 'Invalid email or password.']);
         }
 
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if ($user !== null && ! $user->is_active) {
+            Auth::logout();
+
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors(['email' => 'This account has been deactivated.']);
+        }
+
         $request->session()->regenerate();
 
         return redirect()->intended(route('imports.index'));

@@ -732,7 +732,7 @@ class ExcelDailyReportParser
      */
     private function readCellValue(Worksheet $worksheet, string $columnLetter, int $rowIndex): ?string
     {
-        $value = trim((string) $worksheet->getCell($columnLetter.$rowIndex)->getCalculatedValue());
+        $value = trim((string) $worksheet->getCell($columnLetter . $rowIndex)->getCalculatedValue());
 
         return $value === '' ? null : $value;
     }
@@ -793,8 +793,10 @@ class ExcelDailyReportParser
                     $usdColumns[] = $columnLetter;
                 }
 
-                if (in_array($header, ['RUBL', 'RUB', 'RUBLES', 'RUBLE'], true)
-                    || str_contains($header, 'RUBL')) {
+                if (
+                    in_array($header, ['RUBL', 'RUB', 'RUBLES', 'RUBLE'], true)
+                    || str_contains($header, 'RUBL')
+                ) {
                     $columnMap['rubl_amount'] = $columnLetter;
                 }
 

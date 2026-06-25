@@ -104,7 +104,7 @@ class DailyReportEditorTest extends TestCase
         $this->assertDatabaseHas('daily_reports', ['id' => $report->id]);
     }
 
-    public function test_viewer_cannot_open_daily_report_editor(): void
+    public function test_viewer_can_open_daily_report_editor_read_only(): void
     {
         $this->seed();
 
@@ -119,6 +119,6 @@ class DailyReportEditorTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('daily-report.index'))
-            ->assertForbidden();
+            ->assertOk();
     }
 }

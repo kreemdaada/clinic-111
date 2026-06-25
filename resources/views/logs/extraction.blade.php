@@ -726,7 +726,7 @@ $issueSummary[$severity]++;
 }
 
 foreach ($unknownDoctorErrors ?? [] as $unknownDoctor) {
-    $issueSummary['error'] += count($unknownDoctor['rows'] ?? []);
+$issueSummary['error'] += count($unknownDoctor['rows'] ?? []);
 }
 $issueSummary['warning'] += count($log['skipped_rows'] ?? []);
 
@@ -819,39 +819,39 @@ $issueSummary[$severity]++;
         @endforeach
     </div>
     <div class="extraction-scroll">
-    <table>
-        <thead>
-            <tr>
-                <th>Doctor</th>
-                <th>Imported days</th>
-                <th>Skipped rows</th>
-                <th>Unresolved</th>
-                <th>Total paid (AED)</th>
-                <th>Total lab cost (AED)</th>
-                <th>Issues</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse ($doctorTotals as $code => $totals)
-            <tr class="extraction-summary-row" data-doctor-select="{{ $code }}">
-                <td>
-                    <span class="extraction-doctor-code">{{ $code }}</span><br>
-                    <span class="extraction-muted">{{ $totals['doctor_label'] ?? '' }}</span>
-                </td>
-                <td>{{ $totals['day_count'] ?? 0 }}</td>
-                <td>{{ $totals['skipped_rows_on_sheet'] ?? 0 }}</td>
-                <td>{{ $totals['unresolved_rows'] ?? 0 }}</td>
-                <td>{{ $totals['paid_total_aed'] ?? '0.00' }}</td>
-                <td>{{ $totals['lab_total_aed'] ?? '0.00' }}</td>
-                <td>{{ $totals['issue_count'] ?? 0 }}</td>
-            </tr>
-            @empty
-            <tr>
-                <td colspan="7">No data.</td>
-            </tr>
-            @endforelse
-        </tbody>
-    </table>
+        <table>
+            <thead>
+                <tr>
+                    <th>Doctor</th>
+                    <th>Imported days</th>
+                    <th>Skipped rows</th>
+                    <th>Unresolved</th>
+                    <th>Total paid (AED)</th>
+                    <th>Total lab cost (AED)</th>
+                    <th>Issues</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse ($doctorTotals as $code => $totals)
+                <tr class="extraction-summary-row" data-doctor-select="{{ $code }}">
+                    <td>
+                        <span class="extraction-doctor-code">{{ $code }}</span><br>
+                        <span class="extraction-muted">{{ $totals['doctor_label'] ?? '' }}</span>
+                    </td>
+                    <td>{{ $totals['day_count'] ?? 0 }}</td>
+                    <td>{{ $totals['skipped_rows_on_sheet'] ?? 0 }}</td>
+                    <td>{{ $totals['unresolved_rows'] ?? 0 }}</td>
+                    <td>{{ $totals['paid_total_aed'] ?? '0.00' }}</td>
+                    <td>{{ $totals['lab_total_aed'] ?? '0.00' }}</td>
+                    <td>{{ $totals['issue_count'] ?? 0 }}</td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="7">No data.</td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
 </div>
 
@@ -861,10 +861,10 @@ $issueSummary[$severity]++;
 
 @foreach ($doctorCodes as $doctorCode)
 @php
-    $rows = $importedByDoctor[$doctorCode] ?? [];
+$rows = $importedByDoctor[$doctorCode] ?? [];
 @endphp
 @if (count($rows) === 0)
-    @continue
+@continue
 @endif
 <div class="card extraction-doctor-panel" data-doctor-panel="{{ $doctorCode }}" hidden>
     <div class="extraction-panel-header">
@@ -881,16 +881,16 @@ $issueSummary[$severity]++;
 
     @foreach ($rows as $row)
     @php
-        $isImported = ($row['work_row_id'] ?? null) !== null;
-        $diag = is_array($row['diagnostics'] ?? null) ? $row['diagnostics'] : null;
-        $visibleIssues = array_values(array_filter(
-            $row['issues'] ?? [],
-            fn ($issue) => in_array($issue['severity'] ?? '', ['error', 'warning'], true)
-                && ! in_array($issue['code'] ?? '', ['lab_not_persisted', 'ignored_treatment_noted'], true),
-        ));
-        $issueCount = count($visibleIssues);
+    $isImported = ($row['work_row_id'] ?? null) !== null;
+    $diag = is_array($row['diagnostics'] ?? null) ? $row['diagnostics'] : null;
+    $visibleIssues = array_values(array_filter(
+    $row['issues'] ?? [],
+    fn ($issue) => in_array($issue['severity'] ?? '', ['error', 'warning'], true)
+    && ! in_array($issue['code'] ?? '', ['lab_not_persisted', 'ignored_treatment_noted'], true),
+    ));
+    $issueCount = count($visibleIssues);
     @endphp
-    <details @class(['extraction-detail', $issueCount > 0 ? 'extraction-has-issues' : null])>
+    <details @class(['extraction-detail', $issueCount> 0 ? 'extraction-has-issues' : null])>
         <summary>
             <div class="extraction-row-head">
                 <div class="extraction-row-head-main">
@@ -957,7 +957,7 @@ $issueSummary[$severity]++;
             @if ($issueCount > 0)
             <div class="extraction-entry-notes">
                 @foreach ($visibleIssues as $issue)
-                <div @class(['extraction-issue-line', 'extraction-issue-line--' . ($issue['severity'] ?? 'warning')])>
+                <div @class(['extraction-issue-line', 'extraction-issue-line--' . ($issue['severity'] ?? 'warning' )])>
                     {{ $issue['message'] ?? '' }}
                 </div>
                 @endforeach
@@ -985,9 +985,9 @@ $issueSummary[$severity]++;
         const activeDetails = () => {
             const activePanel = document.querySelector('[data-doctor-panel].is-active');
 
-            return activePanel
-                ? activePanel.querySelectorAll('.extraction-detail')
-                : document.querySelectorAll('.extraction-detail');
+            return activePanel ?
+                activePanel.querySelectorAll('.extraction-detail') :
+                document.querySelectorAll('.extraction-detail');
         };
 
         function selectDoctor(code) {
@@ -1020,7 +1020,10 @@ $issueSummary[$severity]++;
 
             const activePanel = document.querySelector('[data-doctor-panel].is-active');
             if (activePanel) {
-                activePanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                activePanel.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
             }
         }
 

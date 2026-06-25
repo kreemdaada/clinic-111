@@ -15,6 +15,7 @@ use App\Services\Accounting\LabPriceResolver;
 use App\Services\Accounting\PaymentCalculationService;
 use App\Services\Accounting\TreatmentParserService;
 use App\Services\Accounting\WaelFixedFeeCalculator;
+use App\Services\Audit\AuditLogService;
 use App\Services\Import\DailyReportImportService;
 use App\Support\MoneyCalculator;
 use App\Support\TreatmentTextBuilder;
@@ -33,6 +34,7 @@ class DailyReportEditorService
         private readonly LabBillingResolver $labBillingResolver,
         private readonly LabPriceResolver $labPriceResolver,
         private readonly DailyReportImportService $dailyReportImportService,
+        private readonly AuditLogService $auditLogService,
     ) {}
 
     public function createManualReport(Carbon $monthStart, string $label): DailyReport
@@ -41,9 +43,9 @@ class DailyReportEditorService
 
         if (DailyReport::query()
             ->where('report_date', $reportDate)
-            ->where('status', ReportStatus::Approved)
+            ->whereIn('status', [ReportStatus::Approved, ReportStatus::Locked])
             ->exists()) {
-            throw new RuntimeException('An approved report already exists for this month.');
+            throw new RuntimeException('An approved or locked report already exists for this month.');
         }
 
         return DailyReport::query()->create([
@@ -67,8 +69,8 @@ class DailyReportEditorService
      */
     public function saveWorkRow(DailyReport $dailyReport, array $payload): DailyWorkRow
     {
-        if ($dailyReport->isApproved()) {
-            throw new RuntimeException('Approved reports are read-only.');
+        if ($dailyReport->isLocked()) {
+            throw new RuntimeException('Approved or locked reports are read-only.');
         }
 
         $doctor = Doctor::query()->where('is_active', true)->findOrFail($payload['doctor_id']);
@@ -114,12 +116,29 @@ class DailyReportEditorService
             $paymentTotals,
             $payload,
         ) {
+            $isCorrection = isset($payload['work_row_id']);
+            $oldCorrectionValues = null;
+
             /** @var DailyWorkRow $workRow */
-            $workRow = isset($payload['work_row_id'])
+            $workRow = $isCorrection
                 ? DailyWorkRow::query()
                     ->where('daily_report_id', $dailyReport->id)
                     ->findOrFail($payload['work_row_id'])
                 : new DailyWorkRow(['daily_report_id' => $dailyReport->id]);
+
+            if ($isCorrection) {
+                $oldCorrectionValues = [
+                    'work_row_id' => $workRow->id,
+                    'doctor_id' => $workRow->doctor_id,
+                    'paid_total_aed' => (string) $workRow->paid_total_aed,
+                    'dhs_amount' => (string) $workRow->dhs_amount,
+                    'cheque_amount' => (string) $workRow->cheque_amount,
+                    'tabby_amount' => (string) $workRow->tabby_amount,
+                    'usd_amount' => (string) $workRow->usd_amount,
+                    'visa_amount' => (string) $workRow->visa_amount,
+                    'treatment_text' => $workRow->treatment_text,
+                ];
+            }
 
             $rawData = is_array($workRow->raw_data_json) ? $workRow->raw_data_json : [];
             $rawData['sheet_day'] = $day;
@@ -151,14 +170,32 @@ class DailyReportEditorService
 
             $this->dailyReportImportService->processParsedReport($dailyReport->fresh());
 
+            if ($isCorrection && $oldCorrectionValues !== null) {
+                $this->auditLogService->logManualPaymentCorrection(
+                    $dailyReport,
+                    $oldCorrectionValues,
+                    [
+                        'work_row_id' => $workRow->id,
+                        'doctor_id' => $workRow->doctor_id,
+                        'paid_total_aed' => (string) $workRow->paid_total_aed,
+                        'dhs_amount' => (string) $workRow->dhs_amount,
+                        'cheque_amount' => (string) $workRow->cheque_amount,
+                        'tabby_amount' => (string) $workRow->tabby_amount,
+                        'usd_amount' => (string) $workRow->usd_amount,
+                        'visa_amount' => (string) $workRow->visa_amount,
+                        'treatment_text' => $workRow->treatment_text,
+                    ],
+                );
+            }
+
             return $workRow->fresh(['doctor', 'workItems.treatment', 'workItems.labJob', 'payments']);
         });
     }
 
     public function deleteWorkRow(DailyReport $dailyReport, DailyWorkRow $dailyWorkRow): void
     {
-        if ($dailyReport->isApproved()) {
-            throw new RuntimeException('Approved reports are read-only.');
+        if ($dailyReport->isLocked()) {
+            throw new RuntimeException('Approved or locked reports are read-only.');
         }
 
         if ($dailyWorkRow->daily_report_id !== $dailyReport->id) {

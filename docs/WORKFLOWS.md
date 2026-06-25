@@ -241,10 +241,53 @@ Unchanged — Sanctum bearer tokens, rate-limited login.
 | View daily report | ✓ | ✓ | ✓ |
 | View validation summary | ✓ | ✓ | ✓ |
 | View monthly income | ✓ | ✓ | ✓ |
+| Manage users (`/admin/users`) | ✓ | ✗ | ✗ |
+| Approve / unlock reports | ✓ | ✗ | ✗ |
+| Manage doctors / lab prices | ✓ | ✗ | ✗ |
 
 ---
 
-## 8. Environment Variables (import / privacy)
+## 8. User Administration (admin only)
+
+```mermaid
+sequenceDiagram
+    actor Admin
+    participant UI as /admin/users
+    participant Svc as UserManagementService
+    participant DB as users + audit_logs
+
+    Admin->>UI: Create user (password or temp)
+    UI->>Svc: create()
+    Svc->>DB: INSERT user
+    Svc->>DB: audit user_created
+
+    Admin->>UI: Change role
+    UI->>Svc: update()
+    Svc->>DB: UPDATE role
+    Svc->>DB: audit user_role_changed
+
+    Admin->>UI: Deactivate user
+    UI->>Svc: deactivate()
+    Svc->>DB: is_active = false
+    Svc->>DB: revoke Sanctum tokens
+    Svc->>DB: audit user_deactivated
+
+    Admin->>UI: Reset password
+    UI->>Svc: resetPassword()
+    Svc->>DB: new password hash
+    Svc->>DB: audit password_reset
+```
+
+**Rules:**
+
+- Users are never physically deleted — `is_active = false`
+- Deactivated users cannot log in (web session or API token)
+- Admins cannot deactivate themselves or change their own role
+- Temporary passwords are shown once in the success flash / API response
+
+---
+
+## 9. Environment Variables (import / privacy)
 
 | Variable | Purpose |
 |---|---|
@@ -254,13 +297,18 @@ Unchanged — Sanctum bearer tokens, rate-limited login.
 
 ---
 
-## 9. V2 Manual Entry (Planned)
+## 10. V2 Manual Entry (Planned)
 
 Same pipeline after row creation: `TreatmentImportValidationService` → `LabJobCalculationService`. No Excel parser.
 
 ---
 
 ## What Changed
+
+**Updated — 2026-06-25**
+
+- User administration workflow (`/admin/users`, admin-only)
+- Extended RBAC table with user management and master data
 
 **Updated — 2026-06-19**
 

@@ -43,14 +43,39 @@
         <h1 class="page-title">Daily Report</h1>
         <p class="page-subtitle" style="margin:0;">{{ $dailyReport->report_date->format('F Y') }} — {{ $dailyReport->source_file_name }} · {{ $dailyReport->status->value }}</p>
     </div>
-    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
         <a href="{{ route('daily-report.index') }}" class="btn btn-ghost">← All reports</a>
         <a href="{{ route('imports.income', $dailyReport) }}" class="btn btn-secondary">Income Excel</a>
+        @if (auth()->user()->isAdmin())
+            @if (in_array($dailyReport->status->value, ['calculated', 'needs_review'], true))
+                <form method="POST" action="{{ route('daily-report.approve', $dailyReport) }}">
+                    @csrf
+                    <button type="submit" class="btn btn-primary">Approve & lock</button>
+                </form>
+            @endif
+            @if ($dailyReport->isLocked())
+                <form method="POST" action="{{ route('daily-report.unlock', $dailyReport) }}" style="display:flex;gap:0.5rem;align-items:center;">
+                    @csrf
+                    <input type="text" name="reason" placeholder="Unlock reason (required)" required class="form-input" style="min-width:220px;">
+                    <button type="submit" class="btn btn-secondary">Unlock</button>
+                </form>
+            @endif
+        @endif
     </div>
 </div>
 
+@if (session('success'))
+    <div class="alert alert-success" style="margin-bottom:1rem;">{{ session('success') }}</div>
+@endif
+
+@if ($errors->has('approve') || $errors->has('unlock'))
+    <div class="alert alert-error" style="margin-bottom:1rem;">
+        {{ $errors->first('approve') ?: $errors->first('unlock') }}
+    </div>
+@endif
+
 @if ($readOnly)
-<div class="alert alert-error" style="margin-bottom:1rem;">This report is approved — entries are read-only.</div>
+<div class="alert alert-error" style="margin-bottom:1rem;">This report is approved or locked — entries are read-only until an admin unlocks it with a reason.</div>
 @endif
 
 <div class="dr-layout">

@@ -100,9 +100,9 @@ class DailyReportEditorController extends Controller
             abort(404);
         }
 
-        if ($dailyReport->isApproved()) {
+        if ($dailyReport->isLocked()) {
             return back()->withErrors([
-                'delete' => 'Approved reports cannot be deleted.',
+                'delete' => 'Approved or locked reports cannot be deleted.',
             ]);
         }
 
@@ -141,7 +141,7 @@ class DailyReportEditorController extends Controller
             'doctors' => $doctors,
             'labs' => Lab::query()->where('is_active', true)->orderBy('name')->get(),
             'rows' => $rows,
-            'readOnly' => $dailyReport->isApproved(),
+            'readOnly' => $dailyReport->isLocked(),
         ]);
     }
 

@@ -67,9 +67,9 @@ class DailyReportImportService
 
         if (DailyReport::query()
             ->where('report_date', $resolvedReportDate)
-            ->where('status', ReportStatus::Approved)
+            ->whereIn('status', [ReportStatus::Approved, ReportStatus::Locked])
             ->exists()) {
-            throw new RuntimeException('An approved report already exists for this month.');
+            throw new RuntimeException('An approved or locked report already exists for this month.');
         }
 
         $storedPath = $this->storeUploadedFile($uploadedFile);
@@ -147,8 +147,8 @@ class DailyReportImportService
      */
     public function processParsedReport(DailyReport $dailyReport): void
     {
-        if ($dailyReport->isApproved()) {
-            throw new RuntimeException('Approved reports are read-only.');
+        if ($dailyReport->isLocked()) {
+            throw new RuntimeException('Approved or locked reports are read-only.');
         }
 
         $dailyReport->load('dailyWorkRows.doctor');

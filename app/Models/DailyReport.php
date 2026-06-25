@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ReportSourceType;
 use App\Enums\ReportStatus;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -52,10 +53,33 @@ class DailyReport extends Model
     }
 
     /**
-     * Whether this report is locked and cannot be re-imported or modified.
+     * Whether this report is approved and locked for editing.
      */
     public function isApproved(): bool
     {
         return $this->status === ReportStatus::Approved;
+    }
+
+    /**
+     * Whether rows, payments, work items, and lab jobs cannot be edited.
+     */
+    public function isLocked(): bool
+    {
+        return in_array($this->status, [ReportStatus::Approved, ReportStatus::Locked], true);
+    }
+
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function lockedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'locked_by');
+    }
+
+    public function unlockedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'unlocked_by');
     }
 }

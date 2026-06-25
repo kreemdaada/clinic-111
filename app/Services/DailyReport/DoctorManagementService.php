@@ -6,14 +6,19 @@ use App\Enums\CommissionType;
 use App\Models\Doctor;
 use App\Models\DoctorLabBilling;
 use App\Models\Treatment;
+use App\Services\Audit\AuditLogService;
 use App\Support\LabCostTreatmentCatalog;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Create and update doctors from the V2 UI.
+ * Create and update doctors from the V2 UI — never physically delete financial configuration.
  */
 class DoctorManagementService
 {
+    public function __construct(
+        private readonly AuditLogService $auditLogService,
+    ) {}
+
     /**
      * @param  array{
      *     name: string,
@@ -45,6 +50,8 @@ class DoctorManagementService
                 $this->seedFullLabBilling($doctor);
             }
 
+            $this->auditLogService->logDoctorCreated($doctor);
+
             return $doctor->fresh('defaultLab');
         });
     }
@@ -61,6 +68,8 @@ class DoctorManagementService
     public function update(Doctor $doctor, array $data): Doctor
     {
         return DB::transaction(function () use ($doctor, $data) {
+            $oldValues = $this->auditLogService->doctorSnapshot($doctor);
+
             $doctor->fill([
                 'name' => $data['name'],
                 'commission_type' => $data['commission_type'],
@@ -76,26 +85,27 @@ class DoctorManagementService
 
             $doctor->save();
 
+            $newValues = $this->auditLogService->doctorSnapshot($doctor->fresh());
+            $this->auditLogService->logDoctorUpdated($doctor, $oldValues, $newValues);
+
             return $doctor->fresh('defaultLab');
         });
     }
 
     /**
-     * Remove a doctor, or deactivate when report history exists.
-     *
-     * @return 'deleted'|'deactivated'
+     * Soft-deactivate a doctor — financial configuration is never physically deleted.
      */
-    public function delete(Doctor $doctor): string
+    public function deactivate(Doctor $doctor): Doctor
     {
-        if ($doctor->dailyWorkRows()->exists()) {
+        return DB::transaction(function () use ($doctor) {
+            $oldValues = $this->auditLogService->doctorSnapshot($doctor);
+
             $doctor->update(['is_active' => false]);
 
-            return 'deactivated';
-        }
+            $this->auditLogService->logDoctorDeactivated($doctor->fresh(), $oldValues);
 
-        $doctor->delete();
-
-        return 'deleted';
+            return $doctor->fresh('defaultLab');
+        });
     }
 
     private function seedFullLabBilling(Doctor $doctor): void

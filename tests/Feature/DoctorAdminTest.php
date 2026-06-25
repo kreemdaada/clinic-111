@@ -78,7 +78,7 @@ class DoctorAdminTest extends TestCase
         ]);
     }
 
-    public function test_admin_can_delete_doctor_without_report_entries(): void
+    public function test_admin_deactivates_doctor_without_report_entries(): void
     {
         $this->seed();
 
@@ -95,7 +95,10 @@ class DoctorAdminTest extends TestCase
             ->delete(route('doctors.destroy', $doctor))
             ->assertRedirect(route('doctors.index'));
 
-        $this->assertDatabaseMissing('doctors', ['id' => $doctor->id]);
+        $this->assertDatabaseHas('doctors', [
+            'id' => $doctor->id,
+            'is_active' => false,
+        ]);
     }
 
     public function test_inactive_doctors_are_hidden_from_daily_report_editor(): void

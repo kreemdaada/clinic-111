@@ -63,6 +63,7 @@ class LabPriceResolver
         $query = LabPrice::query()
             ->where('treatment_id', $treatmentId)
             ->where('lab_id', $labId)
+            ->where('is_active', true)
             ->where(function ($builder) use ($doctorId) {
                 if ($doctorId === null) {
                     $builder->whereNull('doctor_id');

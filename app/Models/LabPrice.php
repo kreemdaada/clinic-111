@@ -33,6 +33,7 @@ class LabPrice extends Model
             'unit_cost' => 'decimal:2',
             'valid_from' => 'date',
             'valid_to' => 'date',
+            'is_active' => 'boolean',
         ];
     }
 

@@ -189,7 +189,7 @@
                 <select class="form-input" id="doctor_id" name="doctor_id" required>
                     <option value="">— Choose doctor —</option>
                     @foreach ($doctors as $doctor)
-                    <option value="{{ $doctor->id }}" @selected((int) old('doctor_id') === $doctor->id)>
+                    <option value="{{ $doctor->id }}" @selected((int) old('doctor_id')===$doctor->id)>
                         {{ $doctor->code }} — {{ $doctor->name }}
                     </option>
                     @endforeach
@@ -255,7 +255,7 @@
                 <span class="badge badge-{{ $report->status->value }}">{{ str_replace('_', ' ', $report->status->value) }}</span>
                 <div class="dr-report-actions">
                     <a href="{{ route('daily-report.edit', $report) }}" class="btn btn-secondary btn-sm">Open</a>
-                    @unless ($report->isApproved())
+                    @unless ($report->isLocked())
                     <form method="POST" action="{{ route('daily-report.destroy', $report) }}"
                         onsubmit="return confirm('Delete report #{{ $report->id }} and all its entries?');">
                         @csrf
@@ -274,24 +274,24 @@
 
 @push('scripts')
 <script>
-(function () {
-    const fromInput = document.getElementById('date_from');
-    const toInput = document.getElementById('date_to');
+    (function() {
+        const fromInput = document.getElementById('date_from');
+        const toInput = document.getElementById('date_to');
 
-    function syncMonthBounds() {
-        if (!fromInput.value) return;
-        const from = new Date(fromInput.value + 'T12:00:00');
-        const monthEnd = new Date(from.getFullYear(), from.getMonth() + 1, 0);
-        const monthEndStr = monthEnd.toISOString().slice(0, 10);
-        if (!toInput.value || toInput.value < fromInput.value) {
-            toInput.value = monthEndStr;
+        function syncMonthBounds() {
+            if (!fromInput.value) return;
+            const from = new Date(fromInput.value + 'T12:00:00');
+            const monthEnd = new Date(from.getFullYear(), from.getMonth() + 1, 0);
+            const monthEndStr = monthEnd.toISOString().slice(0, 10);
+            if (!toInput.value || toInput.value < fromInput.value) {
+                toInput.value = monthEndStr;
+            }
+            toInput.min = fromInput.value;
+            toInput.max = monthEndStr;
         }
-        toInput.min = fromInput.value;
-        toInput.max = monthEndStr;
-    }
 
-    fromInput.addEventListener('change', syncMonthBounds);
-    syncMonthBounds();
-})();
+        fromInput.addEventListener('change', syncMonthBounds);
+        syncMonthBounds();
+    })();
 </script>
 @endpush

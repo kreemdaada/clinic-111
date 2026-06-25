@@ -39,6 +39,10 @@ class EnsureUserHasRole
             abort(Response::HTTP_FORBIDDEN, 'Insufficient permissions.');
         }
 
+        if (! $user->is_active) {
+            abort(Response::HTTP_FORBIDDEN, 'Account deactivated.');
+        }
+
         return $next($request);
     }
 }

@@ -85,9 +85,9 @@ class ImportController extends Controller
      */
     public function destroy(DailyReport $dailyReport): RedirectResponse
     {
-        if ($dailyReport->isApproved()) {
+        if ($dailyReport->isLocked()) {
             return back()->withErrors([
-                'delete' => 'Approved reports cannot be deleted.',
+                'delete' => 'Approved or locked reports cannot be deleted.',
             ]);
         }
 

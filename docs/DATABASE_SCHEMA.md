@@ -368,7 +368,38 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 
 ### `users`
 
-Extended with `role` column: `admin`, `accountant`, `viewer`.
+**Purpose:** Application login accounts for web session and Sanctum API tokens.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | bigint PK | |
+| `name` | string | Display name |
+| `email` | string unique | Login identifier |
+| `email_verified_at` | timestamp nullable | |
+| `password` | string | Bcrypt hash — never mass-assignable |
+| `role` | string | `admin`, `accountant`, `viewer` |
+| `is_active` | boolean | `false` = deactivated (never physically deleted) |
+| `remember_token` | string nullable | Web sessions |
+| `created_at`, `updated_at` | timestamps | |
+
+**Relationships:**
+
+- `hasMany` audit_logs (as actor via `user_id`)
+- Sanctum `personal_access_tokens`
+
+**Business rules:**
+
+- Deactivated users cannot log in (web or API)
+- Admin manages users at `/admin/users` — soft deactivate only
+- Password and `is_active` are set only via `UserManagementService`, not `$fillable`
+
+**Default seed users:**
+
+| email | role | password |
+|---|---|---|
+| admin@clinic.test | admin | password |
+| accountant@clinic.test | accountant | password |
+| viewer@clinic.test | viewer | password |
 
 ### `audit_logs`
 
@@ -384,6 +415,7 @@ Extended with `role` column: `admin`, `accountant`, `viewer`.
 | `old_values` | json nullable | |
 | `new_values` | json nullable | |
 | `ip_address` | string nullable | |
+| `user_agent` | text nullable | |
 | `created_at`, `updated_at` | timestamps | |
 
 ### `personal_access_tokens`
@@ -416,6 +448,12 @@ doctor_fixed_fees ── doctors + treatments
 ---
 
 ## What Changed
+
+**Updated — 2026-06-25**
+
+- `users.is_active` for soft deactivation
+- `audit_logs.user_agent` column
+- User admin documented with role management rules
 
 **Updated — 2026-06-21 (privacy + validation)**
 

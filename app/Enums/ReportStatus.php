@@ -22,8 +22,11 @@ enum ReportStatus: string
     /** Import completed but parser/lab warnings require human review. */
     case NeedsReview = 'needs_review';
 
-    /** Report locked — read-only; re-import for same date is rejected. */
+    /** Report approved — read-only until admin unlocks with reason. */
     case Approved = 'approved';
+
+    /** Report explicitly locked — same read-only rules as approved. */
+    case Locked = 'locked';
 
     /** Import or calculation failed; no partial data committed. */
     case Failed = 'failed';

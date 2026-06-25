@@ -9,7 +9,6 @@ use App\Models\Lab;
 use App\Services\DailyReport\DoctorManagementService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
-use RuntimeException;
 
 /**
  * Admin-only doctor master data (commission %, deactivate/delete).
@@ -47,18 +46,10 @@ class DoctorAdminController extends Controller
     {
         $code = $doctor->code;
 
-        try {
-            $result = $this->doctorManagementService->delete($doctor);
-        } catch (RuntimeException $exception) {
-            return back()->withErrors(['delete' => $exception->getMessage()]);
-        }
-
-        $message = $result === 'deleted'
-            ? "Doctor {$code} deleted."
-            : "Doctor {$code} deactivated (has existing report entries).";
+        $this->doctorManagementService->deactivate($doctor);
 
         return redirect()
             ->route('doctors.index')
-            ->with('success', $message);
+            ->with('success', "Doctor {$code} deactivated.");
     }
 }

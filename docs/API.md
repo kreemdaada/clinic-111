@@ -376,6 +376,181 @@ GET /api/monthly-income?month=2026-01
 
 ---
 
+---
+
+## User Management (admin only)
+
+### GET /api/users
+
+**Purpose:** List all users (active and inactive).
+
+**Role:** admin
+
+**Response `200`:**
+
+```json
+{
+  "data": [
+    {
+      "id": 2,
+      "name": "Accountant User",
+      "email": "accountant@clinic.test",
+      "role": "accountant",
+      "is_active": true
+    }
+  ]
+}
+```
+
+---
+
+### POST /api/users
+
+**Purpose:** Create a user account.
+
+**Role:** admin
+
+**Request:**
+
+```json
+{
+  "name": "New Viewer",
+  "email": "viewer2@clinic.test",
+  "role": "viewer",
+  "password": "secure-password"
+}
+```
+
+Or generate a temporary password:
+
+```json
+{
+  "name": "New Viewer",
+  "email": "viewer2@clinic.test",
+  "role": "viewer",
+  "generate_temp_password": true
+}
+```
+
+**Validation (`StoreUserRequest`):**
+
+| Field | Rules |
+|---|---|
+| `name` | required, string, max 120 |
+| `email` | required, email, unique |
+| `role` | required, `admin` \| `accountant` \| `viewer` |
+| `password` | required_without:generate_temp_password |
+| `generate_temp_password` | optional boolean |
+| `is_active` | optional boolean |
+
+**Response `201`:**
+
+```json
+{
+  "message": "User created.",
+  "data": {
+    "id": 5,
+    "name": "New Viewer",
+    "email": "viewer2@clinic.test",
+    "role": "viewer",
+    "is_active": true
+  },
+  "temporary_password": "xK9mP2nQ4rTv"
+}
+```
+
+`temporary_password` is `null` when a manual password was supplied.
+
+---
+
+### PUT /api/users/{id}
+
+**Purpose:** Update name, email, role, or active status.
+
+**Role:** admin
+
+**Request:**
+
+```json
+{
+  "name": "Updated Name",
+  "email": "updated@clinic.test",
+  "role": "accountant",
+  "is_active": true
+}
+```
+
+**Validation (`UpdateUserRequest`):** same fields as create (except password). Email unique except current user.
+
+**Response `200`:** Updated user object.
+
+**Audit:** `user_role_changed` when role changes; `user_deactivated` when `is_active` becomes false.
+
+---
+
+### DELETE /api/users/{id}
+
+**Purpose:** Soft-deactivate a user (`is_active = false`). Never physically deletes the row.
+
+**Role:** admin
+
+**Response `200`:**
+
+```json
+{
+  "message": "User deactivated.",
+  "data": { "id": 5, "is_active": false }
+}
+```
+
+Revokes all Sanctum tokens for the user.
+
+---
+
+### POST /api/users/{id}/reset-password
+
+**Purpose:** Set a new password (manual or generated temporary).
+
+**Role:** admin
+
+**Request:**
+
+```json
+{
+  "password": "new-secure-password"
+}
+```
+
+Or:
+
+```json
+{
+  "generate_temp_password": true
+}
+```
+
+**Validation (`ResetUserPasswordRequest`):** `password` required_without `generate_temp_password`.
+
+**Response `200`:** Includes `temporary_password` when generated.
+
+**Audit:** `password_reset` (password hash is never stored in audit JSON).
+
+---
+
+### Web UI: `/admin/users`
+
+Same capabilities as the API. Admin-only. Nav link visible when logged in as admin.
+
+| Route | Method | Action |
+|---|---|---|
+| `/admin/users` | GET | List users + create form |
+| `/admin/users` | POST | Create user |
+| `/admin/users/{id}` | PUT | Update user |
+| `/admin/users/{id}` | DELETE | Deactivate user |
+| `/admin/users/{id}/reset-password` | POST | Reset password |
+
+---
+
 ## Default Test Users
 
 | Email | Password | Role |
@@ -400,6 +575,12 @@ GET /api/monthly-income?month=2026-01
 ---
 
 ## What Changed
+
+**Updated — 2026-06-25**
+
+- User management API (`GET/POST/PUT/DELETE /api/users`, `POST /api/users/{id}/reset-password`)
+- Web admin page `/admin/users`
+- Documented `StoreUserRequest`, `UpdateUserRequest`, `ResetUserPasswordRequest`
 
 **Updated — 2026-06-19**
 
