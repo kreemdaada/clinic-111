@@ -8,6 +8,7 @@ use App\Models\DailyReport;
 use App\Services\Export\DoctorsIncomeExcelExportService;
 use App\Services\Import\DailyReportImportService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
@@ -36,6 +37,7 @@ class ImportController extends Controller
     public function index(): View
     {
         $recentReports = DailyReport::query()
+            ->withCount('dailyWorkRows')
             ->latest('id')
             ->limit(10)
             ->get();
@@ -76,5 +78,29 @@ class ImportController extends Controller
     public function downloadIncome(DailyReport $dailyReport): BinaryFileResponse
     {
         return $this->incomeExporter->downloadResponse($dailyReport);
+    }
+
+    /**
+     * Delete a previously imported report and all related rows/logs.
+     */
+    public function destroy(DailyReport $dailyReport): RedirectResponse
+    {
+        if ($dailyReport->isApproved()) {
+            return back()->withErrors([
+                'delete' => 'Approved reports cannot be deleted.',
+            ]);
+        }
+
+        $relativeLogPath = 'import-extractions/report-' . $dailyReport->id . '.json';
+
+        if (Storage::disk('local')->exists($relativeLogPath)) {
+            Storage::disk('local')->delete($relativeLogPath);
+        }
+
+        $dailyReport->delete();
+
+        return redirect()
+            ->route('imports.index')
+            ->with('status', 'Import deleted.');
     }
 }

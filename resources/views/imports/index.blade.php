@@ -32,12 +32,17 @@
     .import-actions { margin-top: 1.25rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
     .spinner { display: none; align-items: center; gap: 0.5rem; color: #64748b; font-size: 0.9rem; }
     .spinner.visible { display: flex; }
+    .table-actions form { display: inline; margin: 0; }
 </style>
 @endpush
 
 @section('content')
 <h1 class="page-title">Import Daily Report</h1>
 <p class="page-subtitle">Upload your daily Excel — review the extraction log, then download the Server Income file.</p>
+
+@if (session('status'))
+    <div class="alert alert-success">{{ session('status') }}</div>
+@endif
 
 @if ($errors->any())
     <div class="alert alert-error">
@@ -95,11 +100,17 @@
                     <td>
                         <span class="badge badge-{{ $report->status->value }}">{{ $report->status->value }}</span>
                     </td>
-                    <td>{{ $report->dailyWorkRows()->count() }}</td>
+                    <td>{{ $report->daily_work_rows_count }}</td>
                     <td>
                         <div class="table-actions">
                             <a href="{{ route('logs.extraction', $report) }}" class="btn btn-secondary btn-sm">Extraction log</a>
+                            <a href="{{ route('daily-report.edit', $report) }}" class="btn btn-secondary btn-sm">Edit rows</a>
                             <a href="{{ route('imports.income', $report) }}" class="btn btn-secondary btn-sm">Income Excel</a>
+                            <form method="POST" action="{{ route('imports.destroy', $report) }}" class="inline-form" onsubmit="return confirm('Delete this import and all its data?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-secondary btn-sm">Delete</button>
+                            </form>
                         </div>
                     </td>
                 </tr>

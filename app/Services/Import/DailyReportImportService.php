@@ -202,6 +202,8 @@ class DailyReportImportService
     private function createWorkRowFromParsedData(DailyReport $dailyReport, array $parsedRow, Carbon $monthAnchor, Doctor $doctor): DailyWorkRow
     {
         $dhsAmount = $this->toDecimalString($this->getParsedRowValue($parsedRow, 'dhs_amount', 0));
+        $chequeAmount = $this->toDecimalString($this->getParsedRowValue($parsedRow, 'cheque_amount', 0));
+        $tabbyAmount = $this->toDecimalString($this->getParsedRowValue($parsedRow, 'tabby_amount', 0));
         $usdAmount = $this->toDecimalString($this->getParsedRowValue($parsedRow, 'usd_amount', 0));
         $visaAmount = $this->toDecimalString($this->getParsedRowValue($parsedRow, 'visa_amount', 0));
         $rublAmount = $this->toDecimalString($this->getParsedRowValue($parsedRow, 'rubl_amount', 0));
@@ -211,6 +213,8 @@ class DailyReportImportService
             $usdAmount,
             $visaAmount,
             rublAmount: $rublAmount,
+            chequeAmount: $chequeAmount,
+            tabbyAmount: $tabbyAmount,
         );
 
         if (bccomp($rublAmount, '0', 2) > 0) {
@@ -236,6 +240,8 @@ class DailyReportImportService
             'total_cost' => $this->toDecimalString($this->getParsedRowValue($parsedRow, 'total_cost', 0)),
             'discount_amount' => $this->toDecimalString($this->getParsedRowValue($parsedRow, 'discount_amount', 0)),
             'dhs_amount' => $dhsAmount,
+            'cheque_amount' => $chequeAmount,
+            'tabby_amount' => $tabbyAmount,
             'usd_amount' => $usdAmount,
             'usd_to_aed_amount' => $paymentTotals['usd_to_aed_amount'],
             'visa_amount' => $visaAmount,

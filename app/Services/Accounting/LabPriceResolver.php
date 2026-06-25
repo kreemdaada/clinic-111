@@ -104,4 +104,37 @@ class LabPriceResolver
 
         return $activeLabs->first();
     }
+
+    /**
+     * Resolve lab + price, falling back to MAIN_LAB when the doctor's lab has no price row.
+     *
+     * Dr Riyad uses RIYADH_LAB for ZIR / IMPL-ZIR / POST overrides; other treatments may price on MAIN_LAB.
+     *
+     * @return array{lab: Lab, price: LabPrice}|null
+     */
+    public function resolveWithLabFallback(
+        Doctor $doctor,
+        Treatment $treatment,
+        Collection $activeLabs,
+        ?CarbonInterface $effectiveDate = null,
+    ): ?array {
+        $primaryLab = $this->resolveLabForDoctor($doctor, $activeLabs);
+        $price = $this->resolve($doctor, $treatment, $primaryLab, $effectiveDate);
+
+        if ($price !== null) {
+            return ['lab' => $primaryLab, 'price' => $price];
+        }
+
+        $mainLab = $activeLabs->firstWhere('code', 'MAIN_LAB');
+
+        if ($mainLab !== null && $mainLab->id !== $primaryLab->id) {
+            $price = $this->resolve($doctor, $treatment, $mainLab, $effectiveDate);
+
+            if ($price !== null) {
+                return ['lab' => $mainLab, 'price' => $price];
+            }
+        }
+
+        return null;
+    }
 }

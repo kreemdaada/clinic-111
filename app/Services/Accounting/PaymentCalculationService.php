@@ -9,9 +9,9 @@ use App\Support\MoneyCalculator;
 use Carbon\CarbonInterface;
 
 /**
- * Calculates TOTAL (collected payments) from DHS, USD, and VISA amounts.
+ * Calculates TOTAL (collected payments) from DHS, cheque, Tabby, USD, and VISA amounts.
  *
- * TOTAL = DHS + (USD × exchange_rate) + VISA (all normalized to AED).
+ * TOTAL = DHS + cheque + Tabby + (USD × exchange_rate) + VISA (all normalized to AED).
  */
 class PaymentCalculationService
 {
@@ -31,6 +31,8 @@ class PaymentCalculationService
      * @param  string|null  $usdExchangeRate  Override for USD conversion.
      * @param  string  $rublAmount  Optional RUB amount (legacy column support).
      * @param  string|null  $rubToAedRate  Override for RUB conversion.
+     * @param  string  $chequeAmount  Cheque payment in AED.
+     * @param  string  $tabbyAmount  Tabby payment in AED.
      * @return array{usd_to_aed_amount: string, rubl_to_aed_amount: string, paid_total_aed: string}
      */
     public function calculateTotalCollectedAed(
@@ -40,6 +42,8 @@ class PaymentCalculationService
         ?string $usdExchangeRate = null,
         string $rublAmount = '0.00',
         ?string $rubToAedRate = null,
+        string $chequeAmount = '0.00',
+        string $tabbyAmount = '0.00',
     ): array {
         $exchangeRate = $this->defaultUsdExchangeRate;
         if ($usdExchangeRate !== null) {
@@ -58,6 +62,8 @@ class PaymentCalculationService
 
         $totalCollectedAed = MoneyCalculator::add(
             $dhsAmount,
+            $chequeAmount,
+            $tabbyAmount,
             $usdToAedAmount,
             $rublToAedAmount,
             $visaAmount,
@@ -97,6 +103,18 @@ class PaymentCalculationService
             [
                 'method' => PaymentMethod::Dhs,
                 'amount' => (string) $dailyWorkRow->dhs_amount,
+                'currency' => 'AED',
+                'exchange_rate' => '1',
+            ],
+            [
+                'method' => PaymentMethod::Cheque,
+                'amount' => (string) $dailyWorkRow->cheque_amount,
+                'currency' => 'AED',
+                'exchange_rate' => '1',
+            ],
+            [
+                'method' => PaymentMethod::Tabby,
+                'amount' => (string) $dailyWorkRow->tabby_amount,
                 'currency' => 'AED',
                 'exchange_rate' => '1',
             ],

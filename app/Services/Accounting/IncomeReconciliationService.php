@@ -48,10 +48,16 @@ class IncomeReconciliationService
         $issues = [];
         $expectedTotal = MoneyCalculator::add(
             MoneyCalculator::add(
-                (string) $dailyWorkRow->dhs_amount,
-                (string) $dailyWorkRow->usd_to_aed_amount,
+                MoneyCalculator::add(
+                    (string) $dailyWorkRow->dhs_amount,
+                    (string) $dailyWorkRow->cheque_amount,
+                ),
+                (string) $dailyWorkRow->tabby_amount,
             ),
-            (string) $dailyWorkRow->visa_amount,
+            MoneyCalculator::add(
+                (string) $dailyWorkRow->usd_to_aed_amount,
+                (string) $dailyWorkRow->visa_amount,
+            ),
         );
 
         if (bccomp($expectedTotal, (string) $dailyWorkRow->paid_total_aed, 2) !== 0) {
@@ -60,7 +66,7 @@ class IncomeReconciliationService
                 'type' => 'payment_mismatch',
                 'doctor' => $dailyWorkRow->doctor?->code,
                 'work_date' => $dailyWorkRow->work_date?->toDateString(),
-                'message' => "paid_total_aed ({$dailyWorkRow->paid_total_aed}) does not match DHS+USD+VISA ({$expectedTotal}).",
+                'message' => "paid_total_aed ({$dailyWorkRow->paid_total_aed}) does not match DHS+cheque+Tabby+USD+VISA ({$expectedTotal}).",
             ];
         }
 

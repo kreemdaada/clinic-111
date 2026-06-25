@@ -26,11 +26,18 @@ class DoctorIncomeExportProfileSeeder extends Seeder
                 'write_payment_headers' => true,
                 'summary_shows_net_total' => false,
                 'payment_columns' => [
-                    'dhs' => 'B', 'usd' => 'C', 'usd_to_aed' => 'D', 'visa' => 'E', 'total' => 'F', 'job' => 'G',
+                    'dhs' => 'B',
+                    'cheque' => 'C',
+                    'tabby' => 'D',
+                    'usd' => 'E',
+                    'usd_to_aed' => 'F',
+                    'visa' => 'G',
+                    'total' => 'H',
+                    'job' => 'I',
                 ],
                 'treatment_columns' => [
-                    'MC' => 'H', 'ZIR' => 'I', 'IMPL-CR' => 'J', 'IMPL-ZIR' => 'K', 'VENEER' => 'L',
-                    'IMPL' => 'N', 'POST' => 'P', 'ABT' => 'Q', 'REMOV' => 'R',
+                    'MC' => 'J', 'ZIR' => 'K', 'IMPL-CR' => 'L', 'IMPL-ZIR' => 'M', 'VENEER' => 'N',
+                    'IMPL' => 'P', 'POST' => 'R', 'ABT' => 'S', 'REMOV' => 'T',
                 ],
             ],
             'RIYAD' => [
@@ -57,7 +64,8 @@ class DoctorIncomeExportProfileSeeder extends Seeder
                     'dhs' => 'B', 'usd' => 'C', 'usd_to_aed' => 'D', 'visa' => 'E', 'total' => 'F', 'job' => 'G',
                 ],
                 'treatment_columns' => [
-                    'MC' => 'H', 'ZIR' => 'I', 'POST' => 'N', 'REMOV' => 'P',
+                    'ZIR' => 'H', 'MC' => 'I', 'POST' => 'J', 'SXP' => 'K', 'CF' => 'L',
+                    'RCT' => 'M', 'RCF' => 'N', 'AF' => 'O',
                 ],
             ],
             'WA' => [

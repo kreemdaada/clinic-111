@@ -514,29 +514,53 @@
         background: var(--surface-muted);
     }
 
-    .extraction-detail-grid {
+    .extraction-entry-body {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
         gap: 0.75rem;
-        margin-bottom: 0.75rem;
     }
 
-    .extraction-detail-box {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-sm);
-        padding: 0.75rem;
+    .extraction-entry-block-title {
+        font-size: 0.6875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-subtle);
+        margin-bottom: 0.4rem;
+    }
+
+    .extraction-entry-lines {
+        display: grid;
+        gap: 0.25rem;
         font-size: 0.8125rem;
         color: var(--text);
     }
 
-    .extraction-detail-box h4 {
-        margin: 0 0 0.5rem;
-        font-size: 0.6875rem;
-        font-weight: 500;
-        text-transform: uppercase;
-        color: var(--text-subtle);
-        letter-spacing: 0.04em;
+    .extraction-entry-line-muted {
+        color: var(--text-muted);
+    }
+
+    .extraction-entry-total {
+        margin-top: 0.35rem;
+        padding-top: 0.35rem;
+        border-top: 1px solid var(--border);
+        font-weight: 600;
+    }
+
+    .extraction-treatment-block {
+        font-size: 0.8125rem;
+        line-height: 1.45;
+        color: var(--text);
+        word-break: break-word;
+        margin-bottom: 0.75rem;
+    }
+
+    .extraction-entry-notes {
+        margin-top: 0.75rem;
+        padding: 0.65rem 0.9rem;
+        border: 1px solid #fde68a;
+        border-radius: var(--radius-sm);
+        background: var(--warning-soft);
     }
 
     .extraction-flag {
@@ -646,6 +670,7 @@
     </div>
     <div class="extraction-toolbar">
         <a href="{{ route('imports.index') }}" class="btn btn-ghost">← Back</a>
+        <a href="{{ route('daily-report.edit', $dailyReport) }}" class="btn btn-secondary">Edit rows</a>
         @if ($log !== null)
         <a href="{{ route('logs.extraction.download', $dailyReport) }}" class="btn btn-secondary">Download JSON</a>
         @endif
@@ -729,7 +754,7 @@ $issueSummary[$severity]++;
 </div>
 
 <div class="extraction-toolbar-row">
-    <span class="extraction-toolbar-hint">Select a doctor to view daily rows and expand for details.</span>
+    <span class="extraction-toolbar-hint">Select a doctor to view their rows — expand for payment and lab details.</span>
     <span style="display:flex;gap:0.5rem;">
         <button type="button" class="extraction-toggle-btn" id="extraction-expand-all">Expand all</button>
         <button type="button" class="extraction-toggle-btn" id="extraction-collapse-all">Collapse all</button>
@@ -738,10 +763,10 @@ $issueSummary[$severity]++;
 
 @if (count($unknownDoctorErrors) > 0)
 <div class="card extraction-unresolved-card">
-    <h2 class="extraction-unresolved-title">Unknown doctors (not in system)</h2>
+    <h2 class="extraction-unresolved-title">Unrecognized doctor sections</h2>
     <p class="extraction-unresolved-note">
-        These Excel sections use a doctor name that is not registered (JACK, RIYAD, PURIYA, WA).
-        Their days and treatments were not imported — fix the label in Excel or add the doctor to the system.
+        These rows could not be matched to a registered doctor (JACK, RIYAD, PURIYA, WA).
+        Fix the doctor label in Excel or add the doctor in the system. Sheet-level TOTAL rows are not listed here.
     </p>
     @foreach ($unknownDoctorErrors as $unknownDoctor)
     <div style="margin-bottom:1.25rem;">
@@ -787,7 +812,7 @@ $issueSummary[$severity]++;
 
 <div class="card">
     <h2 class="extraction-section-title">Summary by doctor</h2>
-    <p class="extraction-section-note" style="margin-bottom:1rem;">Click a row or tab to filter daily rows.</p>
+    <p class="extraction-section-note" style="margin-bottom:1rem;">Click a row or tab to filter rows by doctor.</p>
     <div class="extraction-doctor-tabs" id="extraction-doctor-tabs">
         @foreach ($doctorCodes as $code)
         <button type="button" class="extraction-doctor-tab" data-doctor-select="{{ $code }}">{{ $code }}</button>
@@ -831,7 +856,7 @@ $issueSummary[$severity]++;
 </div>
 
 <div id="extraction-pick-doctor" class="card extraction-pick-doctor">
-    Select a doctor above to view their days and treatments.
+    Select a doctor above to view their treatments.
 </div>
 
 @foreach ($doctorCodes as $doctorCode)
@@ -845,29 +870,27 @@ $issueSummary[$severity]++;
     <div class="extraction-panel-header">
         <h2 class="extraction-panel-title">
             {{ $doctorCode }}
-            @if (!empty($rows[0]['doctor_label']))
-            <span class="extraction-doctor-subtitle">— {{ $rows[0]['doctor_label'] }}</span>
-            @elseif (!empty($doctorTotals[$doctorCode]['doctor_label']))
+            @if (!empty($doctorTotals[$doctorCode]['doctor_label']))
             <span class="extraction-doctor-subtitle">— {{ $doctorTotals[$doctorCode]['doctor_label'] }}</span>
+            @elseif (!empty($rows[0]['doctor_label']))
+            <span class="extraction-doctor-subtitle">— {{ $rows[0]['doctor_label'] }}</span>
             @endif
         </h2>
-        @if (count($rows) > 0)
-        <span class="extraction-section-note">{{ count($rows) }} rows</span>
-        @endif
+        <span class="extraction-section-note">{{ count($rows) }} {{ count($rows) === 1 ? 'row' : 'rows' }}</span>
     </div>
 
     @foreach ($rows as $row)
     @php
-    $isImported = ($row['work_row_id'] ?? null) !== null;
-    $diag = is_array($row['diagnostics'] ?? null) ? $row['diagnostics'] : null;
-    $visibleIssues = array_values(array_filter(
-    $row['issues'] ?? [],
-    fn ($issue) => in_array($issue['severity'] ?? '', ['error', 'warning'], true)
-    && ! in_array($issue['code'] ?? '', ['lab_not_persisted', 'ignored_treatment_noted'], true),
-    ));
-    $issueCount = count($visibleIssues);
+        $isImported = ($row['work_row_id'] ?? null) !== null;
+        $diag = is_array($row['diagnostics'] ?? null) ? $row['diagnostics'] : null;
+        $visibleIssues = array_values(array_filter(
+            $row['issues'] ?? [],
+            fn ($issue) => in_array($issue['severity'] ?? '', ['error', 'warning'], true)
+                && ! in_array($issue['code'] ?? '', ['lab_not_persisted', 'ignored_treatment_noted'], true),
+        ));
+        $issueCount = count($visibleIssues);
     @endphp
-    <details @class(['extraction-detail', $issueCount> 0 ? 'extraction-has-issues' : null])>
+    <details @class(['extraction-detail', $issueCount > 0 ? 'extraction-has-issues' : null])>
         <summary>
             <div class="extraction-row-head">
                 <div class="extraction-row-head-main">
@@ -880,7 +903,7 @@ $issueSummary[$severity]++;
                         @if ($issueCount > 0)
                         <span class="extraction-row-badge extraction-row-badge--warning">{{ $issueCount }} {{ $issueCount === 1 ? 'issue' : 'issues' }}</span>
                         @endif
-                        @if (!$isImported)
+                        @if (! $isImported)
                         <span class="extraction-row-badge extraction-row-badge--error">Not imported</span>
                         @endif
                     </div>
@@ -889,106 +912,50 @@ $issueSummary[$severity]++;
             </div>
         </summary>
         <div class="extraction-detail-body">
-            <div class="extraction-detail-grid">
-                <div class="extraction-detail-box">
-                    <h4>Patient payment</h4>
-                    <dl class="extraction-kv">
-                        <div class="extraction-kv-row">
-                            <dt>Cash (AED)</dt>
-                            <dd>{{ $row['dhs_aed'] ?? '0.00' }}</dd>
-                        </div>
-                        <div class="extraction-kv-row">
-                            <dt>Cash (USD)</dt>
-                            <dd>{{ $row['usd'] ?? '0.00' }} <span class="extraction-muted">(→ {{ $row['usd_to_aed'] ?? '0.00' }} AED)</span></dd>
-                        </div>
-                        <div class="extraction-kv-row">
-                            <dt>Card (Visa)</dt>
-                            <dd>{{ $row['visa_aed'] ?? '0.00' }}</dd>
-                        </div>
-                        <div class="extraction-kv-row extraction-kv-row--total">
-                            <dt>Total paid</dt>
-                            <dd>{{ $row['paid_total_aed'] ?? '0.00' }} AED</dd>
-                        </div>
-                    </dl>
-                    @if ($diag && !($diag['payments']['payment_ok'] ?? true))
-                    <p class="extraction-issue-line extraction-issue-line--error" style="margin-top:0.5rem;margin-bottom:0;">
+            <div class="extraction-treatment-block">{{ $row['treatment_text'] ?? '—' }}</div>
+            <div class="extraction-entry-body">
+                <div>
+                    <div class="extraction-entry-block-title">Patient payment</div>
+                    <div class="extraction-entry-lines">
+                        <div>Cash (AED): {{ $row['dhs_aed'] ?? '0.00' }}</div>
+                        <div>Cash (USD): {{ $row['usd'] ?? '0.00' }} <span class="extraction-entry-line-muted">(→ {{ $row['usd_to_aed'] ?? '0.00' }} AED)</span></div>
+                        <div>Card (Visa): {{ $row['visa_aed'] ?? '0.00' }}</div>
+                        <div class="extraction-entry-total">Total paid: {{ $row['paid_total_aed'] ?? '0.00' }} AED</div>
+                    </div>
+                    @if ($diag && ! ($diag['payments']['payment_ok'] ?? true))
+                    <p class="extraction-issue-line extraction-issue-line--error" style="margin:0.5rem 0 0;">
                         Payment total does not match cash + card amounts.
                     </p>
                     @endif
                 </div>
-                <div class="extraction-detail-box">
-                    <h4>Source</h4>
-                    <div class="extraction-source-list">
-                        <div class="extraction-source-item">
-                            <span>Calendar day</span>
-                            <span>{{ $row['sheet_day'] ?? '—' }}</span>
+                <div>
+                    <div class="extraction-entry-block-title">Lab costs</div>
+                    @if ($diag && ($diag['job']['lines'] ?? []) !== [])
+                    <div class="extraction-entry-lines">
+                        @foreach ($diag['job']['lines'] as $jobLine)
+                        <div>
+                            {{ $jobLine['code'] }} × {{ $jobLine['quantity'] }}
+                            @ {{ $jobLine['unit_cost_aed'] }} AED
+                            = <strong>{{ $jobLine['line_total_aed'] }} AED</strong>
                         </div>
-                        <div class="extraction-source-item">
-                            <span>Doctor in Excel</span>
-                            <span>{{ $row['doctor_label'] ?? '—' }}</span>
-                        </div>
-                        @if (!empty($row['flags']))
-                        <div class="extraction-source-item">
-                            <span>Flags</span>
-                            <span>
-                                @foreach ($row['flags'] as $flag)
-                                <span class="extraction-flag">{{ $flag }}</span>
-                                @endforeach
-                            </span>
-                        </div>
-                        @endif
+                        @endforeach
+                        <div class="extraction-entry-total">Total lab: {{ $diag['job']['total_aed'] ?? '0.00' }} AED</div>
                     </div>
-                </div>
-                <div class="extraction-detail-box">
-                    <h4>Treatments</h4>
-                    <div class="extraction-treatment-block">{{ $row['treatment_text'] ?? '—' }}</div>
+                    @else
+                    <p class="extraction-empty-note" style="margin:0;">No lab costs for this treatment.</p>
+                    @endif
+                    @if ($diag && ($diag['treatments_ignored'] ?? []) !== [])
+                    <div class="extraction-entry-lines" style="margin-top:0.5rem;">
+                        <div class="extraction-entry-line-muted">Without lab cost:</div>
+                        @foreach ($diag['treatments_ignored'] as $t)
+                        <div>{{ $t['code'] }} × {{ $t['quantity'] }}</div>
+                        @endforeach
+                    </div>
+                    @endif
                 </div>
             </div>
-
-            @if ($diag && ($diag['job']['lines'] ?? []) !== [])
-            <h4 class="extraction-subsection-title">Lab costs</h4>
-            <div class="extraction-job-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Treatment</th>
-                        <th>Qty</th>
-                        <th>Unit price (AED)</th>
-                        <th>Line total (AED)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($diag['job']['lines'] as $jobLine)
-                    <tr>
-                        <td><strong>{{ $jobLine['code'] }}</strong></td>
-                        <td>{{ $jobLine['quantity'] }}</td>
-                        <td>{{ $jobLine['unit_cost_aed'] }}</td>
-                        <td>{{ $jobLine['line_total_aed'] }}</td>
-                    </tr>
-                    @endforeach
-                    <tr class="extraction-job-total">
-                        <td colspan="3">Total lab cost</td>
-                        <td>{{ $diag['job']['total_aed'] ?? '0.00' }} AED</td>
-                    </tr>
-                </tbody>
-            </table>
-            </div>
-            @else
-            <p class="extraction-empty-note">No lab costs for this row.</p>
-            @endif
-
-            @if ($diag && ($diag['treatments_ignored'] ?? []) !== [])
-            <p class="extraction-small" style="margin-top:0.75rem;margin-bottom:0;">
-                <strong>Treatments without lab cost:</strong>
-                @foreach ($diag['treatments_ignored'] as $t)
-                <span class="extraction-treatment-tag">{{ $t['code'] }}×{{ $t['quantity'] }}</span>
-                @endforeach
-            </p>
-            @endif
-
             @if ($issueCount > 0)
-            <div style="margin-top:0.75rem;">
-                <h4 class="extraction-subsection-title">Notes</h4>
+            <div class="extraction-entry-notes">
                 @foreach ($visibleIssues as $issue)
                 <div @class(['extraction-issue-line', 'extraction-issue-line--' . ($issue['severity'] ?? 'warning')])>
                     {{ $issue['message'] ?? '' }}

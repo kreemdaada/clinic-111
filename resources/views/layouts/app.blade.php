@@ -380,6 +380,10 @@
         <a href="{{ route('imports.index') }}" class="topbar-brand">Clinic 111 Accounting</a>
         <nav class="topbar-nav">
             <a href="{{ route('imports.index') }}" @class(['active'=> request()->routeIs('imports.*') || request()->routeIs('logs.*')])>Import</a>
+            <a href="{{ route('daily-report.index') }}" @class(['active'=> request()->routeIs('daily-report.*')])>Daily Report</a>
+            @if (auth()->user()->isAdmin())
+            <a href="{{ route('doctors.index') }}" @class(['active'=> request()->routeIs('doctors.index') || request()->routeIs('doctors.update') || request()->routeIs('doctors.destroy')])>Doctors</a>
+            @endif
             <span class="topbar-user">{{ auth()->user()->email }} ({{ auth()->user()->role->value }})</span>
             <form method="POST" action="{{ route('logout') }}" style="display:inline;">
                 @csrf

@@ -34,14 +34,17 @@ class TreatmentParserService
 
     /** @var array<string, string> */
     private const CODE_ALIASES = [
-        'ZIR CR' => 'ZIR',
-        'ZIRCR' => 'ZIR',
-        'ZIR BR' => 'ZIR',
+        'IMPL-ZIR' => 'IMPL-ZIR',
         'IMPL CR' => 'IMPL-CR',
         'IMPL-CR' => 'IMPL-CR',
         'IMP-CR' => 'IMPL-CR',
-        'IMPL-ZIR' => 'IMPL-ZIR',
-        'IMPL ZIR' => 'IMPL-ZIR',
+        'ZIR-CR' => 'ZIR',
+        'ZIR CR' => 'ZIR',
+        'ZIRCR' => 'ZIR',
+        'ZIR BR' => 'ZIR',
+        'M/C-CR' => 'MC',
+        'M/C CR' => 'MC',
+        'M/C' => 'MC',
         'IMP' => 'IMPL',
         'REPEAR' => 'REPAIR',
         'RE-PEAR' => 'REPAIR',
@@ -397,6 +400,10 @@ class TreatmentParserService
                 $parts = array_values(array_filter(explode('|', $toothGroups), fn(string $part): bool => $part !== ''));
                 $lastPart = $parts[array_key_last($parts)] ?? '';
 
+                if ($this->looksLikeTrailingFileNumber($parts[0], $lastPart) && count($parts) > 1) {
+                    return $this->countTeethFromPipeGroups($parts[0]);
+                }
+
                 // ZIR CR 546|5 → explicit quantity 5 (not tooth "5" only)
                 if (count($parts) === 2 && strlen($lastPart) <= 2 && (int) $lastPart >= 1 && (int) $lastPart <= self::MAX_QUANTITY) {
                     return (int) $lastPart;
@@ -554,7 +561,11 @@ class TreatmentParserService
 
         $normalized = preg_replace('/\bDEEP\s+SXP\b/', 'SXP', $normalized) ?? $normalized;
 
-        foreach (self::CODE_ALIASES as $alias => $canonicalCode) {
+        $aliasKeys = array_keys(self::CODE_ALIASES);
+        usort($aliasKeys, fn(string $a, string $b): int => strlen($b) <=> strlen($a));
+
+        foreach ($aliasKeys as $alias) {
+            $canonicalCode = self::CODE_ALIASES[$alias];
             $normalized = preg_replace(
                 '/\b' . preg_quote($alias, '/') . '\b/i',
                 $canonicalCode,
@@ -563,6 +574,30 @@ class TreatmentParserService
         }
 
         return $normalized;
+    }
+
+    /**
+     * Trailing clinic file numbers (e.g. ZIR CR 546|6517) must not inflate crown quantities.
+     */
+    private function looksLikeTrailingFileNumber(string $clinicalPart, string $suffixPart): bool
+    {
+        $suffix = preg_replace('/\D/', '', $suffixPart) ?? '';
+
+        if (strlen($suffix) < 4 || (int) $suffix < 6000) {
+            return false;
+        }
+
+        $clinical = preg_replace('/\D/', '', $clinicalPart) ?? '';
+
+        if ($clinical === '') {
+            return false;
+        }
+
+        if (strlen($clinical) <= 3) {
+            return true;
+        }
+
+        return ! preg_match('/^[1-8]+$/', $clinical);
     }
 
     /**
