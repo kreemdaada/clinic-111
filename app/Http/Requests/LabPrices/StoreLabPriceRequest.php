@@ -13,6 +13,13 @@ class StoreLabPriceRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('doctor_id') && $this->input('doctor_id') === '') {
+            $this->merge(['doctor_id' => null]);
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */

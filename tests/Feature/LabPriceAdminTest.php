@@ -255,6 +255,30 @@ class LabPriceAdminTest extends TestCase
         $this->assertNull($resolver->resolve($doctor, $treatment, $mainLab));
     }
 
+    public function test_admin_can_update_lab_price_from_ui(): void
+    {
+        $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $price = LabPrice::query()->where('is_active', true)->whereNull('doctor_id')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->from(route('lab-prices.index', ['doctor_id' => 'all']))
+            ->put(route('lab-prices.update', $price), [
+                '_form' => 'edit',
+                '_update_url' => route('lab-prices.update', $price),
+                'return_doctor_id' => 'all',
+                'lab_id' => $price->lab_id,
+                'treatment_id' => $price->treatment_id,
+                'doctor_id' => '',
+                'unit_cost' => '150.00',
+                'currency' => 'AED',
+                'is_active' => '1',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertSame('150.00', (string) $price->fresh()->unit_cost);
+    }
+
     public function test_api_index_returns_filtered_prices(): void
     {
         $this->actingAsRole('admin');

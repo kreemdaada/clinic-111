@@ -13,6 +13,7 @@ use App\Models\Treatment;
 use App\Services\Accounting\LabPriceManagementService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
@@ -63,9 +64,7 @@ class LabPriceAdminController extends Controller
         $price = $this->labPriceManagementService->create($request->validated());
 
         return redirect()
-            ->route('lab-prices.index', $request->only([
-                'search', 'lab_id', 'treatment_id', 'doctor_id', 'status', 'currency',
-            ]))
+            ->route('lab-prices.index', $this->filterRedirectParams($request))
             ->with('success', "Lab price #{$price->id} created.");
     }
 
@@ -74,9 +73,7 @@ class LabPriceAdminController extends Controller
         $this->labPriceManagementService->update($labPrice, $request->validated());
 
         return redirect()
-            ->route('lab-prices.index', $request->only([
-                'search', 'lab_id', 'treatment_id', 'doctor_id', 'status', 'currency', 'page',
-            ]))
+            ->route('lab-prices.index', $this->filterRedirectParams($request))
             ->with('success', "Lab price #{$labPrice->id} updated.");
     }
 
@@ -156,5 +153,21 @@ class LabPriceAdminController extends Controller
         }
 
         return $query;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function filterRedirectParams(Request $request): array
+    {
+        return array_filter([
+            'search' => $request->input('return_search'),
+            'lab_id' => $request->input('return_lab_id'),
+            'treatment_id' => $request->input('return_treatment_id'),
+            'doctor_id' => $request->input('return_doctor_id'),
+            'status' => $request->input('return_status'),
+            'currency' => $request->input('return_currency'),
+            'page' => $request->input('return_page'),
+        ], fn ($value) => $value !== null && $value !== '');
     }
 }

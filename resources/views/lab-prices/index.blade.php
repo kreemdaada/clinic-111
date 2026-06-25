@@ -157,16 +157,18 @@
 @endif
 
 <div class="lp-modal-backdrop" id="lp-create-modal" aria-hidden="true"
-    data-open-on-load="{{ ($errors->any() && old('lab_id') && ! request()->routeIs('lab-prices.update')) ? '1' : '0' }}">
+    data-open-on-load="{{ ($errors->any() && old('_form') !== 'edit' && old('lab_id')) ? '1' : '0' }}">
     <div class="lp-modal" role="dialog">
         <h2>Create lab price</h2>
         <form method="POST" action="{{ route('lab-prices.store') }}">
             @csrf
-            @foreach (request()->only(['search', 'lab_id', 'treatment_id', 'doctor_id', 'status', 'currency']) as $key => $value)
-                @if ($value !== null && $value !== '')
-                <input type="hidden" name="{{ $key }}" value="{{ $value }}">
-                @endif
-            @endforeach
+            <input type="hidden" name="_form" value="create">
+            <input type="hidden" name="return_search" value="{{ $search }}">
+            <input type="hidden" name="return_lab_id" value="{{ $labId }}">
+            <input type="hidden" name="return_treatment_id" value="{{ $treatmentId }}">
+            <input type="hidden" name="return_doctor_id" value="{{ $doctorFilter }}">
+            <input type="hidden" name="return_status" value="{{ $status }}">
+            <input type="hidden" name="return_currency" value="{{ $currency }}">
             @include('lab-prices._form-fields', ['prefix' => 'create'])
             <div class="lp-modal-actions">
                 <button type="button" class="btn btn-ghost btn-sm" data-close-modal>Cancel</button>
@@ -176,17 +178,39 @@
     </div>
 </div>
 
-<div class="lp-modal-backdrop" id="lp-edit-modal" aria-hidden="true">
+<div class="lp-modal-backdrop" id="lp-edit-modal" aria-hidden="true"
+    data-open-on-load="{{ ($errors->any() && old('_form') === 'edit') ? '1' : '0' }}"
+    data-edit-payload="{{ ($errors->any() && old('_form') === 'edit') ? e(json_encode([
+        'lab_id' => old('lab_id'),
+        'treatment_id' => old('treatment_id'),
+        'doctor_id' => old('doctor_id'),
+        'unit_cost' => old('unit_cost'),
+        'currency' => old('currency'),
+        'valid_from' => old('valid_from'),
+        'valid_to' => old('valid_to'),
+        'is_active' => old('is_active', '1'),
+        'update_url' => old('_update_url'),
+        'activate_url' => old('_activate_url'),
+        'destroy_url' => old('_destroy_url'),
+        'duplicate_url' => old('_duplicate_url'),
+    ])) : '' }}">
     <div class="lp-modal" role="dialog">
         <h2>Edit lab price</h2>
-        <form method="POST" id="lp-edit-form">
+        <form method="POST" id="lp-edit-form" action="{{ old('_update_url') }}">
             @csrf
             @method('PUT')
-            @foreach (request()->only(['search', 'lab_id', 'treatment_id', 'doctor_id', 'status', 'currency', 'page']) as $key => $value)
-                @if ($value !== null && $value !== '')
-                <input type="hidden" name="{{ $key }}" value="{{ $value }}">
-                @endif
-            @endforeach
+            <input type="hidden" name="_form" value="edit">
+            <input type="hidden" name="_update_url" id="lp-edit-update-url" value="{{ old('_update_url') }}">
+            <input type="hidden" name="_activate_url" id="lp-edit-activate-url" value="{{ old('_activate_url') }}">
+            <input type="hidden" name="_destroy_url" id="lp-edit-destroy-url" value="{{ old('_destroy_url') }}">
+            <input type="hidden" name="_duplicate_url" id="lp-edit-duplicate-url" value="{{ old('_duplicate_url') }}">
+            <input type="hidden" name="return_search" value="{{ $search }}">
+            <input type="hidden" name="return_lab_id" value="{{ $labId }}">
+            <input type="hidden" name="return_treatment_id" value="{{ $treatmentId }}">
+            <input type="hidden" name="return_doctor_id" value="{{ $doctorFilter }}">
+            <input type="hidden" name="return_status" value="{{ $status }}">
+            <input type="hidden" name="return_currency" value="{{ $currency }}">
+            <input type="hidden" name="return_page" value="{{ request('page') }}">
             @include('lab-prices._form-fields', ['prefix' => 'edit'])
             <div class="form-group">
                 <label class="form-label">Status</label>
@@ -258,24 +282,38 @@
 
     document.querySelectorAll('[data-edit-price]').forEach(btn => {
         btn.addEventListener('click', () => {
-            const data = JSON.parse(btn.getAttribute('data-edit-price'));
-            editForm.action = data.update_url;
-            deactivateForm.action = data.destroy_url;
-            activateForm.action = data.activate_url;
-            duplicateForm.action = data.duplicate_url;
-            document.getElementById('lp-edit-lab-id').value = data.lab_id;
-            document.getElementById('lp-edit-treatment-id').value = data.treatment_id;
-            document.getElementById('lp-edit-doctor-id').value = data.doctor_id || '';
-            document.getElementById('lp-edit-unit-cost').value = data.unit_cost;
-            document.getElementById('lp-edit-currency').value = data.currency;
-            document.getElementById('lp-edit-valid-from').value = data.valid_from || '';
-            document.getElementById('lp-edit-valid-to').value = data.valid_to || '';
-            document.getElementById('lp-edit-is-active').value = data.is_active ? '1' : '0';
-            deactivateBtn.hidden = !data.is_active;
-            activateBtn.hidden = !!data.is_active;
+            populateEditForm(JSON.parse(btn.getAttribute('data-edit-price')));
             openModal(editModal);
         });
     });
+
+    function populateEditForm(data) {
+        editForm.action = data.update_url;
+        document.getElementById('lp-edit-update-url').value = data.update_url;
+        document.getElementById('lp-edit-activate-url').value = data.activate_url;
+        document.getElementById('lp-edit-destroy-url').value = data.destroy_url;
+        document.getElementById('lp-edit-duplicate-url').value = data.duplicate_url;
+        deactivateForm.action = data.destroy_url;
+        activateForm.action = data.activate_url;
+        duplicateForm.action = data.duplicate_url;
+        document.getElementById('lp-edit-lab-id').value = data.lab_id;
+        document.getElementById('lp-edit-treatment-id').value = data.treatment_id;
+        document.getElementById('lp-edit-doctor-id').value = data.doctor_id || '';
+        document.getElementById('lp-edit-unit-cost').value = data.unit_cost;
+        document.getElementById('lp-edit-currency').value = data.currency;
+        document.getElementById('lp-edit-valid-from').value = data.valid_from || '';
+        document.getElementById('lp-edit-valid-to').value = data.valid_to || '';
+        document.getElementById('lp-edit-is-active').value = data.is_active === true || data.is_active === '1' || data.is_active === 1 ? '1' : '0';
+        const isActive = data.is_active === true || data.is_active === '1' || data.is_active === 1;
+        deactivateBtn.hidden = !isActive;
+        activateBtn.hidden = isActive;
+    }
+
+    const editPayload = editModal?.dataset.editPayload;
+    if (editModal?.dataset.openOnLoad === '1' && editPayload) {
+        populateEditForm(JSON.parse(editPayload));
+        openModal(editModal);
+    }
 
     if (createModal?.dataset.openOnLoad === '1') {
         openModal(createModal);
