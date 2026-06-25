@@ -384,6 +384,7 @@
             @if (auth()->user()->isAdmin())
             <a href="{{ route('doctors.index') }}" @class(['active'=> request()->routeIs('doctors.*')])>Doctors</a>
             <a href="{{ route('labs.index') }}" @class(['active'=> request()->routeIs('labs.*')])>Labs</a>
+            <a href="{{ route('treatments.index') }}" @class(['active'=> request()->routeIs('treatments.*')])>Treatments</a>
             <a href="{{ route('lab-prices.index') }}" @class(['active'=> request()->routeIs('lab-prices.*')])>Lab prices</a>
             <a href="{{ route('admin.users.index') }}" @class(['active'=> request()->routeIs('admin.users.*')])>Users</a>
             @endif

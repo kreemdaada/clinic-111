@@ -8,6 +8,7 @@ use App\Models\DailyReport;
 use App\Models\Doctor;
 use App\Models\Lab;
 use App\Models\LabPrice;
+use App\Models\Treatment;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
@@ -265,6 +266,67 @@ class AuditLogService
             $oldValues,
             $this->labSnapshot($lab),
         );
+    }
+
+    public function logTreatmentCreated(Treatment $treatment): AuditLog
+    {
+        return $this->log(
+            AuditAction::TreatmentCreated,
+            $treatment,
+            null,
+            $this->treatmentSnapshot($treatment),
+        );
+    }
+
+    public function logTreatmentUpdated(Treatment $treatment, array $oldValues, array $newValues): ?AuditLog
+    {
+        if (($oldValues['is_active'] ?? true) && ! ($newValues['is_active'] ?? true)) {
+            return $this->logTreatmentDeactivated($treatment, $oldValues);
+        }
+
+        if (! ($oldValues['is_active'] ?? true) && ($newValues['is_active'] ?? true)) {
+            return $this->log(
+                AuditAction::TreatmentActivated,
+                $treatment,
+                $oldValues,
+                $newValues,
+            );
+        }
+
+        if ($oldValues === $newValues) {
+            return null;
+        }
+
+        return $this->log(
+            AuditAction::TreatmentUpdated,
+            $treatment,
+            $oldValues,
+            $newValues,
+        );
+    }
+
+    public function logTreatmentDeactivated(Treatment $treatment, array $oldValues): AuditLog
+    {
+        return $this->log(
+            AuditAction::TreatmentDeactivated,
+            $treatment,
+            $oldValues,
+            $this->treatmentSnapshot($treatment),
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function treatmentSnapshot(Treatment $treatment): array
+    {
+        return [
+            'code' => $treatment->code,
+            'name' => $treatment->name,
+            'description' => $treatment->description,
+            'has_lab_cost' => $treatment->has_lab_cost,
+            'is_active' => $treatment->is_active,
+        ];
     }
 
     /**

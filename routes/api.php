@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\DailyReportController;
 use App\Http\Controllers\Api\LabAdminController;
 use App\Http\Controllers\Api\LabPriceAdminController;
 use App\Http\Controllers\Api\MonthlyIncomeController;
+use App\Http\Controllers\Api\TreatmentAdminController;
 use App\Http\Controllers\Api\UserAdminController;
 use App\Http\Controllers\Api\ReferenceDataController;
 use Illuminate\Support\Facades\Route;
@@ -41,6 +42,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/', [LabPriceAdminController::class, 'store']);
         Route::put('/{labPrice}', [LabPriceAdminController::class, 'update']);
         Route::delete('/{labPrice}', [LabPriceAdminController::class, 'destroy']);
+    });
+
+    Route::middleware('role:admin')->prefix('admin/treatments')->group(function () {
+        Route::get('/', [TreatmentAdminController::class, 'index']);
+        Route::post('/', [TreatmentAdminController::class, 'store']);
+        Route::put('/{treatment}', [TreatmentAdminController::class, 'update']);
+        Route::delete('/{treatment}', [TreatmentAdminController::class, 'destroy']);
+        Route::post('/{treatment}/activate', [TreatmentAdminController::class, 'activate']);
     });
 
     Route::middleware('role:admin')->prefix('users')->group(function () {

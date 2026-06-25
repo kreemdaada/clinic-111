@@ -332,6 +332,35 @@ activate($lab)
 
 ---
 
+### `TreatmentManagementService`
+
+**Path:** `app/Services/Accounting/TreatmentManagementService.php`
+
+**Purpose:** Admin CRUD for treatment master data (`treatments` table).
+
+**Input:**
+
+```php
+create(['code' => 'MC', 'name' => 'Metal Ceramic Crown', 'has_lab_cost' => true, 'description' => null])
+update($treatment, ['code' => '...', 'name' => '...', 'has_lab_cost' => bool, 'is_active' => bool])
+deactivate($treatment)
+activate($treatment)
+```
+
+**Output:** `Treatment` model
+
+**Business rules:**
+
+- Codes are stored uppercase and must be unique
+- Never physically deletes rows
+- `has_lab_cost` drives `LabJobCalculationService` and `LabCostTreatmentCatalog`
+- Inactive treatments are excluded from `TreatmentParserService` known codes and editor catalog
+- Historical `work_items` retain `treatment_id` references
+
+**Dependencies:** `AuditLogService`, `Treatment` model
+
+---
+
 ## Audit Services
 
 ### `AuditLogService`
@@ -353,7 +382,7 @@ log(
 
 **Output:** `AuditLog` model
 
-**Logged actions:** `report_import`, `price_change`, `commission_change`, `report_approval`, `manual_correction`, `lab_created`, `lab_updated`, `lab_deactivated`, `lab_activated`, `user_created`, `user_role_changed`, `user_deactivated`, `password_reset`
+**Logged actions:** `report_import`, `price_change`, `commission_change`, `report_approval`, `manual_correction`, `lab_created`, `lab_updated`, `lab_deactivated`, `lab_activated`, `treatment_created`, `treatment_updated`, `treatment_deactivated`, `treatment_activated`, `user_created`, `user_role_changed`, `user_deactivated`, `password_reset`
 
 **Dependencies:** `AuditLog` model, authenticated user
 
@@ -382,6 +411,11 @@ Import validation warning and per-row persist result.
 ---
 
 ## What Changed
+
+**Updated — 2026-06-26**
+
+- Documented `TreatmentManagementService` (Milestone 02)
+- `LabCostTreatmentCatalog` now reads `has_lab_cost` from database
 
 **Updated — 2026-06-25**
 

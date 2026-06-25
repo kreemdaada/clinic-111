@@ -65,4 +65,16 @@ enum AuditAction: string
 
     /** A laboratory was reactivated. */
     case LabActivated = 'lab_activated';
+
+    /** A treatment master record was created. */
+    case TreatmentCreated = 'treatment_created';
+
+    /** A treatment master record was updated. */
+    case TreatmentUpdated = 'treatment_updated';
+
+    /** A treatment was deactivated (never physically deleted). */
+    case TreatmentDeactivated = 'treatment_deactivated';
+
+    /** A treatment was reactivated. */
+    case TreatmentActivated = 'treatment_activated';
 }

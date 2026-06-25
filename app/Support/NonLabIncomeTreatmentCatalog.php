@@ -3,39 +3,20 @@
 namespace App\Support;
 
 /**
- * Treatments that must never appear in the Server/Original Income Excel
- * (columns SxP, RCT, CF, EXO, AF, …) and must never contribute to JOB (column G).
+ * Treatments excluded from Income Excel columns and JOB totals.
+ *
+ * Derived from the database `has_lab_cost` flag — not a hardcoded list.
  */
 final class NonLabIncomeTreatmentCatalog
 {
-    /** @var array<int, string> Known non-lab treatment codes from daily report text. */
-    public const CODES = [
-        'SXP',
-        'RCT',
-        'CF',
-        'EXO',
-        'AF',
-        'RCF',
-        'RE-RCT',
-        'BLEACHING',
-        'REPAIR',
-        'REIMPL',
-        'PARTIAL',
-        'BG',
-        'SINUS',
-    ];
-
     /**
      * Whether a treatment code is excluded from Income columns and JOB.
-     *
-     * Returns true for known non-lab codes or any code not in {@see LabCostTreatmentCatalog}.
      *
      * @param  string  $code  Treatment code from parser or database.
      */
     public static function isNonLabIncomeCode(string $code): bool
     {
-        return in_array(strtoupper(trim($code)), self::CODES, true)
-            || ! LabCostTreatmentCatalog::isLabCostCode($code);
+        return ! LabCostTreatmentCatalog::isLabCostCode($code);
     }
 
     /**

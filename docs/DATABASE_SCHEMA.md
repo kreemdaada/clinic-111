@@ -92,6 +92,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | `id` | bigint PK | |
 | `code` | string unique | e.g. `ZIR`, `IMPL-CR`, `BG` |
 | `name` | string | Full name |
+| `description` | text nullable | Optional admin notes |
 | `has_lab_cost` | boolean | If false, no lab_job is created |
 | `is_active` | boolean | |
 | `created_at`, `updated_at` | timestamps | |
@@ -101,6 +102,13 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 - `hasMany` work_items
 - `hasMany` lab_prices
 - `hasMany` doctor_fixed_fees
+
+**Admin rules (Milestone 02):**
+
+- Managed at web `/treatments` and API `/api/admin/treatments` (admin only)
+- Never physically deleted — use `is_active = false`
+- Inactive treatments excluded from parser known codes and editor catalog; historical `work_items` unchanged
+- `has_lab_cost` and `is_active` set via `TreatmentManagementService`, not mass-assignable
 
 **Example data:**
 
@@ -459,6 +467,10 @@ doctor_fixed_fees ── doctors + treatments
 **Updated — 2026-06-25**
 
 - `labs` admin rules documented (soft deactivate, Milestone 01)
+
+**Updated — 2026-06-26**
+
+- `treatments.description` column and admin rules (Milestone 02)
 
 **Updated — 2026-06-25**
 

@@ -7,7 +7,7 @@ use App\Http\Controllers\Web\ImportController;
 use App\Http\Controllers\Web\LabAdminController;
 use App\Http\Controllers\Web\LabPriceAdminController;
 use App\Http\Controllers\Web\LogController;
-use App\Http\Controllers\Web\ReportLockController;
+use App\Http\Controllers\Web\TreatmentAdminController;
 use App\Http\Controllers\Web\UserAdminController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -86,6 +86,14 @@ Route::middleware('auth')->group(function () {
         Route::post('/', [LabPriceAdminController::class, 'store'])->name('store');
         Route::put('/{labPrice}', [LabPriceAdminController::class, 'update'])->name('update');
         Route::delete('/{labPrice}', [LabPriceAdminController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::middleware('role:admin')->prefix('treatments')->name('treatments.')->group(function () {
+        Route::get('/', [TreatmentAdminController::class, 'index'])->name('index');
+        Route::post('/', [TreatmentAdminController::class, 'store'])->name('store');
+        Route::put('/{treatment}', [TreatmentAdminController::class, 'update'])->name('update');
+        Route::delete('/{treatment}', [TreatmentAdminController::class, 'destroy'])->name('destroy');
+        Route::post('/{treatment}/activate', [TreatmentAdminController::class, 'activate'])->name('activate');
     });
 
     Route::middleware('role:admin')->prefix('admin/users')->name('admin.users.')->group(function () {

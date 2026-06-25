@@ -477,6 +477,91 @@ Admin management uses `/api/admin/labs` and web `/labs`.
 
 ---
 
+## Treatment Administration (admin only)
+
+Reference endpoint `GET /api/treatments` returns **active treatments only** (unchanged).
+
+Admin management uses `/api/admin/treatments` and web `/treatments`.
+
+### GET /api/admin/treatments
+
+**Purpose:** Paginated list with search and status filter.
+
+**Role:** admin
+
+**Query parameters (`ListTreatmentsRequest`):**
+
+| Param | Rules |
+|---|---|
+| `search` | optional — matches code, name, or description |
+| `status` | optional: `all`, `active`, `inactive` |
+| `page` | optional pagination |
+
+**Response `200`:** `{ data: [...], meta: { current_page, last_page, per_page, total } }`
+
+---
+
+### POST /api/admin/treatments
+
+**Purpose:** Create a treatment.
+
+**Role:** admin
+
+**Request:**
+
+```json
+{
+  "code": "NEW-TX",
+  "name": "New Treatment",
+  "description": "Optional",
+  "has_lab_cost": true
+}
+```
+
+**Validation (`StoreTreatmentRequest`):** unique `code`, required `name`, optional `description`, optional `has_lab_cost`.
+
+**Response `201`:** Created treatment + audit `treatment_created`.
+
+---
+
+### PUT /api/admin/treatments/{id}
+
+**Purpose:** Update treatment fields.
+
+**Role:** admin
+
+**Audit:** `treatment_updated`, `treatment_deactivated`, or `treatment_activated`.
+
+---
+
+### DELETE /api/admin/treatments/{id}
+
+**Purpose:** Soft-deactivate. Never deletes the row.
+
+**Role:** admin
+
+---
+
+### POST /api/admin/treatments/{id}/activate
+
+**Purpose:** Reactivate a deactivated treatment.
+
+**Role:** admin
+
+---
+
+### Web UI: `/treatments`
+
+| Route | Method | Action |
+|---|---|---|
+| `/treatments` | GET | Paginated list + search/filter |
+| `/treatments` | POST | Create (modal) |
+| `/treatments/{id}` | PUT | Update (modal) |
+| `/treatments/{id}` | DELETE | Deactivate |
+| `/treatments/{id}/activate` | POST | Activate |
+
+---
+
 ## User Management (admin only)
 
 ### GET /api/users
@@ -674,6 +759,10 @@ Same capabilities as the API. Admin-only. Nav link visible when logged in as adm
 ---
 
 ## What Changed
+
+**Updated — 2026-06-26**
+
+- Treatment administration API (`/api/admin/treatments`) and web `/treatments`
 
 **Updated — 2026-06-25**
 

@@ -2,44 +2,50 @@
 
 namespace App\Support;
 
+use App\Models\Treatment;
+
 /**
- * Treatments that generate JOB (lab cost) in the Original / Server Income report.
+ * Resolves lab-cost treatment flags from the database catalog.
  *
- * All other treatments (CF, SxP, RCT, EXO, AF, BLEACHING, …) must not appear
- * in income columns H–T and must not contribute to column G (JOB).
+ * Runtime business logic must not hardcode treatment codes.
+ * Initial seed data lives in {@see \Database\Seeders\TreatmentSeeder}.
  */
 final class LabCostTreatmentCatalog
 {
-    /** @var array<int, string> Treatment codes that create lab jobs and Income H–P counts. */
-    public const CODES = [
-        'MC',
-        'ZIR',
-        'IMPL-CR',
-        'IMPL-ZIR',
-        'VENEER',
-        'IMPL',
-        'POST',
-        'ABT',
-        'REMOV',
-    ];
-
     /**
-     * Whether the given code is a lab-cost treatment (counts toward JOB).
+     * Whether the given code creates lab jobs (JOB column).
      *
      * @param  string  $code  Treatment code (case-insensitive).
      */
     public static function isLabCostCode(string $code): bool
     {
-        return in_array(strtoupper(trim($code)), self::CODES, true);
+        $normalized = strtoupper(trim($code));
+
+        if ($normalized === '') {
+            return false;
+        }
+
+        $treatment = Treatment::query()->where('code', $normalized)->first();
+
+        if ($treatment === null) {
+            return false;
+        }
+
+        return $treatment->has_lab_cost;
     }
 
     /**
-     * Return all lab-cost treatment codes.
+     * Active treatment codes that generate lab jobs.
      *
      * @return array<int, string>
      */
     public static function codes(): array
     {
-        return self::CODES;
+        return Treatment::query()
+            ->where('has_lab_cost', true)
+            ->where('is_active', true)
+            ->orderBy('code')
+            ->pluck('code')
+            ->all();
     }
 }

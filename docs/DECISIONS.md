@@ -1,252 +1,363 @@
-# Architectural Decisions
+# Dental Clinic Accounting System
 
-Record of important design decisions. Add a new entry whenever a significant choice is made.
+# Architecture Decision Records (ADR)
 
-Format:
+---
 
+# Purpose
+
+This document records every significant architectural decision made during the lifetime of this project.
+
+Its objectives are:
+
+* Explain why a decision was made.
+* Document the business and technical context.
+* Record alternative solutions that were considered.
+* Describe the long-term consequences.
+* Prevent repeating old discussions.
+* Help future developers understand the architecture.
+
+This document is the **Single Source of Truth** for all architectural decisions.
+
+Every developer must read this document before introducing major architectural changes.
+
+---
+
+# Scope
+
+This document contains only architecture-level decisions.
+
+Examples include:
+
+* Database design
+* Accounting engine
+* Security architecture
+* Multi-Clinic architecture
+* Service Layer decisions
+* Import pipeline
+* Privacy strategy
+* API architecture
+
+This document must **not** contain:
+
+* Bug fixes
+* Small refactoring
+* UI improvements
+* CSS changes
+* Minor optimizations
+
+---
+
+# Rules
+
+Every important architectural decision must receive a new ADR.
+
+Existing ADRs must never be deleted.
+
+Existing ADRs should rarely be modified.
+
+If an old decision changes:
+
+* Create a new ADR.
+* Reference the previous ADR.
+* Explain why the architecture changed.
+
+Never rewrite project history.
+
+Architecture history is valuable.
+
+---
+
+# ADR Lifecycle
+
+Each ADR has one of the following statuses.
+
+Accepted
+
+The decision is active.
+
+Deprecated
+
+The decision is no longer recommended.
+
+Superseded
+
+A newer ADR replaces this one.
+
+Proposed
+
+Under discussion.
+
+---
+
+# ADR Template
+
+Every new ADR should follow this structure.
+
+```markdown
+## ADR-XXX
+
+### Title
+
+Short descriptive title.
+
+### Status
+
+Accepted
+
+### Date
+
+YYYY-MM-DD
+
+### Milestone
+
+Milestone XX
+
+### Context
+
+Describe the business or technical problem.
+
+### Decision
+
+Describe the chosen solution.
+
+### Alternatives Considered
+
+Alternative A
+
+Alternative B
+
+Alternative C
+
+### Consequences
+
+Advantages
+
+Disadvantages
+
+Technical impact
+
+### Affected Components
+
+Models
+
+Services
+
+Controllers
+
+Database
+
+API
+
+UI
+
+Tests
+
+### Related Documentation
+
+DATABASE_SCHEMA.md
+
+SERVICES.md
+
+WORKFLOWS.md
+
+API.md
+
+ROADMAP.md
+
+### Related Commit
+
+git commit message
+
+### Notes
+
+Optional notes.
 ```
-Decision: ...
-Reason: ...
-Date: YYYY-MM-DD
-```
 
 ---
 
-## ADR-001: TOTAL Means Collected Payments, Not Treatment Value
+## ADR-022
 
-**Decision:** `paid_total_aed` and `payments.amount_aed` represent money collected from the patient (DHS + USD + VISA), not the treatment invoice value (`total_cost`).
+### Title
 
-**Reason:** The clinic calculates doctor income from collected payments, not from quoted treatment prices. A patient may pay partially or across multiple methods.
+Database-Driven Treatment Catalog
 
-**Date:** 2026-06-19
+### Status
 
----
+Accepted
 
-## ADR-002: JOB Means Lab Cost, Not Job Number
+### Context
 
-**Decision:** The term JOB in business language maps to `lab_jobs.total_cost_aed`, not an external work order ID.
+Milestone 02 requires administrators to manage treatments from the UI. Runtime code previously used hardcoded arrays in `LabCostTreatmentCatalog` and `NonLabIncomeTreatmentCatalog`.
 
-**Reason:** Clinic staff use "JOB" colloquially to mean the lab bill for a day's work. Storing it as calculated lab cost avoids confusion with external lab tracking systems.
+### Decision
 
-**Date:** 2026-06-19
+- `LabCostTreatmentCatalog::isLabCostCode()` and `codes()` read from the `treatments` table (`has_lab_cost`, `is_active`).
+- `TreatmentManagementService` manages create/update/activate/deactivate with audit logs.
+- Initial seed data remains in `TreatmentSeeder` only (not runtime business logic).
 
----
+### Consequences
 
-## ADR-003: Database-Driven Rules, No Hardcoded Doctor Names
+- New treatments and lab-cost flags are configurable without code deploy.
+- Parser known codes and editor catalog use active treatments only.
+- Historical `work_items` keep `treatment_id` references when treatments are deactivated.
 
-**Decision:** All doctor commission logic reads from `doctors.commission_type`, `doctors.commission_percentage`, and `doctor_fixed_fees`. No `if ($doctor->name === 'Dr Jack')` anywhere in services.
+### Related Milestone
 
-**Reason:** Doctors, rates, and lab assignments change over time. Database configuration allows updates without code deployment.
+Milestone 02 — Treatments Administration
 
-**Date:** 2026-06-19
+### Date
 
----
-
-## ADR-004: Lab Price Fallback Chain
-
-**Decision:** Lab prices resolve in order: (1) doctor-specific override, (2) default price where `doctor_id IS NULL`. Both scoped to the resolved lab.
-
-**Reason:** Dr Riyad has different lab prices and a different default lab. Other doctors share default prices. Nullable `doctor_id` keeps the schema simple without a separate "is_default" flag.
-
-**Date:** 2026-06-19
+2026-06-26
 
 ---
 
-## ADR-005: bcmath for All Money Calculations
+# ADR Index
 
-**Decision:** Use PHP `bcmath` via `MoneyCalculator` for all arithmetic. Never use float. Database columns are `decimal(12,2)`.
-
-**Reason:** Floating-point arithmetic causes rounding errors in financial systems. bcmath provides deterministic, testable results.
-
-**Date:** 2026-06-19
-
----
-
-## ADR-006: Isolated Excel Parser
-
-**Decision:** Excel reading is isolated in `ExcelDailyReportParser`, separate from `DailyReportImportService`.
-
-**Reason:** V2 will replace Excel upload with manual web form entry. The import orchestrator stays the same; only the parser/input layer changes.
-
-**Date:** 2026-06-19
-
----
-
-## ADR-007: Rule-Based Treatment Parser (No AI)
-
-**Decision:** `TreatmentParserService` uses regex pattern matching against known treatment codes from the database. No AI or ML.
-
-**Reason:** Accounting calculations must be deterministic and testable. Regex parsing is predictable, fast, and fully unit-testable.
-
-**Date:** 2026-06-19
-
----
-
-## ADR-008: Single Pipeline for Excel and Future Manual Entry
-
-**Decision:** V2 manual entry will create the same records (`daily_work_rows`, `payments`, `work_items`, `lab_jobs`) and call the same calculation services.
-
-**Reason:** Avoids duplicating business logic. The only difference is the input source (Excel parser vs. web form).
-
-**Date:** 2026-06-19
+| ADR     | Title                               | Status   |
+| ------- | ----------------------------------- | -------- |
+| ADR-001 | TOTAL Means Collected Payments      | Accepted |
+| ADR-002 | JOB Means Lab Cost                  | Accepted |
+| ADR-003 | Database Driven Business Rules      | Accepted |
+| ADR-004 | Lab Price Fallback Chain            | Accepted |
+| ADR-005 | bcmath for Money Calculations       | Accepted |
+| ADR-006 | Isolated Excel Parser               | Accepted |
+| ADR-007 | Rule-Based Treatment Parser         | Accepted |
+| ADR-008 | Shared Accounting Pipeline          | Accepted |
+| ADR-009 | Approved Reports Are Read-Only      | Accepted |
+| ADR-010 | Soft Delete Strategy                | Accepted |
+| ADR-011 | Sanctum Authentication              | Accepted |
+| ADR-012 | Private File Storage                | Accepted |
+| ADR-013 | Sanitized Raw Import Data           | Accepted |
+| ADR-014 | Financial Rounding Rules            | Accepted |
+| ADR-015 | Explicit Null Checks                | Accepted |
+| ADR-016 | Database Driven Export Profiles     | Accepted |
+| ADR-017 | Patient Privacy                     | Accepted |
+| ADR-018 | Work Items for All Valid Treatments | Accepted |
+| ADR-019 | Import Validation Warnings          | Accepted |
+| ADR-020 | Delete Uploaded Excel Files         | Accepted |
+| ADR-021 | Laboratory Soft Deactivate          | Accepted |
+| ADR-022 | Database-Driven Treatment Catalog   | Accepted |
 
 ---
 
-## ADR-009: Approved Reports Are Read-Only
+# Future ADR Roadmap
 
-**Decision:** Reports with `status = approved` cannot be re-imported for the same date or reprocessed.
+The following architectural topics are expected to receive future ADRs.
 
-**Reason:** Financial data integrity. Approved reports represent finalized accounting periods.
+ADR-023
 
-**Date:** 2026-06-19
+Doctor Fixed Fee Administration
 
----
+ADR-024
 
-## ADR-010: Soft Status Instead of Physical Deletes
+Configuration Dashboard
 
-**Decision:** Financial records (`lab_jobs`, reports) are never physically deleted. Use status fields (`cancelled`, `failed`) instead.
+ADR-025
 
-**Reason:** Audit trail and regulatory compliance. Accounting systems require immutable history.
+Clinic Entity
 
-**Date:** 2026-06-19
+ADR-026
 
----
+Attach clinic_id
 
-## ADR-011: Sanctum for API Authentication
+ADR-027
 
-**Decision:** Use Laravel Sanctum token-based auth with role middleware, not session-based web auth.
+Current Clinic Resolver
 
-**Reason:** V1 is API-only (no frontend). Sanctum is lightweight and sufficient for MVP. Roles enforced via `EnsureUserHasRole` middleware.
+ADR-028
 
-**Date:** 2026-06-19
+Query Isolation
 
----
+ADR-029
 
-## ADR-012: Private File Storage for Uploads
+Dynamic Business Rules
 
-**Decision:** Excel uploads stored on the `local` disk under `daily-reports/`, outside the public directory.
+ADR-030
 
-**Reason:** Uploaded files may contain patient names and financial data. Public access is a security risk.
+Multi-Clinic Registration Wizard
 
-**Date:** 2026-06-19
+ADR-031
 
----
+Tenant Security
 
-## ADR-013: Store Raw Excel Data for Audit
+ADR-032
 
-**Decision:** Every imported row stores a **sanitized** parsed row in `daily_work_rows.raw_data_json` (patient identifier keys removed, PII cells redacted).
+Multi-Currency Strategy
 
-**Reason:** Enables debugging import issues and supports audit requirements without retaining plain-text patient names.
+ADR-033
 
-**Date:** 2026-06-19
-
----
-
-## ADR-014: Percentage Rounding — Half-Up to 2 Decimals
-
-**Decision:** `MoneyCalculator::percentage()` rounds half-up to 2 decimal places (e.g. 12456.9375 → 12456.94).
-
-**Reason:** Standard financial rounding. bcmath truncates by default; explicit rounding prevents off-by-one-cent errors in doctor payouts.
-
-**Date:** 2026-06-19
+Accounting Rule Engine
 
 ---
 
-## ADR-015: Explicit Null Checks Over Shorthand Operators
+# Documentation Rule
 
-**Decision:** Prefer explicit `if ($value === null)` and `if ($object !== null)` over PHP shorthand operators `??`, `??=`, and `?->` in application code.
+Whenever an architectural decision affects one or more of the following:
 
-**Reason:** The team prioritizes readability for developers who may not be familiar with modern PHP syntax. Explicit checks are self-documenting without sacrificing correctness. Array defaults from parsed Excel rows use a dedicated `getParsedRowValue()` helper instead of inline `??`.
+* Database
+* Accounting Engine
+* API
+* Authentication
+* Authorization
+* Services
+* Security
+* Multi-Clinic
+* Import Pipeline
+* Business Rules
 
-**Date:** 2026-06-19
+A new ADR must be created.
 
----
-
-## ADR-016: Doctor Income Export Profiles in Database
-
-**Decision:** Server Income Excel layout (sheet name, column letters, layout type) is stored in `doctor_income_export_profiles`, loaded by `DoctorIncomeExportProfileService`. No hardcoded doctor profile arrays in export code.
-
-**Reason:** New or inactive doctors should be configurable via DB/seeder/admin without code deploy. JOB calculation remains one pipeline (`LabJobCalculationService` + `lab_prices`); only Excel layout is profile-driven.
-
-**Date:** 2026-06-19
-
----
-
-## ADR-017: Patient Privacy — HMAC Reference, No Plain-Text PII
-
-**Decision:** Do not persist `patient_name`, `mrn`, or `file_number`. During import, read them in memory only, store `patient_reference_hash` (HMAC-SHA256), sanitize `raw_data_json`, and never return patient identifiers in API responses. Use dedicated `ACCOUNTING_PATIENT_REFERENCE_HMAC_KEY`, not `APP_KEY`.
-
-**Reason:** Accounting traceability without storing reversible patient identifiers. GDPR-aligned minimization for a non-clinical system.
-
-**Date:** 2026-06-19
+Minor implementation details do not require an ADR.
 
 ---
 
-## ADR-018: Work Items for All Valid Treatments
+# Long-Term Vision
 
-**Decision:** Every valid parsed treatment code creates a `work_item`. `lab_jobs` are created only when `treatments.has_lab_cost = true`.
+The project evolves through the following stages.
 
-**Reason:** CF, RCT, REPAIR, and REMOV (among others) affect treatment counts and doctor income context even when they do not all follow the same JOB rules. REMOV has lab cost (100 AED) and creates both work_item and lab_job.
+V1
 
-**Date:** 2026-06-19
+Single Clinic Accounting Engine
 
----
+↓
 
-## ADR-019: Import Validation Warnings and needs_review Status
+V2
 
-**Decision:** `TreatmentImportValidationService` emits explicit warnings (`invalid_format`, `missing_quantity`, `unknown_treatment_code`, `lab_price_not_found`). Reports with warnings get status `needs_review` instead of `calculated`. Expose summary via `GET /api/daily-reports/{id}/validation-summary`.
+Configurable Accounting Platform
 
-**Reason:** Invalid treatments must not be silently ignored. Staff need a review queue before approving a month.
+↓
 
-**Date:** 2026-06-19
+V3
 
----
+Multi-Clinic SaaS Platform
 
-## ADR-020: Delete Uploaded Excel After Successful Import
+↓
 
-**Decision:** Remove uploaded Excel from private storage after successful import unless `ACCOUNTING_DELETE_UPLOAD_AFTER_IMPORT=false`.
+Future
 
-**Reason:** Uploaded files contain patient names; minimize retention once data is extracted and sanitized in the database.
-
-**Date:** 2026-06-19
+Enterprise Dental Accounting Platform
 
 ---
 
-## ADR-021: Laboratory Soft Deactivate (Milestone 01)
+# Architectural Principle
 
-**Decision:** Laboratories are configuration data managed via `LabManagementService`. Admins deactivate labs with `is_active = false` instead of deleting rows. Historical `lab_jobs` retain their `lab_id`.
+Business requirements evolve.
 
-**Reason:** Accounting history must remain intact. Inactive labs are excluded from active-lab queries used for new calculations only.
+Configuration changes.
 
-**Date:** 2026-06-25
+Accounting data grows.
+
+Architecture should remain stable.
+
+Every ADR exists to protect that stability.
 
 ---
 
-## What Changed
+# Architecture History
 
-**Updated — 2026-06-25**
+All ADRs below represent the historical evolution of the project.
 
-- ADR-021 — laboratory soft deactivate (Milestone 01)
+Do not modify them unless correcting factual mistakes.
 
-**Updated — 2026-06-19**
-
-- ADR-017 through ADR-020 — privacy, work items, validation, file retention
-- ADR-013 note: `raw_data_json` is sanitized (PII redacted), not a full copy of patient fields
-
-**Updated — 2026-06-19**
-
-- Seed data aligned with clinic commission and lab price sheet (MC 105 AED, Dr Riyad)
-
-**Updated — 2026-06-19**
-
-Added:
-
-- ADR-015 — explicit null checks over shorthand operators
-
-**Initial documentation — 2026-06-19**
-
-Created:
-
-- `docs/DECISIONS.md` — 14 architectural decision records (ADR-001 through ADR-014)
-
-Documents all major design choices made during V1 MVP implementation.
+New architectural decisions must always be appended as new ADR entries.

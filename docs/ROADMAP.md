@@ -33,6 +33,7 @@ Current Features
 * Monthly Income Calculation
 * Doctor Administration
 * Laboratory Administration
+* Treatments Administration
 * User Administration
 * Authentication
 * Role Based Access Control
@@ -45,6 +46,8 @@ Current Features
 Current Test Status
 
 123+ automated tests passing.
+
+**Updated — 2026-06-26:** Milestone 02 (Treatments Administration) complete — 153 tests.
 
 **Updated — 2026-06-25:** Milestone 01 (Laboratory Administration) complete — 138 tests.
 
@@ -112,7 +115,7 @@ Milestone 02
 
 Status
 
-TODO
+**DONE**
 
 Goal
 

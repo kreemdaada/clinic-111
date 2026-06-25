@@ -243,6 +243,7 @@ Unchanged — Sanctum bearer tokens, rate-limited login.
 | View monthly income | ✓ | ✓ | ✓ |
 | Manage users (`/admin/users`) | ✓ | ✗ | ✗ |
 | Manage laboratories (`/labs`) | ✓ | ✗ | ✗ |
+| Manage treatments (`/treatments`) | ✓ | ✗ | ✗ |
 | Approve / unlock reports | ✓ | ✗ | ✗ |
 | Manage doctors / lab prices | ✓ | ✗ | ✗ |
 
@@ -278,7 +279,37 @@ sequenceDiagram
 
 ---
 
-## 9. User Administration (admin only)
+## 9. Treatment Administration (admin only)
+
+```mermaid
+sequenceDiagram
+    actor Admin
+    participant UI as /treatments
+    participant Svc as TreatmentManagementService
+    participant DB as treatments + audit_logs
+
+    Admin->>UI: Create treatment
+    UI->>Svc: create()
+    Svc->>DB: INSERT treatments
+    Svc->>DB: audit treatment_created
+
+    Admin->>UI: Deactivate treatment
+    UI->>Svc: deactivate()
+    Svc->>DB: is_active = false
+    Svc->>DB: audit treatment_deactivated
+
+    Note over DB: Historical work_items unchanged
+```
+
+**Rules:**
+
+- Treatments never physically deleted
+- `LabCostTreatmentCatalog` reads `has_lab_cost` from database (no hardcoded code list)
+- Parser and editor use active treatments only for new entries
+
+---
+
+## 10. User Administration (admin only)
 
 ```mermaid
 sequenceDiagram
@@ -318,7 +349,7 @@ sequenceDiagram
 
 ---
 
-## 10. Environment Variables (import / privacy)
+## 11. Environment Variables (import / privacy)
 
 | Variable | Purpose |
 |---|---|
@@ -328,7 +359,7 @@ sequenceDiagram
 
 ---
 
-## 11. V2 Manual Entry (Planned)
+## 12. V2 Manual Entry (Planned)
 
 Same pipeline after row creation: `TreatmentImportValidationService` → `LabJobCalculationService`. No Excel parser.
 
@@ -340,9 +371,14 @@ Same pipeline after row creation: `TreatmentImportValidationService` → `LabJob
 
 - Laboratory administration workflow (Milestone 01)
 
+**Updated — 2026-06-26**
+
+- Treatment administration workflow (Milestone 02)
+- Database-driven `LabCostTreatmentCatalog`
+
 **Updated — 2026-06-25**
 
-- User administration workflow (`/admin/users`, admin-only)
+- Laboratory administration workflow (`/admin/users`, admin-only)
 - Extended RBAC table with user management and master data
 
 **Updated — 2026-06-19**
