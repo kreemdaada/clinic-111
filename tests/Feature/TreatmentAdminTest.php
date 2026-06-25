@@ -25,6 +25,43 @@ class TreatmentAdminTest extends TestCase
         $this->seedAccountingData();
     }
 
+    public function test_admin_can_view_treatment_index_with_modal_markup(): void
+    {
+        $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->get(route('treatments.index', ['page' => 1]))
+            ->assertOk()
+            ->assertSee('data-open-create', false)
+            ->assertSee('tx-create-modal', false)
+            ->assertSee('tx-edit-modal', false)
+            ->assertSee('tx-edit-btn', false)
+            ->assertSee('DOMContentLoaded', false);
+    }
+
+    public function test_admin_can_update_treatment_from_ui(): void
+    {
+        $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $treatment = Treatment::query()->where('code', 'CF')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->from(route('treatments.index', ['page' => 1]))
+            ->put(route('treatments.update', $treatment), [
+                '_form' => 'edit',
+                '_update_url' => route('treatments.update', $treatment),
+                'return_page' => '1',
+                'code' => 'CF',
+                'name' => 'Composite Filling Updated UI',
+                'description' => 'Updated from UI test',
+                'has_lab_cost' => '0',
+                'is_active' => '1',
+            ])
+            ->assertRedirect(route('treatments.index', ['page' => 1]))
+            ->assertSessionHas('success');
+
+        $this->assertSame('Composite Filling Updated UI', $treatment->fresh()->name);
+    }
+
     public function test_viewer_cannot_access_treatment_admin(): void
     {
         $viewer = User::query()->where('email', 'viewer@clinic.test')->firstOrFail();

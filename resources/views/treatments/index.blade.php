@@ -56,9 +56,12 @@
     <div style="display:flex;gap:0.5rem;align-items:center;">
         <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
         <a href="{{ route('treatments.index') }}" class="btn btn-ghost btn-sm">Reset</a>
-        <button type="button" class="btn btn-primary btn-sm" data-open-create>Create treatment</button>
     </div>
 </form>
+
+<div style="margin-bottom:1rem;">
+    <button type="button" class="btn btn-primary btn-sm" data-open-create>Create treatment</button>
+</div>
 
 <div class="card tx-table-wrap">
     <table>
@@ -91,17 +94,18 @@
                 <td>{{ $treatment->work_items_count }} {{ Str::plural('item', $treatment->work_items_count) }}</td>
                 <td>
                     <div class="table-actions">
-                        <button type="button" class="btn btn-secondary btn-sm" data-edit-treatment="{{ e(json_encode([
-                            'id' => $treatment->id,
-                            'code' => $treatment->code,
-                            'name' => $treatment->name,
-                            'description' => $treatment->description,
-                            'has_lab_cost' => $treatment->has_lab_cost,
-                            'is_active' => $treatment->is_active,
-                            'update_url' => route('treatments.update', $treatment),
-                            'activate_url' => route('treatments.activate', $treatment),
-                            'destroy_url' => route('treatments.destroy', $treatment),
-                        ])) }}">Edit</button>
+                        <button
+                            type="button"
+                            class="btn btn-secondary btn-sm tx-edit-btn"
+                            data-code="{{ $treatment->code }}"
+                            data-name="{{ e($treatment->name) }}"
+                            data-description="{{ e($treatment->description ?? '') }}"
+                            data-has-lab-cost="{{ $treatment->has_lab_cost ? '1' : '0' }}"
+                            data-is-active="{{ $treatment->is_active ? '1' : '0' }}"
+                            data-update-url="{{ route('treatments.update', $treatment) }}"
+                            data-activate-url="{{ route('treatments.activate', $treatment) }}"
+                            data-destroy-url="{{ route('treatments.destroy', $treatment) }}"
+                        >Edit</button>
                     </div>
                 </td>
             </tr>
@@ -117,13 +121,14 @@
 @endif
 
 <div class="tx-modal-backdrop" id="tx-create-modal" aria-hidden="true"
-    data-open-on-load="{{ ($errors->any() && old('code') && ! request()->routeIs('treatments.update')) ? '1' : '0' }}">
+    data-open-on-load="{{ ($errors->any() && old('_form') !== 'edit') ? '1' : '0' }}">
     <div class="tx-modal" role="dialog">
         <h2>Create treatment</h2>
         <form method="POST" action="{{ route('treatments.store') }}">
             @csrf
-            <input type="hidden" name="search" value="{{ $search }}">
-            <input type="hidden" name="status" value="{{ $status }}">
+            <input type="hidden" name="_form" value="create">
+            <input type="hidden" name="return_search" value="{{ $search }}">
+            <input type="hidden" name="return_status" value="{{ $status }}">
             <div class="form-group">
                 <label class="form-label">Code</label>
                 <input class="form-input" type="text" name="code" value="{{ old('code') }}" required>
@@ -150,38 +155,43 @@
     </div>
 </div>
 
-<div class="tx-modal-backdrop" id="tx-edit-modal" aria-hidden="true">
+<div class="tx-modal-backdrop" id="tx-edit-modal" aria-hidden="true"
+    data-open-on-load="{{ ($errors->any() && old('_form') === 'edit') ? '1' : '0' }}">
     <div class="tx-modal" role="dialog">
         <h2>Edit treatment</h2>
-        <form method="POST" id="tx-edit-form">
+        <form method="POST" id="tx-edit-form" action="{{ old('_update_url') }}">
             @csrf
             @method('PUT')
-            <input type="hidden" name="search" value="{{ $search }}">
-            <input type="hidden" name="status" value="{{ $status }}">
-            <input type="hidden" name="page" value="{{ request('page') }}">
+            <input type="hidden" name="_form" value="edit">
+            <input type="hidden" name="_update_url" id="tx-edit-update-url" value="{{ old('_update_url') }}">
+            <input type="hidden" name="_activate_url" id="tx-edit-activate-url" value="{{ old('_activate_url') }}">
+            <input type="hidden" name="_destroy_url" id="tx-edit-destroy-url" value="{{ old('_destroy_url') }}">
+            <input type="hidden" name="return_search" value="{{ $search }}">
+            <input type="hidden" name="return_status" value="{{ $status }}">
+            <input type="hidden" name="return_page" value="{{ request('page') }}">
             <div class="form-group">
                 <label class="form-label">Code</label>
-                <input class="form-input" type="text" name="code" id="tx-edit-code" required>
+                <input class="form-input" type="text" name="code" id="tx-edit-code" value="{{ old('code') }}" required>
             </div>
             <div class="form-group">
                 <label class="form-label">Name</label>
-                <input class="form-input" type="text" name="name" id="tx-edit-name" required>
+                <input class="form-input" type="text" name="name" id="tx-edit-name" value="{{ old('name') }}" required>
             </div>
             <div class="form-group">
                 <label class="form-label">Description</label>
-                <textarea class="form-input" name="description" id="tx-edit-description" rows="2"></textarea>
+                <textarea class="form-input" name="description" id="tx-edit-description" rows="2">{{ old('description') }}</textarea>
             </div>
             <div class="form-group">
                 <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.875rem;">
-                    <input type="checkbox" name="has_lab_cost" value="1" id="tx-edit-has-lab-cost">
+                    <input type="checkbox" name="has_lab_cost" value="1" id="tx-edit-has-lab-cost" @checked(old('has_lab_cost'))>
                     Has lab cost (creates JOB)
                 </label>
             </div>
             <div class="form-group">
                 <label class="form-label">Status</label>
                 <select class="form-input" name="is_active" id="tx-edit-is-active">
-                    <option value="1">Active</option>
-                    <option value="0">Inactive</option>
+                    <option value="1" @selected(old('is_active', '1') === '1')>Active</option>
+                    <option value="0" @selected(old('is_active') === '0')>Inactive</option>
                 </select>
             </div>
             <div class="tx-modal-actions">
@@ -206,7 +216,7 @@
 
 @push('scripts')
 <script>
-(function () {
+document.addEventListener('DOMContentLoaded', function () {
     const createModal = document.getElementById('tx-create-modal');
     const editModal = document.getElementById('tx-edit-modal');
     const editForm = document.getElementById('tx-edit-form');
@@ -214,6 +224,10 @@
     const activateForm = document.getElementById('tx-activate-form');
     const deactivateBtn = document.getElementById('tx-deactivate-btn');
     const activateBtn = document.getElementById('tx-activate-btn');
+
+    if (!createModal || !editModal || !editForm) {
+        return;
+    }
 
     function openModal(modal) {
         modal.classList.add('is-open');
@@ -225,41 +239,78 @@
         modal.setAttribute('aria-hidden', 'true');
     }
 
-    document.querySelector('[data-open-create]')?.addEventListener('click', () => openModal(createModal));
+    function readEditData(source) {
+        return {
+            update_url: source.dataset.updateUrl || '',
+            activate_url: source.dataset.activateUrl || '',
+            destroy_url: source.dataset.destroyUrl || '',
+            code: source.dataset.code || '',
+            name: source.dataset.name || '',
+            description: source.dataset.description || '',
+            has_lab_cost: source.dataset.hasLabCost === '1',
+            is_active: source.dataset.isActive === '1',
+        };
+    }
 
-    document.querySelectorAll('[data-close-modal]').forEach(btn => {
-        btn.addEventListener('click', () => {
+    function populateEditForm(data) {
+        editForm.action = data.update_url;
+        document.getElementById('tx-edit-update-url').value = data.update_url;
+        document.getElementById('tx-edit-activate-url').value = data.activate_url;
+        document.getElementById('tx-edit-destroy-url').value = data.destroy_url;
+        deactivateForm.action = data.destroy_url;
+        activateForm.action = data.activate_url;
+        document.getElementById('tx-edit-code').value = data.code;
+        document.getElementById('tx-edit-name').value = data.name;
+        document.getElementById('tx-edit-description').value = data.description;
+        document.getElementById('tx-edit-has-lab-cost').checked = data.has_lab_cost;
+        document.getElementById('tx-edit-is-active').value = data.is_active ? '1' : '0';
+        deactivateBtn.hidden = !data.is_active;
+        activateBtn.hidden = data.is_active;
+    }
+
+    document.querySelector('[data-open-create]')?.addEventListener('click', function () {
+        openModal(createModal);
+    });
+
+    document.querySelectorAll('[data-close-modal]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
             closeModal(createModal);
             closeModal(editModal);
         });
     });
 
-    [createModal, editModal].forEach(modal => {
-        modal.addEventListener('click', (event) => {
-            if (event.target === modal) closeModal(modal);
+    [createModal, editModal].forEach(function (modal) {
+        modal.addEventListener('click', function (event) {
+            if (event.target === modal) {
+                closeModal(modal);
+            }
         });
     });
 
-    document.querySelectorAll('[data-edit-treatment]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const data = JSON.parse(btn.getAttribute('data-edit-treatment'));
-            editForm.action = data.update_url;
-            deactivateForm.action = data.destroy_url;
-            activateForm.action = data.activate_url;
-            document.getElementById('tx-edit-code').value = data.code;
-            document.getElementById('tx-edit-name').value = data.name;
-            document.getElementById('tx-edit-description').value = data.description || '';
-            document.getElementById('tx-edit-has-lab-cost').checked = !!data.has_lab_cost;
-            document.getElementById('tx-edit-is-active').value = data.is_active ? '1' : '0';
-            deactivateBtn.hidden = !data.is_active;
-            activateBtn.hidden = !!data.is_active;
+    document.querySelectorAll('.tx-edit-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            populateEditForm(readEditData(btn));
             openModal(editModal);
         });
     });
 
-    if (createModal?.dataset.openOnLoad === '1') {
+    if (editModal.dataset.openOnLoad === '1') {
+        populateEditForm({
+            update_url: document.getElementById('tx-edit-update-url')?.value || editForm.action,
+            activate_url: document.getElementById('tx-edit-activate-url')?.value || '',
+            destroy_url: document.getElementById('tx-edit-destroy-url')?.value || '',
+            code: document.getElementById('tx-edit-code')?.value || '',
+            name: document.getElementById('tx-edit-name')?.value || '',
+            description: document.getElementById('tx-edit-description')?.value || '',
+            has_lab_cost: document.getElementById('tx-edit-has-lab-cost')?.checked || false,
+            is_active: document.getElementById('tx-edit-is-active')?.value === '1',
+        });
+        openModal(editModal);
+    }
+
+    if (createModal.dataset.openOnLoad === '1') {
         openModal(createModal);
     }
-})();
+});
 </script>
 @endpush
