@@ -94,6 +94,12 @@ final class ExtractionLogDoctorGrouper
         }
 
         foreach ($log['skipped_rows'] ?? [] as $row) {
+            $reason = (string) ($row['reason'] ?? '');
+
+            if (in_array($reason, ['grand_total_row', 'cash_row', 'special_section'], true)) {
+                continue;
+            }
+
             $resolved = DoctorCodeResolver::resolve(
                 isset($row['doctor_code']) ? (string) $row['doctor_code'] : null,
                 isset($row['doctor_label']) ? (string) $row['doctor_label'] : null,

@@ -73,4 +73,25 @@ class ExtractionLogDoctorGrouperTest extends TestCase
         $this->assertTrue($resolved['is_known']);
         $this->assertSame('RIYAD', $resolved['code']);
     }
+
+    public function test_grand_total_skipped_rows_are_not_unknown_doctor_errors(): void
+    {
+        $log = [
+            'imported_rows' => [],
+            'skipped_rows' => [
+                [
+                    'doctor_label' => null,
+                    'reason' => 'grand_total_row',
+                    'treatment_text' => 'TOTAL',
+                    'dhs_aed' => '2000.00',
+                    'visa_aed' => '1200.00',
+                ],
+            ],
+            'unresolved_rows' => [],
+        ];
+
+        $errors = ExtractionLogDoctorGrouper::unknownDoctorErrors($log);
+
+        $this->assertSame([], $errors);
+    }
 }

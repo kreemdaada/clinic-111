@@ -96,4 +96,31 @@ class LabPriceResolverTest extends TestCase
         $this->assertNotNull($labPrice);
         $this->assertSame('100.00', number_format((float) $labPrice->unit_cost, 2, '.', ''));
     }
+
+    public function test_post_for_dr_riyad_uses_riyadh_lab_override(): void
+    {
+        $doctorRiyad = Doctor::query()->where('code', 'RIYAD')->firstOrFail();
+        $treatment = Treatment::query()->where('code', 'POST')->firstOrFail();
+        $riyadhLab = Lab::query()->where('code', 'RIYADH_LAB')->firstOrFail();
+
+        $labPrice = $this->labPriceResolver->resolve($doctorRiyad, $treatment, $riyadhLab);
+
+        $this->assertNotNull($labPrice);
+        $this->assertSame('55.00', number_format((float) $labPrice->unit_cost, 2, '.', ''));
+        $this->assertSame($doctorRiyad->id, $labPrice->doctor_id);
+        $this->assertSame($riyadhLab->id, $labPrice->lab_id);
+    }
+
+    public function test_post_for_dr_riyad_resolve_with_fallback_uses_riyadh_lab(): void
+    {
+        $doctorRiyad = Doctor::query()->where('code', 'RIYAD')->firstOrFail();
+        $treatment = Treatment::query()->where('code', 'POST')->firstOrFail();
+        $activeLabs = Lab::query()->where('is_active', true)->get();
+
+        $resolved = $this->labPriceResolver->resolveWithLabFallback($doctorRiyad, $treatment, $activeLabs);
+
+        $this->assertNotNull($resolved);
+        $this->assertSame('RIYADH_LAB', $resolved['lab']->code);
+        $this->assertSame('55.00', number_format((float) $resolved['price']->unit_cost, 2, '.', ''));
+    }
 }

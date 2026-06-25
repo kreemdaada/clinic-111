@@ -18,14 +18,23 @@ class IncomeSheetColumnMapTest extends TestCase
     {
         $columns = IncomeSheetColumnMap::columnsForDoctor('PURIYA');
 
-        $this->assertSame(['MC' => 'H', 'ZIR' => 'I', 'POST' => 'N', 'REMOV' => 'P'], $columns);
+        $this->assertSame([
+            'ZIR' => 'H',
+            'MC' => 'I',
+            'POST' => 'J',
+            'SXP' => 'K',
+            'CF' => 'L',
+            'RCT' => 'M',
+            'RCF' => 'N',
+            'AF' => 'O',
+        ], $columns);
         $this->assertFalse(IncomeSheetColumnMap::isPaymentsOnlyDoctor('PURIYA'));
     }
 
     public function test_puriya_has_no_impl_column(): void
     {
         $this->assertNull(IncomeSheetColumnMap::columnFor('PURIYA', 'IMPL'));
-        $this->assertSame('H', IncomeSheetColumnMap::columnFor('PURIYA', 'MC'));
+        $this->assertSame('I', IncomeSheetColumnMap::columnFor('PURIYA', 'MC'));
     }
 
     public function test_riyad_alias_resolves_column_map(): void

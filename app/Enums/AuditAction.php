@@ -21,6 +21,60 @@ enum AuditAction: string
     /** A daily report was approved and locked. */
     case ReportApproval = 'report_approval';
 
-    /** A user manually corrected accounting data (future use). */
+    /** A user manually corrected accounting data (payments, rows, etc.). */
     case ManualCorrection = 'manual_correction';
+
+    /** A doctor master record was created. */
+    case DoctorCreated = 'doctor_created';
+
+    /** A doctor master record was updated. */
+    case DoctorUpdated = 'doctor_updated';
+
+    /** A doctor was deactivated (never physically deleted). */
+    case DoctorDeactivated = 'doctor_deactivated';
+
+    /** A lab price row was created. */
+    case LabPriceCreated = 'lab_price_created';
+
+    /** A lab price row was deactivated. */
+    case LabPriceDeactivated = 'lab_price_deactivated';
+
+    /** An approved or locked report was unlocked by an admin. */
+    case ReportUnlocked = 'report_unlocked';
+
+    /** A user account was created. */
+    case UserCreated = 'user_created';
+
+    /** A user role was changed. */
+    case UserRoleChanged = 'user_role_changed';
+
+    /** A user account was deactivated. */
+    case UserDeactivated = 'user_deactivated';
+
+    /** A user password was reset by an admin. */
+    case PasswordReset = 'password_reset';
+
+    /** A laboratory master record was created. */
+    case LabCreated = 'lab_created';
+
+    /** A laboratory master record was updated. */
+    case LabUpdated = 'lab_updated';
+
+    /** A laboratory was deactivated (never physically deleted). */
+    case LabDeactivated = 'lab_deactivated';
+
+    /** A laboratory was reactivated. */
+    case LabActivated = 'lab_activated';
+
+    /** A treatment master record was created. */
+    case TreatmentCreated = 'treatment_created';
+
+    /** A treatment master record was updated. */
+    case TreatmentUpdated = 'treatment_updated';
+
+    /** A treatment was deactivated (never physically deleted). */
+    case TreatmentDeactivated = 'treatment_deactivated';
+
+    /** A treatment was reactivated. */
+    case TreatmentActivated = 'treatment_activated';
 }

@@ -376,6 +376,365 @@ GET /api/monthly-income?month=2026-01
 
 ---
 
+---
+
+## Laboratory Administration (admin only)
+
+Reference endpoint `GET /api/labs` returns **active labs only** (unchanged).
+
+Admin management uses `/api/admin/labs` and web `/labs`.
+
+### GET /api/admin/labs
+
+**Purpose:** List all laboratories with optional search and status filter.
+
+**Role:** admin
+
+**Query parameters (`ListLabsRequest`):**
+
+| Param | Rules |
+|---|---|
+| `search` | optional, max 120 — matches name or code |
+| `status` | optional: `all`, `active`, `inactive` (default `all`) |
+
+**Response `200`:**
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "Main Lab",
+      "code": "MAIN_LAB",
+      "is_active": true,
+      "lab_jobs_count": 42,
+      "lab_prices_count": 18
+    }
+  ]
+}
+```
+
+---
+
+### POST /api/admin/labs
+
+**Purpose:** Create a laboratory.
+
+**Role:** admin
+
+**Request:**
+
+```json
+{
+  "name": "Secondary Lab",
+  "code": "SEC_LAB"
+}
+```
+
+**Validation (`StoreLabRequest`):** `name` required; `code` required, unique, alphanumeric/underscore/dash.
+
+**Response `201`:** Created lab + audit `lab_created`.
+
+---
+
+### PUT /api/admin/labs/{id}
+
+**Purpose:** Update name, code, or active status.
+
+**Role:** admin
+
+**Validation (`UpdateLabRequest`):** same as create; code unique except current lab.
+
+**Audit:** `lab_updated`, `lab_deactivated`, or `lab_activated` depending on changes.
+
+---
+
+### DELETE /api/admin/labs/{id}
+
+**Purpose:** Soft-deactivate (`is_active = false`). Never deletes the row.
+
+**Role:** admin
+
+---
+
+### POST /api/admin/labs/{id}/activate
+
+**Purpose:** Reactivate a deactivated laboratory.
+
+**Role:** admin
+
+---
+
+### Web UI: `/labs`
+
+| Route | Method | Action |
+|---|---|---|
+| `/labs` | GET | List + search + status filter |
+| `/labs` | POST | Create |
+| `/labs/{id}` | PUT | Update |
+| `/labs/{id}` | DELETE | Deactivate |
+| `/labs/{id}/activate` | POST | Activate |
+
+---
+
+## Treatment Administration (admin only)
+
+Reference endpoint `GET /api/treatments` returns **active treatments only** (unchanged).
+
+Admin management uses `/api/admin/treatments` and web `/treatments`.
+
+### GET /api/admin/treatments
+
+**Purpose:** Paginated list with search and status filter.
+
+**Role:** admin
+
+**Query parameters (`ListTreatmentsRequest`):**
+
+| Param | Rules |
+|---|---|
+| `search` | optional — matches code, name, or description |
+| `status` | optional: `all`, `active`, `inactive` |
+| `page` | optional pagination |
+
+**Response `200`:** `{ data: [...], meta: { current_page, last_page, per_page, total } }`
+
+---
+
+### POST /api/admin/treatments
+
+**Purpose:** Create a treatment.
+
+**Role:** admin
+
+**Request:**
+
+```json
+{
+  "code": "NEW-TX",
+  "name": "New Treatment",
+  "description": "Optional",
+  "has_lab_cost": true
+}
+```
+
+**Validation (`StoreTreatmentRequest`):** unique `code`, required `name`, optional `description`, optional `has_lab_cost`.
+
+**Response `201`:** Created treatment + audit `treatment_created`.
+
+---
+
+### PUT /api/admin/treatments/{id}
+
+**Purpose:** Update treatment fields.
+
+**Role:** admin
+
+**Audit:** `treatment_updated`, `treatment_deactivated`, or `treatment_activated`.
+
+---
+
+### DELETE /api/admin/treatments/{id}
+
+**Purpose:** Soft-deactivate. Never deletes the row.
+
+**Role:** admin
+
+---
+
+### POST /api/admin/treatments/{id}/activate
+
+**Purpose:** Reactivate a deactivated treatment.
+
+**Role:** admin
+
+---
+
+### Web UI: `/treatments`
+
+| Route | Method | Action |
+|---|---|---|
+| `/treatments` | GET | Paginated list + search/filter |
+| `/treatments` | POST | Create (modal) |
+| `/treatments/{id}` | PUT | Update (modal) |
+| `/treatments/{id}` | DELETE | Deactivate |
+| `/treatments/{id}/activate` | POST | Activate |
+
+---
+
+## User Management (admin only)
+
+### GET /api/users
+
+**Purpose:** List all users (active and inactive).
+
+**Role:** admin
+
+**Response `200`:**
+
+```json
+{
+  "data": [
+    {
+      "id": 2,
+      "name": "Accountant User",
+      "email": "accountant@clinic.test",
+      "role": "accountant",
+      "is_active": true
+    }
+  ]
+}
+```
+
+---
+
+### POST /api/users
+
+**Purpose:** Create a user account.
+
+**Role:** admin
+
+**Request:**
+
+```json
+{
+  "name": "New Viewer",
+  "email": "viewer2@clinic.test",
+  "role": "viewer",
+  "password": "secure-password"
+}
+```
+
+Or generate a temporary password:
+
+```json
+{
+  "name": "New Viewer",
+  "email": "viewer2@clinic.test",
+  "role": "viewer",
+  "generate_temp_password": true
+}
+```
+
+**Validation (`StoreUserRequest`):**
+
+| Field | Rules |
+|---|---|
+| `name` | required, string, max 120 |
+| `email` | required, email, unique |
+| `role` | required, `admin` \| `accountant` \| `viewer` |
+| `password` | required_without:generate_temp_password |
+| `generate_temp_password` | optional boolean |
+| `is_active` | optional boolean |
+
+**Response `201`:**
+
+```json
+{
+  "message": "User created.",
+  "data": {
+    "id": 5,
+    "name": "New Viewer",
+    "email": "viewer2@clinic.test",
+    "role": "viewer",
+    "is_active": true
+  },
+  "temporary_password": "xK9mP2nQ4rTv"
+}
+```
+
+`temporary_password` is `null` when a manual password was supplied.
+
+---
+
+### PUT /api/users/{id}
+
+**Purpose:** Update name, email, role, or active status.
+
+**Role:** admin
+
+**Request:**
+
+```json
+{
+  "name": "Updated Name",
+  "email": "updated@clinic.test",
+  "role": "accountant",
+  "is_active": true
+}
+```
+
+**Validation (`UpdateUserRequest`):** same fields as create (except password). Email unique except current user.
+
+**Response `200`:** Updated user object.
+
+**Audit:** `user_role_changed` when role changes; `user_deactivated` when `is_active` becomes false.
+
+---
+
+### DELETE /api/users/{id}
+
+**Purpose:** Soft-deactivate a user (`is_active = false`). Never physically deletes the row.
+
+**Role:** admin
+
+**Response `200`:**
+
+```json
+{
+  "message": "User deactivated.",
+  "data": { "id": 5, "is_active": false }
+}
+```
+
+Revokes all Sanctum tokens for the user.
+
+---
+
+### POST /api/users/{id}/reset-password
+
+**Purpose:** Set a new password (manual or generated temporary).
+
+**Role:** admin
+
+**Request:**
+
+```json
+{
+  "password": "new-secure-password"
+}
+```
+
+Or:
+
+```json
+{
+  "generate_temp_password": true
+}
+```
+
+**Validation (`ResetUserPasswordRequest`):** `password` required_without `generate_temp_password`.
+
+**Response `200`:** Includes `temporary_password` when generated.
+
+**Audit:** `password_reset` (password hash is never stored in audit JSON).
+
+---
+
+### Web UI: `/admin/users`
+
+Same capabilities as the API. Admin-only. Nav link visible when logged in as admin.
+
+| Route | Method | Action |
+|---|---|---|
+| `/admin/users` | GET | List users + create form |
+| `/admin/users` | POST | Create user |
+| `/admin/users/{id}` | PUT | Update user |
+| `/admin/users/{id}` | DELETE | Deactivate user |
+| `/admin/users/{id}/reset-password` | POST | Reset password |
+
+---
+
 ## Default Test Users
 
 | Email | Password | Role |
@@ -400,6 +759,20 @@ GET /api/monthly-income?month=2026-01
 ---
 
 ## What Changed
+
+**Updated — 2026-06-26**
+
+- Treatment administration API (`/api/admin/treatments`) and web `/treatments`
+
+**Updated — 2026-06-25**
+
+- Laboratory administration API (`/api/admin/labs`) and web `/labs`
+
+**Updated — 2026-06-25**
+
+- User management API (`GET/POST/PUT/DELETE /api/users`, `POST /api/users/{id}/reset-password`)
+- Web admin page `/admin/users`
+- Documented `StoreUserRequest`, `UpdateUserRequest`, `ResetUserPasswordRequest`
 
 **Updated — 2026-06-19**
 

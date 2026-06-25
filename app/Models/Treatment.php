@@ -15,8 +15,7 @@ class Treatment extends Model
     protected $fillable = [
         'code',
         'name',
-        'has_lab_cost',
-        'is_active',
+        'description',
     ];
 
     /**

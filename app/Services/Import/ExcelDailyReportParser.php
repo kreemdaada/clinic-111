@@ -185,6 +185,7 @@ class ExcelDailyReportParser
         $currentDoctor = null;
         $columnMap = null;
         $sectionPatientTreatments = [];
+        $sectionPatientPayments = $this->emptySectionPaymentTotals();
         $sectionAnchorDate = null;
         $sectionMaxFileNumber = 0;
         $sheetDay = (int) trim($sheetName);
@@ -206,6 +207,7 @@ class ExcelDailyReportParser
                 $currentDoctor = null;
                 $columnMap = null;
                 $sectionPatientTreatments = [];
+                $sectionPatientPayments = $this->emptySectionPaymentTotals();
                 $sectionAnchorDate = null;
                 $sectionMaxFileNumber = 0;
 
@@ -218,6 +220,7 @@ class ExcelDailyReportParser
                 $currentDoctor = $doctorLabel;
                 $columnMap = null;
                 $sectionPatientTreatments = [];
+                $sectionPatientPayments = $this->emptySectionPaymentTotals();
                 $sectionAnchorDate = null;
                 $sectionMaxFileNumber = 0;
 
@@ -252,6 +255,8 @@ class ExcelDailyReportParser
                     $sectionPatientTreatments[] = $treatmentText;
                 }
 
+                $this->accumulateSectionPatientPayments($sectionPatientPayments, $rowData);
+
                 continue;
             }
 
@@ -282,11 +287,14 @@ class ExcelDailyReportParser
                 );
 
                 $sectionPatientTreatments = [];
+                $sectionPatientPayments = $this->emptySectionPaymentTotals();
                 $sectionAnchorDate = null;
                 $sectionMaxFileNumber = 0;
 
                 continue;
             }
+
+            $rowData = $this->applySectionPaymentTotals($rowData, $sectionPatientPayments);
 
             $rowData['doctor'] = $currentDoctor;
             $rowData['sheet_name'] = $sheetName;
@@ -307,11 +315,74 @@ class ExcelDailyReportParser
 
             $parsedRows[] = $rowData;
             $sectionPatientTreatments = [];
+            $sectionPatientPayments = $this->emptySectionPaymentTotals();
             $sectionAnchorDate = null;
             $sectionMaxFileNumber = 0;
         }
 
         return $parsedRows;
+    }
+
+    /**
+     * @return array<string, float>
+     */
+    private function emptySectionPaymentTotals(): array
+    {
+        return [
+            'dhs_amount' => 0.0,
+            'cheque_amount' => 0.0,
+            'tabby_amount' => 0.0,
+            'usd_amount' => 0.0,
+            'visa_amount' => 0.0,
+            'rubl_amount' => 0.0,
+        ];
+    }
+
+    /**
+     * Sum patient-row payments for a doctor section (used instead of subtotal SUM cells).
+     *
+     * Cheque and Tabby on "paid balance" rows are balance settlements, not new collections.
+     *
+     * @param  array<string, float>  $totals
+     * @param  array<string, mixed>  $rowData
+     */
+    private function accumulateSectionPatientPayments(array &$totals, array $rowData): void
+    {
+        $excludeDeferred = $this->isBalanceSettlementTreatment(
+            trim((string) ($rowData['treatment_text'] ?? '')),
+        );
+
+        foreach (['dhs_amount', 'usd_amount', 'visa_amount', 'rubl_amount'] as $field) {
+            $totals[$field] += (float) ($rowData[$field] ?? 0);
+        }
+
+        if (! $excludeDeferred) {
+            $totals['cheque_amount'] += (float) ($rowData['cheque_amount'] ?? 0);
+            $totals['tabby_amount'] += (float) ($rowData['tabby_amount'] ?? 0);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $rowData
+     * @param  array<string, float>  $totals
+     * @return array<string, mixed>
+     */
+    private function applySectionPaymentTotals(array $rowData, array $totals): array
+    {
+        foreach ($totals as $field => $amount) {
+            $rowData[$field] = $amount;
+        }
+
+        return $rowData;
+    }
+
+    private function isBalanceSettlementTreatment(string $treatmentText): bool
+    {
+        if ($treatmentText === '') {
+            return false;
+        }
+
+        return (bool) preg_match('/paid\s*bal/i', $treatmentText);
     }
 
     /**
@@ -432,7 +503,7 @@ class ExcelDailyReportParser
      */
     private function hasPaymentValues(array $rowData): bool
     {
-        foreach (['dhs_amount', 'usd_amount', 'visa_amount', 'rubl_amount'] as $field) {
+        foreach (['dhs_amount', 'cheque_amount', 'tabby_amount', 'usd_amount', 'visa_amount', 'rubl_amount'] as $field) {
             if ($this->hasNumericValue($rowData[$field] ?? null)) {
                 return true;
             }
@@ -629,7 +700,7 @@ class ExcelDailyReportParser
             return false;
         }
 
-        $paymentFields = ['dhs_amount', 'usd_amount', 'visa_amount', 'rubl_amount'];
+        $paymentFields = ['dhs_amount', 'cheque_amount', 'tabby_amount', 'usd_amount', 'visa_amount', 'rubl_amount'];
 
         foreach ($paymentFields as $field) {
             if ($this->hasNumericValue($rowData[$field] ?? null)) {
@@ -661,7 +732,7 @@ class ExcelDailyReportParser
      */
     private function readCellValue(Worksheet $worksheet, string $columnLetter, int $rowIndex): ?string
     {
-        $value = trim((string) $worksheet->getCell($columnLetter.$rowIndex)->getCalculatedValue());
+        $value = trim((string) $worksheet->getCell($columnLetter . $rowIndex)->getCalculatedValue());
 
         return $value === '' ? null : $value;
     }
@@ -722,13 +793,23 @@ class ExcelDailyReportParser
                     $usdColumns[] = $columnLetter;
                 }
 
-                if (in_array($header, ['RUBL', 'RUB', 'RUBLES', 'RUBLE'], true)
-                    || str_contains($header, 'RUBL')) {
+                if (
+                    in_array($header, ['RUBL', 'RUB', 'RUBLES', 'RUBLE'], true)
+                    || str_contains($header, 'RUBL')
+                ) {
                     $columnMap['rubl_amount'] = $columnLetter;
                 }
 
                 if ($header === 'VISA') {
                     $columnMap['visa_amount'] = $columnLetter;
+                }
+
+                if (in_array($header, ['CHEQUE', 'CHQ', 'CHECK'], true)) {
+                    $columnMap['cheque_amount'] = $columnLetter;
+                }
+
+                if ($header === 'TABBY') {
+                    $columnMap['tabby_amount'] = $columnLetter;
                 }
 
                 if ($header === 'CROWN') {
@@ -824,6 +905,8 @@ class ExcelDailyReportParser
             'total_cost' => ['TOTAL COST', 'COST', 'TREATMENT VALUE'],
             'discount_amount' => ['DISCOUNT', 'DISC', 'DISC.'],
             'dhs_amount' => ['DHS', 'AED', 'CASH DHS'],
+            'cheque_amount' => ['CHEQUE', 'CHQ', 'CHECK'],
+            'tabby_amount' => ['TABBY'],
             'usd_amount' => ['USD', 'CASH USD', '$/EURO', '$'],
             'visa_amount' => ['VISA', 'CARD', 'CREDIT CARD'],
             'balance_dhs' => ['BALANCE DHS', 'BAL DHS'],
@@ -982,7 +1065,7 @@ class ExcelDailyReportParser
             return false;
         }
 
-        $paymentFields = ['dhs_amount', 'usd_amount', 'visa_amount'];
+        $paymentFields = ['dhs_amount', 'cheque_amount', 'tabby_amount', 'usd_amount', 'visa_amount'];
 
         foreach ($paymentFields as $field) {
             if ($this->hasNumericValue($rowData[$field] ?? null)) {
@@ -1001,7 +1084,7 @@ class ExcelDailyReportParser
      */
     private function isGenericEmptyRow(array $rowData): bool
     {
-        $significantFields = ['doctor', 'patient_name', 'treatment_text', 'dhs_amount', 'usd_amount', 'visa_amount'];
+        $significantFields = ['doctor', 'patient_name', 'treatment_text', 'dhs_amount', 'cheque_amount', 'tabby_amount', 'usd_amount', 'visa_amount'];
 
         foreach ($significantFields as $field) {
             if (! empty($rowData[$field])) {

@@ -241,10 +241,115 @@ Unchanged — Sanctum bearer tokens, rate-limited login.
 | View daily report | ✓ | ✓ | ✓ |
 | View validation summary | ✓ | ✓ | ✓ |
 | View monthly income | ✓ | ✓ | ✓ |
+| Manage users (`/admin/users`) | ✓ | ✗ | ✗ |
+| Manage laboratories (`/labs`) | ✓ | ✗ | ✗ |
+| Manage treatments (`/treatments`) | ✓ | ✗ | ✗ |
+| Approve / unlock reports | ✓ | ✗ | ✗ |
+| Manage doctors / lab prices | ✓ | ✗ | ✗ |
 
 ---
 
-## 8. Environment Variables (import / privacy)
+## 8. Laboratory Administration (admin only)
+
+```mermaid
+sequenceDiagram
+    actor Admin
+    participant UI as /labs
+    participant Svc as LabManagementService
+    participant DB as labs + audit_logs
+
+    Admin->>UI: Create lab
+    UI->>Svc: create()
+    Svc->>DB: INSERT labs
+    Svc->>DB: audit lab_created
+
+    Admin->>UI: Deactivate lab
+    UI->>Svc: deactivate()
+    Svc->>DB: is_active = false
+    Svc->>DB: audit lab_deactivated
+
+    Note over DB: Historical lab_jobs unchanged
+```
+
+**Rules:**
+
+- Laboratories are never physically deleted
+- `GET /api/labs` (reference) still returns active labs only for accountants/viewers
+- Deactivated labs are excluded from new JOB calculations only
+
+---
+
+## 9. Treatment Administration (admin only)
+
+```mermaid
+sequenceDiagram
+    actor Admin
+    participant UI as /treatments
+    participant Svc as TreatmentManagementService
+    participant DB as treatments + audit_logs
+
+    Admin->>UI: Create treatment
+    UI->>Svc: create()
+    Svc->>DB: INSERT treatments
+    Svc->>DB: audit treatment_created
+
+    Admin->>UI: Deactivate treatment
+    UI->>Svc: deactivate()
+    Svc->>DB: is_active = false
+    Svc->>DB: audit treatment_deactivated
+
+    Note over DB: Historical work_items unchanged
+```
+
+**Rules:**
+
+- Treatments never physically deleted
+- `LabCostTreatmentCatalog` reads `has_lab_cost` from database (no hardcoded code list)
+- Parser and editor use active treatments only for new entries
+
+---
+
+## 10. User Administration (admin only)
+
+```mermaid
+sequenceDiagram
+    actor Admin
+    participant UI as /admin/users
+    participant Svc as UserManagementService
+    participant DB as users + audit_logs
+
+    Admin->>UI: Create user (password or temp)
+    UI->>Svc: create()
+    Svc->>DB: INSERT user
+    Svc->>DB: audit user_created
+
+    Admin->>UI: Change role
+    UI->>Svc: update()
+    Svc->>DB: UPDATE role
+    Svc->>DB: audit user_role_changed
+
+    Admin->>UI: Deactivate user
+    UI->>Svc: deactivate()
+    Svc->>DB: is_active = false
+    Svc->>DB: revoke Sanctum tokens
+    Svc->>DB: audit user_deactivated
+
+    Admin->>UI: Reset password
+    UI->>Svc: resetPassword()
+    Svc->>DB: new password hash
+    Svc->>DB: audit password_reset
+```
+
+**Rules:**
+
+- Users are never physically deleted — `is_active = false`
+- Deactivated users cannot log in (web session or API token)
+- Admins cannot deactivate themselves or change their own role
+- Temporary passwords are shown once in the success flash / API response
+
+---
+
+## 11. Environment Variables (import / privacy)
 
 | Variable | Purpose |
 |---|---|
@@ -254,13 +359,27 @@ Unchanged — Sanctum bearer tokens, rate-limited login.
 
 ---
 
-## 9. V2 Manual Entry (Planned)
+## 12. V2 Manual Entry (Planned)
 
 Same pipeline after row creation: `TreatmentImportValidationService` → `LabJobCalculationService`. No Excel parser.
 
 ---
 
 ## What Changed
+
+**Updated — 2026-06-25**
+
+- Laboratory administration workflow (Milestone 01)
+
+**Updated — 2026-06-26**
+
+- Treatment administration workflow (Milestone 02)
+- Database-driven `LabCostTreatmentCatalog`
+
+**Updated — 2026-06-25**
+
+- Laboratory administration workflow (`/admin/users`, admin-only)
+- Extended RBAC table with user management and master data
 
 **Updated — 2026-06-19**
 

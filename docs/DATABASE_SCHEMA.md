@@ -30,6 +30,13 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | 1 | Main Lab | MAIN_LAB | true |
 | 2 | Riyadh Lab | RIYADH_LAB | true |
 
+**Admin rules (Milestone 01):**
+
+- Managed at web `/labs` and API `/api/admin/labs` (admin only)
+- Never physically deleted — use `is_active = false`
+- Inactive labs are excluded from new calculations but remain on historical `lab_jobs`
+- `is_active` is not mass-assignable on the model; set via `LabManagementService`
+
 ---
 
 ### `doctors`
@@ -85,6 +92,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | `id` | bigint PK | |
 | `code` | string unique | e.g. `ZIR`, `IMPL-CR`, `BG` |
 | `name` | string | Full name |
+| `description` | text nullable | Optional admin notes |
 | `has_lab_cost` | boolean | If false, no lab_job is created |
 | `is_active` | boolean | |
 | `created_at`, `updated_at` | timestamps | |
@@ -94,6 +102,13 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 - `hasMany` work_items
 - `hasMany` lab_prices
 - `hasMany` doctor_fixed_fees
+
+**Admin rules (Milestone 02):**
+
+- Managed at web `/treatments` and API `/api/admin/treatments` (admin only)
+- Never physically deleted — use `is_active = false`
+- Inactive treatments excluded from parser known codes and editor catalog; historical `work_items` unchanged
+- `has_lab_cost` and `is_active` set via `TreatmentManagementService`, not mass-assignable
 
 **Example data:**
 
@@ -368,7 +383,38 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 
 ### `users`
 
-Extended with `role` column: `admin`, `accountant`, `viewer`.
+**Purpose:** Application login accounts for web session and Sanctum API tokens.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | bigint PK | |
+| `name` | string | Display name |
+| `email` | string unique | Login identifier |
+| `email_verified_at` | timestamp nullable | |
+| `password` | string | Bcrypt hash — never mass-assignable |
+| `role` | string | `admin`, `accountant`, `viewer` |
+| `is_active` | boolean | `false` = deactivated (never physically deleted) |
+| `remember_token` | string nullable | Web sessions |
+| `created_at`, `updated_at` | timestamps | |
+
+**Relationships:**
+
+- `hasMany` audit_logs (as actor via `user_id`)
+- Sanctum `personal_access_tokens`
+
+**Business rules:**
+
+- Deactivated users cannot log in (web or API)
+- Admin manages users at `/admin/users` — soft deactivate only
+- Password and `is_active` are set only via `UserManagementService`, not `$fillable`
+
+**Default seed users:**
+
+| email | role | password |
+|---|---|---|
+| admin@clinic.test | admin | password |
+| accountant@clinic.test | accountant | password |
+| viewer@clinic.test | viewer | password |
 
 ### `audit_logs`
 
@@ -384,6 +430,7 @@ Extended with `role` column: `admin`, `accountant`, `viewer`.
 | `old_values` | json nullable | |
 | `new_values` | json nullable | |
 | `ip_address` | string nullable | |
+| `user_agent` | text nullable | |
 | `created_at`, `updated_at` | timestamps | |
 
 ### `personal_access_tokens`
@@ -416,6 +463,20 @@ doctor_fixed_fees ── doctors + treatments
 ---
 
 ## What Changed
+
+**Updated — 2026-06-25**
+
+- `labs` admin rules documented (soft deactivate, Milestone 01)
+
+**Updated — 2026-06-26**
+
+- `treatments.description` column and admin rules (Milestone 02)
+
+**Updated — 2026-06-25**
+
+- `users.is_active` for soft deactivation
+- `audit_logs.user_agent` column
+- User admin documented with role management rules
 
 **Updated — 2026-06-21 (privacy + validation)**
 

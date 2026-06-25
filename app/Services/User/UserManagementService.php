@@ -1,0 +1,161 @@
+<?php
+
+namespace App\Services\User;
+
+use App\Models\User;
+use App\Services\Audit\AuditLogService;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use RuntimeException;
+
+/**
+ * Admin user management — never physically delete accounts.
+ */
+class UserManagementService
+{
+    public function __construct(
+        private readonly AuditLogService $auditLogService,
+    ) {}
+
+    /**
+     * @param  array{
+     *     name: string,
+     *     email: string,
+     *     role: string,
+     *     password?: string|null,
+     *     generate_temp_password?: bool,
+     *     is_active?: bool,
+     * }  $data
+     * @return array{user: User, temporary_password: string|null}
+     */
+    public function create(array $data): array
+    {
+        return DB::transaction(function () use ($data) {
+            [$password, $temporaryPassword] = $this->resolvePassword($data);
+
+            $user = new User;
+            $user->fill([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'role' => $data['role'],
+            ]);
+            $user->password = $password;
+            $user->is_active = $data['is_active'] ?? true;
+            $user->save();
+
+            $this->auditLogService->logUserCreated($user);
+
+            return [
+                'user' => $user->fresh(),
+                'temporary_password' => $temporaryPassword,
+            ];
+        });
+    }
+
+    /**
+     * @param  array{
+     *     name: string,
+     *     email: string,
+     *     role: string,
+     *     is_active?: bool,
+     * }  $data
+     */
+    public function update(User $user, array $data, ?User $actingUser = null): User
+    {
+        return DB::transaction(function () use ($user, $data, $actingUser) {
+            $oldValues = $this->auditLogService->userSnapshot($user);
+
+            if ($actingUser !== null && $actingUser->id === $user->id) {
+                if (array_key_exists('is_active', $data) && ! (bool) $data['is_active']) {
+                    throw new RuntimeException('You cannot deactivate your own account.');
+                }
+
+                if (($data['role'] ?? $user->role->value) !== $user->role->value) {
+                    throw new RuntimeException('You cannot change your own role.');
+                }
+            }
+
+            $user->fill([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'role' => $data['role'],
+            ]);
+
+            if (array_key_exists('is_active', $data)) {
+                $user->is_active = (bool) $data['is_active'];
+            }
+
+            $user->save();
+
+            $freshUser = $user->fresh();
+            $newValues = $this->auditLogService->userSnapshot($freshUser);
+            $this->auditLogService->logUserUpdated($freshUser, $oldValues, $newValues);
+
+            return $freshUser;
+        });
+    }
+
+    public function deactivate(User $user, ?User $actingUser = null): User
+    {
+        if ($actingUser !== null && $actingUser->id === $user->id) {
+            throw new RuntimeException('You cannot deactivate your own account.');
+        }
+
+        return DB::transaction(function () use ($user) {
+            $oldValues = $this->auditLogService->userSnapshot($user);
+
+            $user->is_active = false;
+            $user->save();
+            $user->tokens()->delete();
+
+            $this->auditLogService->logUserDeactivated($user->fresh(), $oldValues);
+
+            return $user->fresh();
+        });
+    }
+
+    /**
+     * @param  array{
+     *     password?: string|null,
+     *     generate_temp_password?: bool,
+     * }  $data
+     * @return array{user: User, temporary_password: string|null}
+     */
+    public function resetPassword(User $user, array $data): array
+    {
+        return DB::transaction(function () use ($user, $data) {
+            [$password, $temporaryPassword] = $this->resolvePassword($data);
+
+            $user->forceFill(['password' => $password])->save();
+            $user->tokens()->delete();
+
+            $this->auditLogService->logPasswordReset($user);
+
+            return [
+                'user' => $user->fresh(),
+                'temporary_password' => $temporaryPassword,
+            ];
+        });
+    }
+
+    /**
+     * @param  array{password?: string|null, generate_temp_password?: bool}  $data
+     * @return array{0: string, 1: string|null}
+     */
+    private function resolvePassword(array $data): array
+    {
+        if (! empty($data['generate_temp_password'])) {
+            $plain = Str::password(12);
+
+            return [$plain, $plain];
+        }
+
+        $password = $data['password'] ?? null;
+
+        if ($password === null || trim($password) === '') {
+            throw new RuntimeException('Password is required unless generating a temporary password.');
+        }
+
+        return [$password, null];
+    }
+}

@@ -85,17 +85,19 @@ class LabJobCalculationService
             return;
         }
 
-        $lab = $this->labPriceResolver->resolveLabForDoctor($doctor, $activeLabs);
-        $labPrice = $this->labPriceResolver->resolve(
+        $resolved = $this->labPriceResolver->resolveWithLabFallback(
             $doctor,
             $treatment,
-            $lab,
+            $activeLabs,
             $dailyWorkRow->work_date,
         );
 
-        if ($labPrice === null) {
+        if ($resolved === null) {
             return;
         }
+
+        $lab = $resolved['lab'];
+        $labPrice = $resolved['price'];
 
         $unitCostAed = MoneyCalculator::convertToAed(
             (string) $labPrice->unit_cost,

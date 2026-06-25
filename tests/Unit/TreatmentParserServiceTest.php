@@ -85,6 +85,36 @@ class TreatmentParserServiceTest extends TestCase
         $this->assertSame(5, $itemsByCode->get('ZIR')->quantity);
     }
 
+    public function test_zir_cr_with_file_number_suffix_ignores_file_number(): void
+    {
+        $parsedItems = $this->treatmentParserService->parse('ZIR CR 546|6517');
+
+        $itemsByCode = collect($parsedItems)->keyBy(fn($item) => $item->treatmentCode);
+
+        $this->assertTrue($itemsByCode->has('ZIR'));
+        $this->assertSame(3, $itemsByCode->get('ZIR')->quantity);
+    }
+
+    public function test_parses_hyphenated_crown_codes_with_quantities(): void
+    {
+        $parsedItems = $this->treatmentParserService->parse('ZIR-CR x 3 + IMPL-ZIR x 2');
+
+        $itemsByCode = collect($parsedItems)->keyBy(fn($item) => $item->treatmentCode);
+
+        $this->assertSame(3, $itemsByCode->get('ZIR')->quantity);
+        $this->assertSame(2, $itemsByCode->get('IMPL-ZIR')->quantity);
+    }
+
+    public function test_parses_mc_slash_cr_notation(): void
+    {
+        $parsedItems = $this->treatmentParserService->parse('M/C-CR x 1');
+
+        $itemsByCode = collect($parsedItems)->keyBy(fn($item) => $item->treatmentCode);
+
+        $this->assertTrue($itemsByCode->has('MC'));
+        $this->assertSame(1, $itemsByCode->get('MC')->quantity);
+    }
+
     public function test_abb_parentheses_quantity(): void
     {
         $parsedItems = $this->treatmentParserService->parse('Abb (2)');

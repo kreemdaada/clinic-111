@@ -9,9 +9,8 @@ use App\Models\Treatment;
 use Illuminate\Database\Seeder;
 
 /**
- * Default lab unit prices (AED) and Dr Riyad overrides for ZIR / IMPL-ZIR.
- *
- * REMOV = 100 AED. Prices consumed by LabJobCalculationService via LabPriceResolver.
+ * Default lab unit prices (AED) on MAIN_LAB and Dr Riyad overrides on RIYADH_LAB
+ * (ZIR, IMPL-ZIR, POST).
  *
  * @see database/seeders/README.md
  */
@@ -54,6 +53,7 @@ class LabPriceSeeder extends Seeder
         $riyadOverrides = [
             'ZIR' => ['unit_cost' => 400, 'lab_id' => $riyadhLab->id],
             'IMPL-ZIR' => ['unit_cost' => 500, 'lab_id' => $riyadhLab->id],
+            'POST' => ['unit_cost' => 55, 'lab_id' => $riyadhLab->id],
         ];
 
         foreach ($riyadOverrides as $treatmentCode => $priceData) {
