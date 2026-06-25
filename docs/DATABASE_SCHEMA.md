@@ -30,6 +30,13 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | 1 | Main Lab | MAIN_LAB | true |
 | 2 | Riyadh Lab | RIYADH_LAB | true |
 
+**Admin rules (Milestone 01):**
+
+- Managed at web `/labs` and API `/api/admin/labs` (admin only)
+- Never physically deleted — use `is_active = false`
+- Inactive labs are excluded from new calculations but remain on historical `lab_jobs`
+- `is_active` is not mass-assignable on the model; set via `LabManagementService`
+
 ---
 
 ### `doctors`
@@ -448,6 +455,10 @@ doctor_fixed_fees ── doctors + treatments
 ---
 
 ## What Changed
+
+**Updated — 2026-06-25**
+
+- `labs` admin rules documented (soft deactivate, Milestone 01)
 
 **Updated — 2026-06-25**
 

@@ -4,6 +4,7 @@ use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\DailyReportEditorController;
 use App\Http\Controllers\Web\DoctorAdminController;
 use App\Http\Controllers\Web\ImportController;
+use App\Http\Controllers\Web\LabAdminController;
 use App\Http\Controllers\Web\LabPriceAdminController;
 use App\Http\Controllers\Web\LogController;
 use App\Http\Controllers\Web\ReportLockController;
@@ -70,6 +71,14 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [DoctorAdminController::class, 'index'])->name('index');
         Route::put('/{doctor}', [DoctorAdminController::class, 'update'])->name('update');
         Route::delete('/{doctor}', [DoctorAdminController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::middleware('role:admin')->prefix('labs')->name('labs.')->group(function () {
+        Route::get('/', [LabAdminController::class, 'index'])->name('index');
+        Route::post('/', [LabAdminController::class, 'store'])->name('store');
+        Route::put('/{lab}', [LabAdminController::class, 'update'])->name('update');
+        Route::delete('/{lab}', [LabAdminController::class, 'destroy'])->name('destroy');
+        Route::post('/{lab}/activate', [LabAdminController::class, 'activate'])->name('activate');
     });
 
     Route::middleware('role:admin')->prefix('lab-prices')->name('lab-prices.')->group(function () {

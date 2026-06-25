@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DailyReportController;
+use App\Http\Controllers\Api\LabAdminController;
 use App\Http\Controllers\Api\LabPriceAdminController;
 use App\Http\Controllers\Api\MonthlyIncomeController;
 use App\Http\Controllers\Api\UserAdminController;
@@ -27,6 +28,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/daily-reports/import', [DailyReportController::class, 'import'])
         ->middleware(['role:admin,accountant', 'throttle:20,1']);
+
+    Route::middleware('role:admin')->prefix('admin/labs')->group(function () {
+        Route::get('/', [LabAdminController::class, 'index']);
+        Route::post('/', [LabAdminController::class, 'store']);
+        Route::put('/{lab}', [LabAdminController::class, 'update']);
+        Route::delete('/{lab}', [LabAdminController::class, 'destroy']);
+        Route::post('/{lab}/activate', [LabAdminController::class, 'activate']);
+    });
 
     Route::middleware('role:admin')->prefix('lab-prices')->group(function () {
         Route::post('/', [LabPriceAdminController::class, 'store']);

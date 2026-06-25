@@ -53,4 +53,16 @@ enum AuditAction: string
 
     /** A user password was reset by an admin. */
     case PasswordReset = 'password_reset';
+
+    /** A laboratory master record was created. */
+    case LabCreated = 'lab_created';
+
+    /** A laboratory master record was updated. */
+    case LabUpdated = 'lab_updated';
+
+    /** A laboratory was deactivated (never physically deleted). */
+    case LabDeactivated = 'lab_deactivated';
+
+    /** A laboratory was reactivated. */
+    case LabActivated = 'lab_activated';
 }

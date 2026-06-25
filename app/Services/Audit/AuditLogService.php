@@ -6,6 +6,7 @@ use App\Enums\AuditAction;
 use App\Models\AuditLog;
 use App\Models\DailyReport;
 use App\Models\Doctor;
+use App\Models\Lab;
 use App\Models\LabPrice;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -217,6 +218,65 @@ class AuditLogService
             null,
             ['email' => $user->email],
         );
+    }
+
+    public function logLabCreated(Lab $lab): AuditLog
+    {
+        return $this->log(
+            AuditAction::LabCreated,
+            $lab,
+            null,
+            $this->labSnapshot($lab),
+        );
+    }
+
+    public function logLabUpdated(Lab $lab, array $oldValues, array $newValues): ?AuditLog
+    {
+        if (($oldValues['is_active'] ?? true) && ! ($newValues['is_active'] ?? true)) {
+            return $this->logLabDeactivated($lab, $oldValues);
+        }
+
+        if (! ($oldValues['is_active'] ?? true) && ($newValues['is_active'] ?? true)) {
+            return $this->log(
+                AuditAction::LabActivated,
+                $lab,
+                $oldValues,
+                $newValues,
+            );
+        }
+
+        if ($oldValues === $newValues) {
+            return null;
+        }
+
+        return $this->log(
+            AuditAction::LabUpdated,
+            $lab,
+            $oldValues,
+            $newValues,
+        );
+    }
+
+    public function logLabDeactivated(Lab $lab, array $oldValues): AuditLog
+    {
+        return $this->log(
+            AuditAction::LabDeactivated,
+            $lab,
+            $oldValues,
+            $this->labSnapshot($lab),
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function labSnapshot(Lab $lab): array
+    {
+        return [
+            'name' => $lab->name,
+            'code' => $lab->code,
+            'is_active' => $lab->is_active,
+        ];
     }
 
     /**

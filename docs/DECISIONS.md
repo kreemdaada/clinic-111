@@ -212,7 +212,21 @@ Date: YYYY-MM-DD
 
 ---
 
+## ADR-021: Laboratory Soft Deactivate (Milestone 01)
+
+**Decision:** Laboratories are configuration data managed via `LabManagementService`. Admins deactivate labs with `is_active = false` instead of deleting rows. Historical `lab_jobs` retain their `lab_id`.
+
+**Reason:** Accounting history must remain intact. Inactive labs are excluded from active-lab queries used for new calculations only.
+
+**Date:** 2026-06-25
+
+---
+
 ## What Changed
+
+**Updated — 2026-06-25**
+
+- ADR-021 — laboratory soft deactivate (Milestone 01)
 
 **Updated — 2026-06-19**
 

@@ -242,12 +242,43 @@ Unchanged — Sanctum bearer tokens, rate-limited login.
 | View validation summary | ✓ | ✓ | ✓ |
 | View monthly income | ✓ | ✓ | ✓ |
 | Manage users (`/admin/users`) | ✓ | ✗ | ✗ |
+| Manage laboratories (`/labs`) | ✓ | ✗ | ✗ |
 | Approve / unlock reports | ✓ | ✗ | ✗ |
 | Manage doctors / lab prices | ✓ | ✗ | ✗ |
 
 ---
 
-## 8. User Administration (admin only)
+## 8. Laboratory Administration (admin only)
+
+```mermaid
+sequenceDiagram
+    actor Admin
+    participant UI as /labs
+    participant Svc as LabManagementService
+    participant DB as labs + audit_logs
+
+    Admin->>UI: Create lab
+    UI->>Svc: create()
+    Svc->>DB: INSERT labs
+    Svc->>DB: audit lab_created
+
+    Admin->>UI: Deactivate lab
+    UI->>Svc: deactivate()
+    Svc->>DB: is_active = false
+    Svc->>DB: audit lab_deactivated
+
+    Note over DB: Historical lab_jobs unchanged
+```
+
+**Rules:**
+
+- Laboratories are never physically deleted
+- `GET /api/labs` (reference) still returns active labs only for accountants/viewers
+- Deactivated labs are excluded from new JOB calculations only
+
+---
+
+## 9. User Administration (admin only)
 
 ```mermaid
 sequenceDiagram
@@ -287,7 +318,7 @@ sequenceDiagram
 
 ---
 
-## 9. Environment Variables (import / privacy)
+## 10. Environment Variables (import / privacy)
 
 | Variable | Purpose |
 |---|---|
@@ -297,13 +328,17 @@ sequenceDiagram
 
 ---
 
-## 10. V2 Manual Entry (Planned)
+## 11. V2 Manual Entry (Planned)
 
 Same pipeline after row creation: `TreatmentImportValidationService` → `LabJobCalculationService`. No Excel parser.
 
 ---
 
 ## What Changed
+
+**Updated — 2026-06-25**
+
+- Laboratory administration workflow (Milestone 01)
 
 **Updated — 2026-06-25**
 

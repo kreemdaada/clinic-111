@@ -378,6 +378,105 @@ GET /api/monthly-income?month=2026-01
 
 ---
 
+## Laboratory Administration (admin only)
+
+Reference endpoint `GET /api/labs` returns **active labs only** (unchanged).
+
+Admin management uses `/api/admin/labs` and web `/labs`.
+
+### GET /api/admin/labs
+
+**Purpose:** List all laboratories with optional search and status filter.
+
+**Role:** admin
+
+**Query parameters (`ListLabsRequest`):**
+
+| Param | Rules |
+|---|---|
+| `search` | optional, max 120 — matches name or code |
+| `status` | optional: `all`, `active`, `inactive` (default `all`) |
+
+**Response `200`:**
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "Main Lab",
+      "code": "MAIN_LAB",
+      "is_active": true,
+      "lab_jobs_count": 42,
+      "lab_prices_count": 18
+    }
+  ]
+}
+```
+
+---
+
+### POST /api/admin/labs
+
+**Purpose:** Create a laboratory.
+
+**Role:** admin
+
+**Request:**
+
+```json
+{
+  "name": "Secondary Lab",
+  "code": "SEC_LAB"
+}
+```
+
+**Validation (`StoreLabRequest`):** `name` required; `code` required, unique, alphanumeric/underscore/dash.
+
+**Response `201`:** Created lab + audit `lab_created`.
+
+---
+
+### PUT /api/admin/labs/{id}
+
+**Purpose:** Update name, code, or active status.
+
+**Role:** admin
+
+**Validation (`UpdateLabRequest`):** same as create; code unique except current lab.
+
+**Audit:** `lab_updated`, `lab_deactivated`, or `lab_activated` depending on changes.
+
+---
+
+### DELETE /api/admin/labs/{id}
+
+**Purpose:** Soft-deactivate (`is_active = false`). Never deletes the row.
+
+**Role:** admin
+
+---
+
+### POST /api/admin/labs/{id}/activate
+
+**Purpose:** Reactivate a deactivated laboratory.
+
+**Role:** admin
+
+---
+
+### Web UI: `/labs`
+
+| Route | Method | Action |
+|---|---|---|
+| `/labs` | GET | List + search + status filter |
+| `/labs` | POST | Create |
+| `/labs/{id}` | PUT | Update |
+| `/labs/{id}` | DELETE | Deactivate |
+| `/labs/{id}/activate` | POST | Activate |
+
+---
+
 ## User Management (admin only)
 
 ### GET /api/users
@@ -575,6 +674,10 @@ Same capabilities as the API. Admin-only. Nav link visible when logged in as adm
 ---
 
 ## What Changed
+
+**Updated — 2026-06-25**
+
+- Laboratory administration API (`/api/admin/labs`) and web `/labs`
 
 **Updated — 2026-06-25**
 

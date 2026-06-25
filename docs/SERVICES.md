@@ -303,6 +303,35 @@ import(UploadedFile $file, ?string $reportDate = null): DailyReport
 
 ---
 
+### `LabManagementService`
+
+**Path:** `app/Services/Accounting/LabManagementService.php`
+
+**Purpose:** Admin CRUD for laboratory master data (`labs` table).
+
+**Input:**
+
+```php
+create(['name' => 'Main Lab', 'code' => 'MAIN_LAB'])
+update($lab, ['name' => '...', 'code' => '...', 'is_active' => true|false])
+deactivate($lab)
+activate($lab)
+```
+
+**Output:** `Lab` model
+
+**Business rules:**
+
+- Codes are stored uppercase
+- Never physically deletes rows — `deactivate()` sets `is_active = false`
+- Inactive labs are excluded from active-lab queries used by the accounting engine
+- Historical `lab_jobs` keep their `lab_id` reference unchanged
+- Every create/update/activate/deactivate writes an audit log
+
+**Dependencies:** `AuditLogService`, `Lab` model
+
+---
+
 ## Audit Services
 
 ### `AuditLogService`
@@ -324,7 +353,7 @@ log(
 
 **Output:** `AuditLog` model
 
-**Logged actions:** `report_import`, `price_change`, `commission_change`, `report_approval`, `manual_correction`
+**Logged actions:** `report_import`, `price_change`, `commission_change`, `report_approval`, `manual_correction`, `lab_created`, `lab_updated`, `lab_deactivated`, `lab_activated`, `user_created`, `user_role_changed`, `user_deactivated`, `password_reset`
 
 **Dependencies:** `AuditLog` model, authenticated user
 
@@ -353,6 +382,10 @@ Import validation warning and per-row persist result.
 ---
 
 ## What Changed
+
+**Updated — 2026-06-25**
+
+- Documented `LabManagementService` (Milestone 01)
 
 **Updated — 2026-06-19**
 

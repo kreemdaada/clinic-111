@@ -383,6 +383,7 @@
             <a href="{{ route('daily-report.index') }}" @class(['active'=> request()->routeIs('daily-report.*')])>Daily Report</a>
             @if (auth()->user()->isAdmin())
             <a href="{{ route('doctors.index') }}" @class(['active'=> request()->routeIs('doctors.*')])>Doctors</a>
+            <a href="{{ route('labs.index') }}" @class(['active'=> request()->routeIs('labs.*')])>Labs</a>
             <a href="{{ route('lab-prices.index') }}" @class(['active'=> request()->routeIs('lab-prices.*')])>Lab prices</a>
             <a href="{{ route('admin.users.index') }}" @class(['active'=> request()->routeIs('admin.users.*')])>Users</a>
             @endif
