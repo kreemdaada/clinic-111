@@ -7,6 +7,7 @@ use App\Http\Controllers\Web\ImportController;
 use App\Http\Controllers\Web\LabAdminController;
 use App\Http\Controllers\Web\LabPriceAdminController;
 use App\Http\Controllers\Web\LogController;
+use App\Http\Controllers\Web\ReportLockController;
 use App\Http\Controllers\Web\TreatmentAdminController;
 use App\Http\Controllers\Web\UserAdminController;
 use Illuminate\Support\Facades\Auth;

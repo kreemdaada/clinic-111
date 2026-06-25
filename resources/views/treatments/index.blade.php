@@ -116,7 +116,8 @@
 <div style="margin-top:1rem;">{{ $treatments->links() }}</div>
 @endif
 
-<div class="tx-modal-backdrop" id="tx-create-modal" aria-hidden="true">
+<div class="tx-modal-backdrop" id="tx-create-modal" aria-hidden="true"
+    data-open-on-load="{{ ($errors->any() && old('code') && ! request()->routeIs('treatments.update')) ? '1' : '0' }}">
     <div class="tx-modal" role="dialog">
         <h2>Create treatment</h2>
         <form method="POST" action="{{ route('treatments.store') }}">
@@ -256,9 +257,9 @@
         });
     });
 
-    @if ($errors->any() && old('code') && ! request()->routeIs('treatments.update'))
-    openModal(createModal);
-    @endif
+    if (createModal?.dataset.openOnLoad === '1') {
+        openModal(createModal);
+    }
 })();
 </script>
 @endpush
