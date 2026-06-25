@@ -91,17 +91,17 @@
                 <td>{{ $treatment->work_items_count }} {{ Str::plural('item', $treatment->work_items_count) }}</td>
                 <td>
                     <div class="table-actions">
-                        <button type="button" class="btn btn-secondary btn-sm" data-edit-treatment='@json([
-                            "id" => $treatment->id,
-                            "code" => $treatment->code,
-                            "name" => $treatment->name,
-                            "description" => $treatment->description,
-                            "has_lab_cost" => $treatment->has_lab_cost,
-                            "is_active" => $treatment->is_active,
-                            "update_url" => route("treatments.update", $treatment),
-                            "activate_url" => route("treatments.activate", $treatment),
-                            "destroy_url" => route("treatments.destroy", $treatment),
-                        ])'>Edit</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-edit-treatment="{{ e(json_encode([
+                            'id' => $treatment->id,
+                            'code' => $treatment->code,
+                            'name' => $treatment->name,
+                            'description' => $treatment->description,
+                            'has_lab_cost' => $treatment->has_lab_cost,
+                            'is_active' => $treatment->is_active,
+                            'update_url' => route('treatments.update', $treatment),
+                            'activate_url' => route('treatments.activate', $treatment),
+                            'destroy_url' => route('treatments.destroy', $treatment),
+                        ])) }}">Edit</button>
                     </div>
                 </td>
             </tr>
