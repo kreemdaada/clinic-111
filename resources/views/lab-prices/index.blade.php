@@ -89,9 +89,12 @@
     <div style="display:flex;gap:0.5rem;align-items:center;">
         <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
         <a href="{{ route('lab-prices.index') }}" class="btn btn-ghost btn-sm">Reset</a>
-        <button type="button" class="btn btn-primary btn-sm" data-open-create>Create price</button>
     </div>
 </form>
+
+<div style="margin-bottom:1rem;">
+    <button type="button" class="btn btn-primary btn-sm" data-open-create>Create price</button>
+</div>
 
 <div class="card lp-table-wrap">
     <table>
@@ -127,21 +130,22 @@
                 </td>
                 <td>
                     <div class="table-actions">
-                        <button type="button" class="btn btn-secondary btn-sm" data-edit-price="{{ e(json_encode([
-                            'id' => $price->id,
-                            'lab_id' => $price->lab_id,
-                            'treatment_id' => $price->treatment_id,
-                            'doctor_id' => $price->doctor_id,
-                            'unit_cost' => (string) $price->unit_cost,
-                            'currency' => $price->currency,
-                            'valid_from' => $price->valid_from?->format('Y-m-d'),
-                            'valid_to' => $price->valid_to?->format('Y-m-d'),
-                            'is_active' => $price->is_active,
-                            'update_url' => route('lab-prices.update', $price),
-                            'activate_url' => route('lab-prices.activate', $price),
-                            'destroy_url' => route('lab-prices.destroy', $price),
-                            'duplicate_url' => route('lab-prices.duplicate', $price),
-                        ])) }}">Edit</button>
+                        <button
+                            type="button"
+                            class="btn btn-secondary btn-sm lp-edit-btn"
+                            data-lab-id="{{ $price->lab_id }}"
+                            data-treatment-id="{{ $price->treatment_id }}"
+                            data-doctor-id="{{ $price->doctor_id ?? '' }}"
+                            data-unit-cost="{{ $price->unit_cost }}"
+                            data-currency="{{ $price->currency }}"
+                            data-valid-from="{{ $price->valid_from?->format('Y-m-d') }}"
+                            data-valid-to="{{ $price->valid_to?->format('Y-m-d') }}"
+                            data-is-active="{{ $price->is_active ? '1' : '0' }}"
+                            data-update-url="{{ route('lab-prices.update', $price) }}"
+                            data-activate-url="{{ route('lab-prices.activate', $price) }}"
+                            data-destroy-url="{{ route('lab-prices.destroy', $price) }}"
+                            data-duplicate-url="{{ route('lab-prices.duplicate', $price) }}"
+                        >Edit</button>
                     </div>
                 </td>
             </tr>
@@ -179,21 +183,7 @@
 </div>
 
 <div class="lp-modal-backdrop" id="lp-edit-modal" aria-hidden="true"
-    data-open-on-load="{{ ($errors->any() && old('_form') === 'edit') ? '1' : '0' }}"
-    data-edit-payload="{{ ($errors->any() && old('_form') === 'edit') ? e(json_encode([
-        'lab_id' => old('lab_id'),
-        'treatment_id' => old('treatment_id'),
-        'doctor_id' => old('doctor_id'),
-        'unit_cost' => old('unit_cost'),
-        'currency' => old('currency'),
-        'valid_from' => old('valid_from'),
-        'valid_to' => old('valid_to'),
-        'is_active' => old('is_active', '1'),
-        'update_url' => old('_update_url'),
-        'activate_url' => old('_activate_url'),
-        'destroy_url' => old('_destroy_url'),
-        'duplicate_url' => old('_duplicate_url'),
-    ])) : '' }}">
+    data-open-on-load="{{ ($errors->any() && old('_form') === 'edit') ? '1' : '0' }}">
     <div class="lp-modal" role="dialog">
         <h2>Edit lab price</h2>
         <form method="POST" id="lp-edit-form" action="{{ old('_update_url') }}">
@@ -245,7 +235,7 @@
 
 @push('scripts')
 <script>
-(function () {
+document.addEventListener('DOMContentLoaded', function () {
     const createModal = document.getElementById('lp-create-modal');
     const editModal = document.getElementById('lp-edit-modal');
     const editForm = document.getElementById('lp-edit-form');
@@ -254,6 +244,10 @@
     const duplicateForm = document.getElementById('lp-duplicate-form');
     const deactivateBtn = document.getElementById('lp-deactivate-btn');
     const activateBtn = document.getElementById('lp-activate-btn');
+
+    if (!createModal || !editModal || !editForm) {
+        return;
+    }
 
     function openModal(modal) {
         modal.classList.add('is-open');
@@ -265,27 +259,22 @@
         modal.setAttribute('aria-hidden', 'true');
     }
 
-    document.querySelector('[data-open-create]')?.addEventListener('click', () => openModal(createModal));
-
-    document.querySelectorAll('[data-close-modal]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            closeModal(createModal);
-            closeModal(editModal);
-        });
-    });
-
-    [createModal, editModal].forEach(modal => {
-        modal.addEventListener('click', (event) => {
-            if (event.target === modal) closeModal(modal);
-        });
-    });
-
-    document.querySelectorAll('[data-edit-price]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            populateEditForm(JSON.parse(btn.getAttribute('data-edit-price')));
-            openModal(editModal);
-        });
-    });
+    function readEditData(source) {
+        return {
+            update_url: source.dataset.updateUrl || '',
+            activate_url: source.dataset.activateUrl || '',
+            destroy_url: source.dataset.destroyUrl || '',
+            duplicate_url: source.dataset.duplicateUrl || '',
+            lab_id: source.dataset.labId || '',
+            treatment_id: source.dataset.treatmentId || '',
+            doctor_id: source.dataset.doctorId || '',
+            unit_cost: source.dataset.unitCost || '',
+            currency: source.dataset.currency || '',
+            valid_from: source.dataset.validFrom || '',
+            valid_to: source.dataset.validTo || '',
+            is_active: source.dataset.isActive === '1',
+        };
+    }
 
     function populateEditForm(data) {
         editForm.action = data.update_url;
@@ -298,26 +287,63 @@
         duplicateForm.action = data.duplicate_url;
         document.getElementById('lp-edit-lab-id').value = data.lab_id;
         document.getElementById('lp-edit-treatment-id').value = data.treatment_id;
-        document.getElementById('lp-edit-doctor-id').value = data.doctor_id || '';
+        document.getElementById('lp-edit-doctor-id').value = data.doctor_id;
         document.getElementById('lp-edit-unit-cost').value = data.unit_cost;
         document.getElementById('lp-edit-currency').value = data.currency;
-        document.getElementById('lp-edit-valid-from').value = data.valid_from || '';
-        document.getElementById('lp-edit-valid-to').value = data.valid_to || '';
-        document.getElementById('lp-edit-is-active').value = data.is_active === true || data.is_active === '1' || data.is_active === 1 ? '1' : '0';
-        const isActive = data.is_active === true || data.is_active === '1' || data.is_active === 1;
-        deactivateBtn.hidden = !isActive;
-        activateBtn.hidden = isActive;
+        document.getElementById('lp-edit-valid-from').value = data.valid_from;
+        document.getElementById('lp-edit-valid-to').value = data.valid_to;
+        document.getElementById('lp-edit-is-active').value = data.is_active ? '1' : '0';
+        deactivateBtn.hidden = !data.is_active;
+        activateBtn.hidden = data.is_active;
     }
 
-    const editPayload = editModal?.dataset.editPayload;
-    if (editModal?.dataset.openOnLoad === '1' && editPayload) {
-        populateEditForm(JSON.parse(editPayload));
+    document.querySelector('[data-open-create]')?.addEventListener('click', function () {
+        openModal(createModal);
+    });
+
+    document.querySelectorAll('[data-close-modal]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            closeModal(createModal);
+            closeModal(editModal);
+        });
+    });
+
+    [createModal, editModal].forEach(function (modal) {
+        modal.addEventListener('click', function (event) {
+            if (event.target === modal) {
+                closeModal(modal);
+            }
+        });
+    });
+
+    document.querySelectorAll('.lp-edit-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            populateEditForm(readEditData(btn));
+            openModal(editModal);
+        });
+    });
+
+    if (editModal.dataset.openOnLoad === '1') {
+        populateEditForm({
+            update_url: document.getElementById('lp-edit-update-url')?.value || editForm.action,
+            activate_url: document.getElementById('lp-edit-activate-url')?.value || '',
+            destroy_url: document.getElementById('lp-edit-destroy-url')?.value || '',
+            duplicate_url: document.getElementById('lp-edit-duplicate-url')?.value || '',
+            lab_id: document.getElementById('lp-edit-lab-id')?.value || '',
+            treatment_id: document.getElementById('lp-edit-treatment-id')?.value || '',
+            doctor_id: document.getElementById('lp-edit-doctor-id')?.value || '',
+            unit_cost: document.getElementById('lp-edit-unit-cost')?.value || '',
+            currency: document.getElementById('lp-edit-currency')?.value || '',
+            valid_from: document.getElementById('lp-edit-valid-from')?.value || '',
+            valid_to: document.getElementById('lp-edit-valid-to')?.value || '',
+            is_active: document.getElementById('lp-edit-is-active')?.value === '1',
+        });
         openModal(editModal);
     }
 
-    if (createModal?.dataset.openOnLoad === '1') {
+    if (createModal.dataset.openOnLoad === '1') {
         openModal(createModal);
     }
-})();
+});
 </script>
 @endpush

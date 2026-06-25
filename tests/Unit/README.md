@@ -21,6 +21,8 @@ php artisan test --testsuite=Unit
 | `TreatmentImportValidationServiceTest` | Import validation warnings + work_item persistence |
 | `LabJobCalculationServiceTest` | JOB = quantity × lab price (e.g. ZIR × 4 for Dr Riyad = 1600 AED) |
 | `LabPriceResolverTest` | Doctor-specific vs default lab prices (incl. REMOV 100 AED) |
+| `LabPriceAdministrationWorkflowTest` | End-to-end lab price create, duplicate, validity, overlap, resolver |
+| `LabPriceManagementServiceTest` | Lab price CRUD, overlap guard, duplicate/activate |
 | `LabCostTreatmentCatalogTest` | Which codes generate JOB vs clinical-only |
 | `NonLabTreatmentJobTest` | CF/SXP/RCT persist as work_items but never create lab_jobs |
 | `PatientPrivacyTest` | HMAC hash + PII stripped from `raw_data_json` |

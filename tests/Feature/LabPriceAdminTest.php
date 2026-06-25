@@ -27,6 +27,20 @@ class LabPriceAdminTest extends TestCase
         $this->seedAccountingData();
     }
 
+    public function test_admin_can_view_lab_price_index_with_modal_markup(): void
+    {
+        $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->get(route('lab-prices.index'))
+            ->assertOk()
+            ->assertSee('data-open-create', false)
+            ->assertSee('lp-create-modal', false)
+            ->assertSee('lp-edit-modal', false)
+            ->assertSee('lp-edit-btn', false)
+            ->assertSee('DOMContentLoaded', false);
+    }
+
     public function test_viewer_cannot_access_lab_price_admin(): void
     {
         $viewer = User::query()->where('email', 'viewer@clinic.test')->firstOrFail();
