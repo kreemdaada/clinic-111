@@ -101,6 +101,16 @@ class AuditLogService
         return $this->log($action, $labPrice, $oldValues, $newValues);
     }
 
+    public function logLabPriceActivated(LabPrice $labPrice, array $oldValues): AuditLog
+    {
+        return $this->log(
+            AuditAction::LabPriceActivated,
+            $labPrice,
+            $oldValues,
+            $this->labPriceSnapshot($labPrice),
+        );
+    }
+
     public function logReportApproved(DailyReport $dailyReport, string $oldStatus): AuditLog
     {
         return $this->log(

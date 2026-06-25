@@ -10,6 +10,7 @@ use App\Models\Treatment;
 use App\Services\Accounting\TreatmentManagementService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
@@ -47,7 +48,7 @@ class TreatmentAdminController extends Controller
         $treatment = $this->treatmentManagementService->create($request->validated());
 
         return redirect()
-            ->route('treatments.index', $request->only(['search', 'status']))
+            ->route('treatments.index', $this->filterRedirectParams($request))
             ->with('success', "Treatment {$treatment->code} created.");
     }
 
@@ -56,7 +57,7 @@ class TreatmentAdminController extends Controller
         $this->treatmentManagementService->update($treatment, $request->validated());
 
         return redirect()
-            ->route('treatments.index', $request->only(['search', 'status', 'page']))
+            ->route('treatments.index', $this->filterRedirectParams($request))
             ->with('success', "Treatment {$treatment->code} updated.");
     }
 
@@ -103,5 +104,17 @@ class TreatmentAdminController extends Controller
         }
 
         return $query;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function filterRedirectParams(Request $request): array
+    {
+        return array_filter([
+            'search' => $request->input('return_search'),
+            'status' => $request->input('return_status'),
+            'page' => $request->input('return_page'),
+        ], fn ($value) => $value !== null && $value !== '');
     }
 }

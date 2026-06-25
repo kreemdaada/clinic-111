@@ -31,7 +31,7 @@ All business rules (doctors, treatments, lab prices, commission rules) are store
 2. **Daily Report Review** — View calculated report, validation summary, extraction logs (no patient names in API).
 3. **Monthly Income Report** — Aggregate payments and lab costs per doctor for a calendar month.
 
-4. **Administration** — Doctors, laboratories, treatments, lab prices, and users configurable from admin UI (Milestones 01–02).
+4. **Administration** — Doctors, laboratories, treatments, lab prices, and users configurable from admin UI (Milestones 01–03).
 
 See [WORKFLOWS.md](./WORKFLOWS.md) for step-by-step details.
 
@@ -146,6 +146,10 @@ Patient name, MRN, and file number are **never stored or exposed** in API respon
 ---
 
 ## What Changed
+
+**Updated — 2026-06-26**
+
+- Lab price administration (Milestone 03) added to admin workflows
 
 **Updated — 2026-06-26**
 

@@ -361,6 +361,44 @@ activate($treatment)
 
 ---
 
+### `LabPriceManagementService`
+
+**Path:** `app/Services/Accounting/LabPriceManagementService.php`
+
+**Purpose:** Admin CRUD for lab unit prices (`lab_prices` table).
+
+**Input:**
+
+```php
+create(['lab_id' => 1, 'treatment_id' => 2, 'doctor_id' => null, 'unit_cost' => '360.00', 'currency' => 'AED', 'valid_from' => null, 'valid_to' => null])
+update($labPrice, ['unit_cost' => '...', 'is_active' => bool, ...])
+deactivate($labPrice)
+activate($labPrice)
+duplicate($labPrice)  // creates inactive copy for new validity period
+```
+
+**Output:** `LabPrice` model (with `lab`, `treatment`, `doctor` loaded)
+
+**Business rules:**
+
+- Never physically deletes rows
+- Only one active price per lab + treatment + doctor scope + overlapping validity period (`LabPriceOverlapValidator`)
+- General price: `doctor_id IS NULL`; doctor override takes precedence in `LabPriceResolver`
+- Inactive prices excluded from resolution; historical `lab_jobs.lab_price_id` unchanged
+- Duplicate creates an **inactive** copy — adjust dates before activating
+
+**Dependencies:** `AuditLogService`, `LabPriceOverlapValidator`, `LabPrice` model
+
+---
+
+### `LabPriceOverlapValidator`
+
+**Path:** `app/Support/LabPriceOverlapValidator.php`
+
+**Purpose:** Detect overlapping active price rows for the same lab/treatment/doctor scope.
+
+---
+
 ## Audit Services
 
 ### `AuditLogService`
@@ -382,7 +420,7 @@ log(
 
 **Output:** `AuditLog` model
 
-**Logged actions:** `report_import`, `price_change`, `commission_change`, `report_approval`, `manual_correction`, `lab_created`, `lab_updated`, `lab_deactivated`, `lab_activated`, `treatment_created`, `treatment_updated`, `treatment_deactivated`, `treatment_activated`, `user_created`, `user_role_changed`, `user_deactivated`, `password_reset`
+**Logged actions:** `report_import`, `price_change`, `commission_change`, `report_approval`, `manual_correction`, `lab_created`, `lab_updated`, `lab_deactivated`, `lab_activated`, `lab_price_created`, `lab_price_deactivated`, `lab_price_activated`, `treatment_created`, `treatment_updated`, `treatment_deactivated`, `treatment_activated`, `user_created`, `user_role_changed`, `user_deactivated`, `password_reset`
 
 **Dependencies:** `AuditLog` model, authenticated user
 
@@ -414,6 +452,7 @@ Import validation warning and per-row persist result.
 
 **Updated — 2026-06-26**
 
+- Documented `LabPriceManagementService` and `LabPriceOverlapValidator` (Milestone 03)
 - Documented `TreatmentManagementService` (Milestone 02)
 - `LabCostTreatmentCatalog` now reads `has_lab_cost` from database
 

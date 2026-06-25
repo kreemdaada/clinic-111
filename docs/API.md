@@ -562,6 +562,108 @@ Admin management uses `/api/admin/treatments` and web `/treatments`.
 
 ---
 
+## Lab Price Administration (admin only)
+
+Admin management uses `/api/admin/lab-prices` and web `/lab-prices`.
+
+Accounting resolution (`LabPriceResolver`) is unchanged — reads active rows from DB.
+
+### GET /api/admin/lab-prices
+
+**Purpose:** List lab prices with search and filters.
+
+**Role:** admin
+
+**Query parameters (`ListLabPricesRequest`):**
+
+| Param | Rules |
+|---|---|
+| `search` | optional — lab, treatment, or doctor code/name |
+| `lab_id` | optional |
+| `treatment_id` | optional |
+| `doctor_id` | optional: `all`, `general`, or doctor id |
+| `status` | optional: `all`, `active`, `inactive` |
+| `currency` | optional, 3-letter code |
+
+**Response `200`:** `{ data: [...] }`
+
+---
+
+### POST /api/admin/lab-prices
+
+**Purpose:** Create a lab price row.
+
+**Role:** admin
+
+**Request:**
+
+```json
+{
+  "lab_id": 1,
+  "treatment_id": 5,
+  "doctor_id": null,
+  "unit_cost": "360.00",
+  "currency": "AED",
+  "valid_from": null,
+  "valid_to": null
+}
+```
+
+**Validation (`StoreLabPriceRequest`):** lab and treatment must exist; `unit_cost` > 0; `currency` required; no overlapping active price for same scope and period.
+
+**Response `201`:** Created price + audit `lab_price_created`.
+
+---
+
+### PUT /api/admin/lab-prices/{id}
+
+**Purpose:** Update price fields (lab, treatment, doctor override, cost, currency, validity, status).
+
+**Role:** admin
+
+**Audit:** `price_change`, `lab_price_deactivated`, or `lab_price_activated`.
+
+---
+
+### DELETE /api/admin/lab-prices/{id}
+
+**Purpose:** Soft-deactivate. Never deletes the row.
+
+**Role:** admin
+
+---
+
+### POST /api/admin/lab-prices/{id}/activate
+
+**Purpose:** Reactivate a deactivated price (overlap validated).
+
+**Role:** admin
+
+---
+
+### POST /api/admin/lab-prices/{id}/duplicate
+
+**Purpose:** Copy row as inactive — adjust validity before activating.
+
+**Role:** admin
+
+**Response `201`:** New inactive price row.
+
+---
+
+### Web UI: `/lab-prices`
+
+| Route | Method | Action |
+|---|---|---|
+| `/lab-prices` | GET | Paginated list + search/filters |
+| `/lab-prices` | POST | Create (modal) |
+| `/lab-prices/{id}` | PUT | Update (modal) |
+| `/lab-prices/{id}` | DELETE | Deactivate |
+| `/lab-prices/{id}/activate` | POST | Activate |
+| `/lab-prices/{id}/duplicate` | POST | Duplicate (inactive copy) |
+
+---
+
 ## User Management (admin only)
 
 ### GET /api/users
@@ -762,6 +864,7 @@ Same capabilities as the API. Admin-only. Nav link visible when logged in as adm
 
 **Updated — 2026-06-26**
 
+- Lab price administration API (`/api/admin/lab-prices`) and web `/lab-prices` (Milestone 03)
 - Treatment administration API (`/api/admin/treatments`) and web `/treatments`
 
 **Updated — 2026-06-25**

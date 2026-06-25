@@ -87,6 +87,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/', [LabPriceAdminController::class, 'store'])->name('store');
         Route::put('/{labPrice}', [LabPriceAdminController::class, 'update'])->name('update');
         Route::delete('/{labPrice}', [LabPriceAdminController::class, 'destroy'])->name('destroy');
+        Route::post('/{labPrice}/activate', [LabPriceAdminController::class, 'activate'])->name('activate');
+        Route::post('/{labPrice}/duplicate', [LabPriceAdminController::class, 'duplicate'])->name('duplicate');
     });
 
     Route::middleware('role:admin')->prefix('treatments')->name('treatments.')->group(function () {
