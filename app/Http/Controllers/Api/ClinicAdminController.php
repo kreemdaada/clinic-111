@@ -8,7 +8,6 @@ use App\Http\Requests\Clinics\StoreClinicRequest;
 use App\Http\Requests\Clinics\UpdateClinicRequest;
 use App\Models\Clinic;
 use App\Services\Configuration\ClinicManagementService;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -28,7 +27,7 @@ class ClinicAdminController extends Controller
         $search = $validated['search'] ?? null;
         $status = $validated['status'] ?? 'all';
 
-        $clinics = $this->filteredClinicsQuery($search, $status)
+        $clinics = $this->clinicManagementService->listQuery($search, $status)
             ->orderBy('name')
             ->paginate(self::PER_PAGE);
 
@@ -97,30 +96,5 @@ class ClinicAdminController extends Controller
             'country' => $clinic->country,
             'is_active' => $clinic->is_active,
         ];
-    }
-
-    private function filteredClinicsQuery(?string $search, string $status): Builder
-    {
-        $query = Clinic::query();
-
-        if ($search !== null && trim($search) !== '') {
-            $term = '%'.trim($search).'%';
-            $query->where(function (Builder $builder) use ($term) {
-                $builder
-                    ->where('name', 'like', $term)
-                    ->orWhere('code', 'like', $term)
-                    ->orWhere('country', 'like', $term);
-            });
-        }
-
-        if ($status === 'active') {
-            $query->where('is_active', true);
-        }
-
-        if ($status === 'inactive') {
-            $query->where('is_active', false);
-        }
-
-        return $query;
     }
 }

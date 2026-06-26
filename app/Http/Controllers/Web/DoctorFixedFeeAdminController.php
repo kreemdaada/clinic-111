@@ -2,16 +2,14 @@
 
 namespace App\Http\Controllers\Web;
 
-use App\Enums\CommissionType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DoctorFixedFees\ListDoctorFixedFeesRequest;
 use App\Http\Requests\DoctorFixedFees\StoreDoctorFixedFeeRequest;
 use App\Http\Requests\DoctorFixedFees\UpdateDoctorFixedFeeRequest;
-use App\Models\Doctor;
 use App\Models\DoctorFixedFee;
-use App\Models\Treatment;
 use App\Services\Accounting\DoctorFixedFeeManagementService;
-use Illuminate\Database\Eloquent\Builder;
+use App\Services\Accounting\TreatmentManagementService;
+use App\Services\DailyReport\DoctorManagementService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -25,6 +23,8 @@ class DoctorFixedFeeAdminController extends Controller
 
     public function __construct(
         private readonly DoctorFixedFeeManagementService $doctorFixedFeeManagementService,
+        private readonly DoctorManagementService $doctorManagementService,
+        private readonly TreatmentManagementService $treatmentManagementService,
     ) {}
 
     public function index(ListDoctorFixedFeesRequest $request): View
@@ -36,7 +36,7 @@ class DoctorFixedFeeAdminController extends Controller
         $status = $validated['status'] ?? 'all';
         $currency = isset($validated['currency']) ? strtoupper($validated['currency']) : null;
 
-        $fees = $this->filteredFeesQuery($search, $doctorId, $treatmentId, $status, $currency)
+        $fees = $this->doctorFixedFeeManagementService->listQuery($search, $doctorId, $treatmentId, $status, $currency)
             ->with(['doctor', 'treatment'])
             ->orderByDesc('is_active')
             ->orderBy('doctor_id')
@@ -46,8 +46,8 @@ class DoctorFixedFeeAdminController extends Controller
 
         return view('doctor-fixed-fees.index', [
             'fees' => $fees,
-            'doctors' => Doctor::query()->where('commission_type', CommissionType::Fixed)->orderBy('code')->get(),
-            'treatments' => Treatment::query()->where('is_active', true)->orderBy('code')->get(),
+            'doctors' => $this->doctorManagementService->listFixedCommissionDoctors(),
+            'treatments' => $this->treatmentManagementService->listActive(),
             'search' => $search,
             'doctorId' => $doctorId,
             'treatmentId' => $treatmentId,
@@ -101,47 +101,6 @@ class DoctorFixedFeeAdminController extends Controller
         return redirect()
             ->route('doctor-fixed-fees.index')
             ->with('success', "Fee rule duplicated as #{$copy->id} (inactive). Adjust dates and activate when ready.");
-    }
-
-    private function filteredFeesQuery(
-        ?string $search,
-        ?int $doctorId,
-        ?int $treatmentId,
-        string $status,
-        ?string $currency,
-    ): Builder {
-        $query = DoctorFixedFee::query();
-
-        if ($search !== null && trim($search) !== '') {
-            $term = '%'.trim($search).'%';
-            $query->where(function (Builder $builder) use ($term) {
-                $builder
-                    ->whereHas('doctor', fn (Builder $q) => $q->where('code', 'like', $term)->orWhere('name', 'like', $term))
-                    ->orWhereHas('treatment', fn (Builder $q) => $q->where('code', 'like', $term)->orWhere('name', 'like', $term));
-            });
-        }
-
-        if ($doctorId !== null) {
-            $query->where('doctor_id', $doctorId);
-        }
-
-        if ($treatmentId !== null) {
-            $query->where('treatment_id', $treatmentId);
-        }
-
-        if ($status === 'active') {
-            $query->where('is_active', true);
-        }
-
-        if ($status === 'inactive') {
-            $query->where('is_active', false);
-        }
-
-        if ($currency !== null && $currency !== '') {
-            $query->where('currency', $currency);
-        }
-
-        return $query;
     }
 
     /**

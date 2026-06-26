@@ -4,6 +4,8 @@ namespace App\Services\Configuration;
 
 use App\Models\Clinic;
 use App\Services\Audit\AuditLogService;
+use App\Services\Configuration\Concerns\ScopesConfigurationQueries;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -11,9 +13,37 @@ use Illuminate\Support\Facades\DB;
  */
 class ClinicManagementService
 {
+    use ScopesConfigurationQueries;
+
     public function __construct(
         private readonly AuditLogService $auditLogService,
+        private readonly CurrentClinicResolver $currentClinicResolver,
     ) {}
+
+    public function listQuery(?string $search = null, string $status = 'all'): Builder
+    {
+        $query = $this->forCurrentClinic(Clinic::class);
+
+        if ($search !== null && trim($search) !== '') {
+            $term = '%'.trim($search).'%';
+            $query->where(function (Builder $builder) use ($term) {
+                $builder
+                    ->where('name', 'like', $term)
+                    ->orWhere('code', 'like', $term)
+                    ->orWhere('country', 'like', $term);
+            });
+        }
+
+        if ($status === 'active') {
+            $query->where('is_active', true);
+        }
+
+        if ($status === 'inactive') {
+            $query->where('is_active', false);
+        }
+
+        return $query;
+    }
 
     /**
      * @param  array{
@@ -53,6 +83,8 @@ class ClinicManagementService
      */
     public function update(Clinic $clinic, array $data): Clinic
     {
+        $this->assertSameClinic($clinic);
+
         return DB::transaction(function () use ($clinic, $data) {
             $oldValues = $this->auditLogService->clinicSnapshot($clinic);
 
@@ -80,6 +112,8 @@ class ClinicManagementService
 
     public function deactivate(Clinic $clinic): Clinic
     {
+        $this->assertSameClinic($clinic);
+
         return $this->update($clinic, [
             'name' => $clinic->name,
             'code' => $clinic->code,
@@ -92,6 +126,8 @@ class ClinicManagementService
 
     public function activate(Clinic $clinic): Clinic
     {
+        $this->assertSameClinic($clinic);
+
         return $this->update($clinic, [
             'name' => $clinic->name,
             'code' => $clinic->code,

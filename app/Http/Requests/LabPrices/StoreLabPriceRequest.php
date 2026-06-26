@@ -3,6 +3,7 @@
 namespace App\Http\Requests\LabPrices;
 
 use App\Support\LabPriceOverlapValidator;
+use App\Services\Configuration\CurrentClinicResolver;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -47,6 +48,7 @@ class StoreLabPriceRequest extends FormRequest
             $doctorId = isset($data['doctor_id']) && $data['doctor_id'] !== '' ? (int) $data['doctor_id'] : null;
 
             if (app(LabPriceOverlapValidator::class)->hasActiveOverlap(
+                app(CurrentClinicResolver::class)->resolveId(),
                 (int) $data['lab_id'],
                 (int) $data['treatment_id'],
                 $doctorId,

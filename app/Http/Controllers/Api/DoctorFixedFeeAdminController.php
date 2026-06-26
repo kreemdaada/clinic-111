@@ -8,7 +8,6 @@ use App\Http\Requests\DoctorFixedFees\StoreDoctorFixedFeeRequest;
 use App\Http\Requests\DoctorFixedFees\UpdateDoctorFixedFeeRequest;
 use App\Models\DoctorFixedFee;
 use App\Services\Accounting\DoctorFixedFeeManagementService;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -29,7 +28,7 @@ class DoctorFixedFeeAdminController extends Controller
         $status = $validated['status'] ?? 'all';
         $currency = isset($validated['currency']) ? strtoupper($validated['currency']) : null;
 
-        $fees = $this->filteredFeesQuery($search, $doctorId, $treatmentId, $status, $currency)
+        $fees = $this->doctorFixedFeeManagementService->listQuery($search, $doctorId, $treatmentId, $status, $currency)
             ->with(['doctor', 'treatment'])
             ->orderByDesc('is_active')
             ->orderBy('doctor_id')
@@ -107,46 +106,5 @@ class DoctorFixedFeeAdminController extends Controller
             'valid_to' => $doctorFixedFee->valid_to?->toDateString(),
             'is_active' => $doctorFixedFee->is_active,
         ];
-    }
-
-    private function filteredFeesQuery(
-        ?string $search,
-        ?int $doctorId,
-        ?int $treatmentId,
-        string $status,
-        ?string $currency,
-    ): Builder {
-        $query = DoctorFixedFee::query();
-
-        if ($search !== null && trim($search) !== '') {
-            $term = '%'.trim($search).'%';
-            $query->where(function (Builder $builder) use ($term) {
-                $builder
-                    ->whereHas('doctor', fn (Builder $q) => $q->where('code', 'like', $term)->orWhere('name', 'like', $term))
-                    ->orWhereHas('treatment', fn (Builder $q) => $q->where('code', 'like', $term)->orWhere('name', 'like', $term));
-            });
-        }
-
-        if ($doctorId !== null) {
-            $query->where('doctor_id', $doctorId);
-        }
-
-        if ($treatmentId !== null) {
-            $query->where('treatment_id', $treatmentId);
-        }
-
-        if ($status === 'active') {
-            $query->where('is_active', true);
-        }
-
-        if ($status === 'inactive') {
-            $query->where('is_active', false);
-        }
-
-        if ($currency !== null && $currency !== '') {
-            $query->where('currency', $currency);
-        }
-
-        return $query;
     }
 }

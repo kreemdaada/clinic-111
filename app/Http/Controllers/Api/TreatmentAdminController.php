@@ -8,7 +8,6 @@ use App\Http\Requests\Treatments\StoreTreatmentRequest;
 use App\Http\Requests\Treatments\UpdateTreatmentRequest;
 use App\Models\Treatment;
 use App\Services\Accounting\TreatmentManagementService;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -28,7 +27,7 @@ class TreatmentAdminController extends Controller
         $search = $validated['search'] ?? null;
         $status = $validated['status'] ?? 'all';
 
-        $treatments = $this->filteredTreatmentsQuery($search, $status)
+        $treatments = $this->treatmentManagementService->listQuery($search, $status)
             ->withCount('workItems')
             ->orderBy('code')
             ->paginate(self::PER_PAGE);
@@ -98,30 +97,5 @@ class TreatmentAdminController extends Controller
             'is_active' => $treatment->is_active,
             'work_items_count' => $treatment->work_items_count ?? null,
         ];
-    }
-
-    private function filteredTreatmentsQuery(?string $search, string $status): Builder
-    {
-        $query = Treatment::query();
-
-        if ($search !== null && trim($search) !== '') {
-            $term = '%'.trim($search).'%';
-            $query->where(function (Builder $builder) use ($term) {
-                $builder
-                    ->where('name', 'like', $term)
-                    ->orWhere('code', 'like', $term)
-                    ->orWhere('description', 'like', $term);
-            });
-        }
-
-        if ($status === 'active') {
-            $query->where('is_active', true);
-        }
-
-        if ($status === 'inactive') {
-            $query->where('is_active', false);
-        }
-
-        return $query;
     }
 }

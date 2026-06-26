@@ -75,6 +75,7 @@ class DoctorFixedFeeAdministrationWorkflowTest extends TestCase
 
         // 5. Overlap validator blocks activating duplicate while current is active.
         $this->assertTrue($this->overlapValidator->hasActiveOverlap(
+            $doctor->clinic_id,
             $doctor->id,
             $treatment->id,
             '2030-01-01',

@@ -4,7 +4,10 @@ namespace App\Services\User;
 
 use App\Models\User;
 use App\Services\Audit\AuditLogService;
+use App\Services\Configuration\Concerns\ScopesConfigurationQueries;
 use App\Services\Configuration\CurrentClinicResolver;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -14,10 +17,25 @@ use RuntimeException;
  */
 class UserManagementService
 {
+    use ScopesConfigurationQueries;
+
     public function __construct(
         private readonly AuditLogService $auditLogService,
         private readonly CurrentClinicResolver $currentClinicResolver,
     ) {}
+
+    public function listQuery(): Builder
+    {
+        return $this->forCurrentClinic(User::class)->orderBy('name');
+    }
+
+    /**
+     * @return Collection<int, User>
+     */
+    public function listForAdministration(): Collection
+    {
+        return $this->listQuery()->get();
+    }
 
     /**
      * @param  array{
@@ -41,7 +59,7 @@ class UserManagementService
                 'email' => $data['email'],
                 'role' => $data['role'],
             ]);
-            $user->clinic_id = $this->currentClinicResolver->resolveId();
+            $user->clinic_id = $this->currentClinicId();
             $user->password = $password;
             $user->is_active = $data['is_active'] ?? true;
             $user->save();
@@ -65,6 +83,8 @@ class UserManagementService
      */
     public function update(User $user, array $data, ?User $actingUser = null): User
     {
+        $this->assertSameClinic($user);
+
         return DB::transaction(function () use ($user, $data, $actingUser) {
             $oldValues = $this->auditLogService->userSnapshot($user);
 
@@ -100,6 +120,8 @@ class UserManagementService
 
     public function deactivate(User $user, ?User $actingUser = null): User
     {
+        $this->assertSameClinic($user);
+
         if ($actingUser !== null && $actingUser->id === $user->id) {
             throw new RuntimeException('You cannot deactivate your own account.');
         }
@@ -126,6 +148,8 @@ class UserManagementService
      */
     public function resetPassword(User $user, array $data): array
     {
+        $this->assertSameClinic($user);
+
         return DB::transaction(function () use ($user, $data) {
             [$password, $temporaryPassword] = $this->resolvePassword($data);
 

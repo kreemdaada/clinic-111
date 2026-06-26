@@ -12,6 +12,7 @@ use Illuminate\Support\Carbon;
 class LabPriceOverlapValidator
 {
     public function hasActiveOverlap(
+        int $clinicId,
         int $labId,
         int $treatmentId,
         ?int $doctorId,
@@ -20,6 +21,7 @@ class LabPriceOverlapValidator
         ?int $excludeLabPriceId = null,
     ): bool {
         $query = LabPrice::query()
+            ->where('clinic_id', $clinicId)
             ->where('is_active', true)
             ->where('lab_id', $labId)
             ->where('treatment_id', $treatmentId);

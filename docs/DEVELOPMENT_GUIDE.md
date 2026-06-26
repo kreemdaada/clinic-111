@@ -456,8 +456,25 @@ Rules:
 
 * Migration backfills existing rows to `CLINIC_111`
 * Seeders resolve clinic by code — never hardcode IDs
-* No query isolation, no global scopes
-* Accounting engine and import pipeline unchanged
+* No global scopes (ADR-028)
+
+---
+
+# Query Isolation (Milestone 09, ADR-028)
+
+Every configuration **read** in the service layer must filter explicitly:
+
+```php
+->where('clinic_id', $this->currentClinicResolver->resolveId())
+```
+
+Rules:
+
+* Use the shared `ScopesConfigurationQueries` trait in configuration services
+* Controllers call service `listQuery()` / `listForAdministration()` methods — never build tenant queries
+* Cross-clinic route-model binding returns **404** via `assertSameClinic()` on mutations
+* Accounting engine, imports, and resolvers remain unscoped until a later milestone
+* Reference APIs (`/api/doctors`, `/api/treatments`, `/api/labs`) return only the authenticated clinic's records
 
 ---
 
@@ -469,9 +486,9 @@ Rules:
 
 * Reads `auth()->user()->clinic_id` — never falls back to `CLINIC_111`
 * Throws `CurrentClinicException` when no authenticated clinic exists
-* Configuration management services inject the resolver and set `clinic_id` on create
+* Configuration management services inject the resolver for **create and read** operations (ADR-028)
 * Controllers never resolve or assign clinic IDs
-* No query filtering yet — ownership assignment only
+* No global scopes — every `where('clinic_id', …)` is explicit in services
 
 ---
 

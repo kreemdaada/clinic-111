@@ -6,12 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\LabPrices\ListLabPricesRequest;
 use App\Http\Requests\LabPrices\StoreLabPriceRequest;
 use App\Http\Requests\LabPrices\UpdateLabPriceRequest;
-use App\Models\Doctor;
-use App\Models\Lab;
 use App\Models\LabPrice;
-use App\Models\Treatment;
+use App\Services\Accounting\LabManagementService;
 use App\Services\Accounting\LabPriceManagementService;
-use Illuminate\Database\Eloquent\Builder;
+use App\Services\Accounting\TreatmentManagementService;
+use App\Services\DailyReport\DoctorManagementService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -25,6 +24,9 @@ class LabPriceAdminController extends Controller
 
     public function __construct(
         private readonly LabPriceManagementService $labPriceManagementService,
+        private readonly LabManagementService $labManagementService,
+        private readonly TreatmentManagementService $treatmentManagementService,
+        private readonly DoctorManagementService $doctorManagementService,
     ) {}
 
     public function index(ListLabPricesRequest $request): View
@@ -37,7 +39,7 @@ class LabPriceAdminController extends Controller
         $status = $validated['status'] ?? 'all';
         $currency = isset($validated['currency']) ? strtoupper($validated['currency']) : null;
 
-        $prices = $this->filteredPricesQuery($search, $labId, $treatmentId, $doctorFilter, $status, $currency)
+        $prices = $this->labPriceManagementService->listQuery($search, $labId, $treatmentId, $doctorFilter, $status, $currency)
             ->with(['lab', 'treatment', 'doctor'])
             ->orderByDesc('is_active')
             ->orderBy('lab_id')
@@ -47,9 +49,9 @@ class LabPriceAdminController extends Controller
 
         return view('lab-prices.index', [
             'prices' => $prices,
-            'labs' => Lab::query()->orderBy('name')->get(),
-            'treatments' => Treatment::query()->where('has_lab_cost', true)->orderBy('code')->get(),
-            'doctors' => Doctor::query()->orderBy('code')->get(),
+            'labs' => $this->labManagementService->listQuery()->orderBy('name')->get(),
+            'treatments' => $this->treatmentManagementService->listActiveWithLabCost(),
+            'doctors' => $this->doctorManagementService->listActive(),
             'search' => $search,
             'labId' => $labId,
             'treatmentId' => $treatmentId,
@@ -104,55 +106,6 @@ class LabPriceAdminController extends Controller
         return redirect()
             ->route('lab-prices.index')
             ->with('success', "Lab price duplicated as #{$copy->id} (inactive). Adjust dates and activate when ready.");
-    }
-
-    private function filteredPricesQuery(
-        ?string $search,
-        ?int $labId,
-        ?int $treatmentId,
-        string $doctorFilter,
-        string $status,
-        ?string $currency,
-    ): Builder {
-        $query = LabPrice::query();
-
-        if ($search !== null && trim($search) !== '') {
-            $term = '%'.trim($search).'%';
-            $query->where(function (Builder $builder) use ($term) {
-                $builder
-                    ->whereHas('lab', fn (Builder $q) => $q->where('code', 'like', $term)->orWhere('name', 'like', $term))
-                    ->orWhereHas('treatment', fn (Builder $q) => $q->where('code', 'like', $term)->orWhere('name', 'like', $term))
-                    ->orWhereHas('doctor', fn (Builder $q) => $q->where('code', 'like', $term)->orWhere('name', 'like', $term));
-            });
-        }
-
-        if ($labId !== null) {
-            $query->where('lab_id', $labId);
-        }
-
-        if ($treatmentId !== null) {
-            $query->where('treatment_id', $treatmentId);
-        }
-
-        if ($doctorFilter === 'general') {
-            $query->whereNull('doctor_id');
-        } elseif ($doctorFilter !== 'all' && $doctorFilter !== '') {
-            $query->where('doctor_id', (int) $doctorFilter);
-        }
-
-        if ($status === 'active') {
-            $query->where('is_active', true);
-        }
-
-        if ($status === 'inactive') {
-            $query->where('is_active', false);
-        }
-
-        if ($currency !== null && $currency !== '') {
-            $query->where('currency', $currency);
-        }
-
-        return $query;
     }
 
     /**

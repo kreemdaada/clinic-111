@@ -304,7 +304,7 @@ GET /api/monthly-income?month=2026-01
 
 ### GET /api/doctors
 
-**Purpose:** List all active doctors with commission settings.
+**Purpose:** List active doctors with commission settings for the **authenticated user's clinic** (ADR-028).
 
 **Role:** Any authenticated user
 
@@ -333,7 +333,7 @@ GET /api/monthly-income?month=2026-01
 
 ### GET /api/treatments
 
-**Purpose:** List all active treatments.
+**Purpose:** List active treatments for the **authenticated user's clinic** (ADR-028).
 
 **Role:** Any authenticated user
 
@@ -356,7 +356,7 @@ GET /api/monthly-income?month=2026-01
 
 ### GET /api/labs
 
-**Purpose:** List all active labs.
+**Purpose:** List active labs for the **authenticated user's clinic** (ADR-028).
 
 **Role:** Any authenticated user
 
@@ -1091,6 +1091,11 @@ Web-only — no API endpoint in Milestone 05. Entry point for the Configuration 
 ---
 
 ## What Changed
+
+**Updated — 2026-06-26**
+
+- Reference APIs (`/api/doctors`, `/api/treatments`, `/api/labs`) and admin list endpoints return only the authenticated clinic's records (Milestone 09, ADR-028); response shapes unchanged
+- Clinic admin list/show scoped to current clinic only
 
 **Updated — 2026-06-26**
 

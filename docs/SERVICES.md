@@ -313,6 +313,8 @@ import(UploadedFile $file, ?string $reportDate = null): DailyReport
 
 ```php
 create(['name' => 'Main Lab', 'code' => 'MAIN_LAB'])
+listQuery(?string $search, string $status = 'all')  // clinic-scoped (ADR-028)
+listActive()
 update($lab, ['name' => '...', 'code' => '...', 'is_active' => true|false])
 deactivate($lab)
 activate($lab)
@@ -327,8 +329,9 @@ activate($lab)
 - Inactive labs are excluded from active-lab queries used by the accounting engine
 - Historical `lab_jobs` keep their `lab_id` reference unchanged
 - Every create/update/activate/deactivate writes an audit log
+- All reads filter `where('clinic_id', CurrentClinicResolver::resolveId())` — cross-clinic mutations abort 404
 
-**Dependencies:** `AuditLogService`, `Lab` model
+**Dependencies:** `AuditLogService`, `CurrentClinicResolver`, `ScopesConfigurationQueries` trait
 
 ---
 
@@ -395,7 +398,9 @@ duplicate($labPrice)  // creates inactive copy for new validity period
 
 **Path:** `app/Support/LabPriceOverlapValidator.php`
 
-**Purpose:** Detect overlapping active price rows for the same lab/treatment/doctor scope.
+**Purpose:** Detect overlapping active price rows for the same clinic/lab/treatment/doctor scope.
+
+First parameter: `$clinicId` (ADR-028).
 
 ---
 
@@ -443,7 +448,9 @@ duplicate($doctorFixedFee)  // creates inactive copy for new validity period
 
 **Path:** `app/Support/DoctorFixedFeeOverlapValidator.php`
 
-**Purpose:** Detect overlapping active fixed fee rows for the same doctor/treatment scope.
+**Purpose:** Detect overlapping active fixed fee rows for the same clinic/doctor/treatment scope.
+
+First parameter: `$clinicId` (ADR-028).
 
 ---
 
@@ -458,10 +465,10 @@ duplicate($doctorFixedFee)  // creates inactive copy for new validity period
 **Input:**
 
 ```php
-buildDashboard(?int $clinicId = null)
-moduleStatistics(?int $clinicId = null)
-recentActivity(?int $clinicId = null, int $limit = 15)
-healthWarnings(?int $clinicId = null)
+buildDashboard()
+moduleStatistics()
+recentActivity(int $limit = 15)
+healthWarnings()
 ```
 
 **Output:** Module card data (total/active/inactive counts), recent audit rows, warning messages (read-only — never auto-fixes data).
@@ -470,9 +477,30 @@ healthWarnings(?int $clinicId = null)
 
 - Covers Doctors, Labs, Treatments, Lab Prices, Doctor Fixed Fees, Users
 - Health warnings only — no automatic data changes
-- Optional `$clinicId` reserved for future multi-clinic scoping (currently ignored; configuration rows have `clinic_id` since Milestone 07 but counts are still global)
+- All counts, health checks, and recent activity scoped to `CurrentClinicResolver::resolveId()` (ADR-028)
+- Recent activity filters audit logs via auditable model `clinic_id` (audit_logs table has no `clinic_id`)
 
-**Dependencies:** Configuration models, `AuditLog`, `AuditAction`
+**Dependencies:** `CurrentClinicResolver`, `ScopesConfigurationQueries` trait, configuration models, `AuditLog`, `AuditAction`
+
+---
+
+### `ReferenceDataService`
+
+**Path:** `app/Services/Configuration/ReferenceDataService.php`
+
+**Purpose:** Clinic-scoped read-only reference data for API clients (ADR-028).
+
+**Input:**
+
+```php
+activeDoctors()
+activeTreatments()
+activeLabs()
+```
+
+**Output:** Collections of active configuration models for the authenticated clinic.
+
+**Dependencies:** `CurrentClinicResolver`, `ScopesConfigurationQueries` trait
 
 ---
 
@@ -485,6 +513,7 @@ healthWarnings(?int $clinicId = null)
 **Input:**
 
 ```php
+listQuery(?string $search, string $status = 'all')  // current clinic only (ADR-028)
 create([
     'name' => 'Clinic 111',
     'code' => 'CLINIC_111',
@@ -505,8 +534,9 @@ activate($clinic)
 - Never physically deletes rows — `deactivate()` sets `is_active = false`
 - No accounting, import, or login integration in Milestone 06
 - Every create/update/activate/deactivate writes an audit log (`clinic_created`, `clinic_updated`, `clinic_deactivated`, `clinic_activated`)
+- List/read/update operations scoped to authenticated user's clinic; cross-clinic clinic IDs return 404
 
-**Dependencies:** `AuditLogService`, `Clinic` model
+**Dependencies:** `AuditLogService`, `CurrentClinicResolver`, `ScopesConfigurationQueries` trait, `Clinic` model
 
 ---
 
@@ -529,12 +559,30 @@ resolveId(): int
 
 - Reads `auth()->user()->clinic_id` — no fallback clinic
 - Throws `CurrentClinicException` when user is unauthenticated, has no `clinic_id`, or clinic record is missing
-- Used by configuration management services on create — not for query filtering yet
+- Mandatory for all configuration service reads and creates (ADR-028)
 - No global scopes
 
 **Dependencies:** `Auth`, `Clinic`, `User`
 
-**Used by:** `LabManagementService`, `DoctorManagementService`, `TreatmentManagementService`, `LabPriceManagementService`, `DoctorFixedFeeManagementService`, `UserManagementService`
+**Used by:** All configuration management services, `ConfigurationDashboardService`, `ReferenceDataService`, overlap validators (via services and form requests)
+
+---
+
+### `ScopesConfigurationQueries`
+
+**Path:** `app/Services/Configuration/Concerns/ScopesConfigurationQueries.php`
+
+**Purpose:** Shared explicit clinic filtering helpers for configuration services (ADR-028).
+
+**Methods:**
+
+```php
+currentClinicId(): int
+forCurrentClinic(string $modelClass): Builder
+assertSameClinic(Model $model): void  // aborts 404 when record belongs to another clinic
+```
+
+**Used by:** All configuration management services, `ConfigurationDashboardService`, `ReferenceDataService`
 
 ---
 
@@ -591,6 +639,7 @@ Import validation warning and per-row persist result.
 
 **Updated — 2026-06-26**
 
+- Documented explicit query isolation: `ScopesConfigurationQueries`, `ReferenceDataService`, clinic-scoped list methods (Milestone 09, ADR-028)
 - Documented `CurrentClinicResolver` (Milestone 08, ADR-027)
 - Documented configuration `clinic_id` ownership (Milestone 07, ADR-026)
 - Documented `ClinicManagementService` (Milestone 06, ADR-026)
