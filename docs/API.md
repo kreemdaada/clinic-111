@@ -1094,6 +1094,7 @@ Web-only — no API endpoint in Milestone 05. Entry point for the Configuration 
 
 **Updated — 2026-06-26**
 
+- No API endpoint changes in Milestone 07; configuration models now store `clinic_id` internally (ADR-026)
 - Clinic administration API (`/api/admin/clinics`) and web `/clinics` (Milestone 06, ADR-026)
 - Configuration dashboard web UI `/configuration` (Milestone 05)
 - Lab price administration API (`/api/admin/lab-prices`) and web `/lab-prices` (Milestone 03)

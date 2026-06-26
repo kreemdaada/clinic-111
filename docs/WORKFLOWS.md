@@ -485,7 +485,37 @@ sequenceDiagram
 
 ---
 
-## 15. Environment Variables (import / privacy)
+## 15. Configuration Clinic Ownership (Milestone 07)
+
+All configuration models now store `clinic_id` pointing to `clinics.id`.
+
+```mermaid
+sequenceDiagram
+    participant DB as configuration tables
+    participant Clinic as CLINIC_111
+
+    Note over DB: Migration backfills existing rows
+    DB->>Clinic: users.clinic_id
+    DB->>Clinic: doctors.clinic_id
+    DB->>Clinic: labs.clinic_id
+    DB->>Clinic: treatments.clinic_id
+    DB->>Clinic: lab_prices.clinic_id
+    DB->>Clinic: doctor_fixed_fees.clinic_id
+
+    Note over DB: No query isolation yet
+```
+
+**Rules:**
+
+- Every seeded configuration record belongs to `CLINIC_111`
+- Seeders resolve clinic by code — never hardcode clinic IDs
+- New configuration rows default to `CLINIC_111` until CurrentClinicResolver (Milestone 08)
+- Admin CRUD, APIs, imports, and accounting behaviour unchanged
+- Dashboard counts remain global
+
+---
+
+## 16. Environment Variables (import / privacy)
 
 | Variable | Purpose |
 |---|---|
@@ -502,6 +532,10 @@ Same pipeline after row creation: `TreatmentImportValidationService` → `LabJob
 ---
 
 ## What Changed
+
+**Updated — 2026-06-26**
+
+- Configuration clinic ownership workflow (Milestone 07, ADR-026)
 
 **Updated — 2026-06-26**
 

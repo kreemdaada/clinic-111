@@ -98,7 +98,7 @@ The current system already has:
 
 Currently, Clinic 111 exists as the first clinic.
 
-However, most data is still not scoped by `clinic_id`.
+However, configuration models are now scoped by `clinic_id` (Milestone 07). Accounting and transactional tables are not scoped yet.
 
 The next milestones will gradually attach data to clinics.
 
@@ -554,6 +554,10 @@ Done
 
 Attach clinic_id to core configuration tables.
 
+Status:
+
+Done
+
 ## Milestone 08
 
 CurrentClinicResolver.
@@ -582,9 +586,9 @@ Multi-Currency.
 
 # 24. Milestone 07 Scope
 
-Milestone 07 should attach `clinic_id` to the first group of tables.
+Milestone 07 should attach `clinic_id` to the configuration tables below.
 
-Recommended first group:
+Implemented group (Milestone 07):
 
 ```text
 users
@@ -593,6 +597,11 @@ labs
 treatments
 lab_prices
 doctor_fixed_fees
+```
+
+Deferred to later milestones:
+
+```text
 daily_reports
 audit_logs
 ```

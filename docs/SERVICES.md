@@ -470,7 +470,7 @@ healthWarnings(?int $clinicId = null)
 
 - Covers Doctors, Labs, Treatments, Lab Prices, Doctor Fixed Fees, Users
 - Health warnings only — no automatic data changes
-- Optional `$clinicId` reserved for future multi-clinic scoping (currently ignored)
+- Optional `$clinicId` reserved for future multi-clinic scoping (currently ignored; configuration rows have `clinic_id` since Milestone 07 but counts are still global)
 
 **Dependencies:** Configuration models, `AuditLog`, `AuditAction`
 
@@ -563,6 +563,7 @@ Import validation warning and per-row persist result.
 
 **Updated — 2026-06-26**
 
+- Documented configuration `clinic_id` ownership (Milestone 07, ADR-026)
 - Documented `ClinicManagementService` (Milestone 06, ADR-026)
 - Documented `ConfigurationDashboardService` (Milestone 05)
 - Documented `DoctorFixedFeeManagementService`, `DoctorFixedFeeResolver`, and `DoctorFixedFeeOverlapValidator` (Milestone 04)

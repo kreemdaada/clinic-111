@@ -8,7 +8,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 
 ### `clinics`
 
-**Purpose:** Root tenant entity for independent clinic accounting (ADR-026). Not yet referenced by accounting data in Milestone 06.
+**Purpose:** Root tenant entity for independent clinic accounting (ADR-026).
 
 | Field | Type | Notes |
 |---|---|---|
@@ -21,11 +21,9 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | `is_active` | boolean | Inactive clinics reserved for future tenant scoping |
 | `created_at`, `updated_at` | timestamps | |
 
-**Relationships (future — `clinic_id` not yet on child tables):**
+**Relationships:**
 
-- `hasMany` users
-- `hasMany` doctors
-- `hasMany` labs
+- `hasMany` users, doctors, labs, treatments, lab_prices, doctor_fixed_fees
 
 **Example data (seeded):**
 
@@ -38,7 +36,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 - Managed at web `/clinics` and API `/api/admin/clinics` (admin only)
 - Never physically deleted — use `is_active = false`
 - `is_active` is not mass-assignable on the model; set via `ClinicManagementService`
-- Accounting, imports, and login are unchanged — no `clinic_id` on other tables yet
+- Configuration models belong to a clinic via `clinic_id` (Milestone 07); accounting and transactional tables are unchanged until later milestones
 
 ---
 
@@ -49,6 +47,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | Field | Type | Notes |
 |---|---|---|
 | `id` | bigint PK | |
+| `clinic_id` | FK → clinics | Required; scoped to owning clinic (Milestone 07) |
 | `name` | string | Display name |
 | `code` | string unique | e.g. `MAIN_LAB`, `RIYADH_LAB` |
 | `is_active` | boolean | Inactive labs are skipped |
@@ -56,6 +55,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 
 **Relationships:**
 
+- `belongsTo` clinic
 - `hasMany` lab_prices
 - `hasMany` lab_jobs
 
@@ -82,6 +82,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | Field | Type | Notes |
 |---|---|---|
 | `id` | bigint PK | |
+| `clinic_id` | FK → clinics | Required; scoped to owning clinic (Milestone 07) |
 | `name` | string | Display name |
 | `code` | string unique | e.g. `JACK`, `RIYAD`, `PURIYA`, `WA` |
 | `commission_type` | string | `percentage` or `fixed` |
@@ -92,6 +93,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 
 **Relationships:**
 
+- `belongsTo` clinic
 - `belongsTo` defaultLab (labs)
 - `hasMany` daily_work_rows
 - `hasMany` lab_prices
@@ -126,6 +128,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | Field | Type | Notes |
 |---|---|---|
 | `id` | bigint PK | |
+| `clinic_id` | FK → clinics | Required; scoped to owning clinic (Milestone 07) |
 | `code` | string unique | e.g. `ZIR`, `IMPL-CR`, `BG` |
 | `name` | string | Full name |
 | `description` | text nullable | Optional admin notes |
@@ -135,6 +138,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 
 **Relationships:**
 
+- `belongsTo` clinic
 - `hasMany` work_items
 - `hasMany` lab_prices
 - `hasMany` doctor_fixed_fees
@@ -164,6 +168,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | Field | Type | Notes |
 |---|---|---|
 | `id` | bigint PK | |
+| `clinic_id` | FK → clinics | Required; scoped to owning clinic (Milestone 07) |
 | `lab_id` | FK → labs | Required |
 | `treatment_id` | FK → treatments | Required |
 | `doctor_id` | FK → doctors nullable | `null` = default price for all doctors |
@@ -183,6 +188,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 
 **Relationships:**
 
+- `belongsTo` clinic
 - `belongsTo` lab
 - `belongsTo` treatment
 - `belongsTo` doctor (nullable)
@@ -211,6 +217,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | Field | Type | Notes |
 |---|---|---|
 | `id` | bigint PK | |
+| `clinic_id` | FK → clinics | Required; scoped to owning clinic (Milestone 07) |
 | `doctor_id` | FK → doctors | |
 | `treatment_id` | FK → treatments | |
 | `fee_amount` | decimal(12,2) | Must be > 0 |
@@ -222,6 +229,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 
 **Relationships:**
 
+- `belongsTo` clinic
 - `belongsTo` doctor
 - `belongsTo` treatment
 
@@ -440,6 +448,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | Field | Type | Notes |
 |---|---|---|
 | `id` | bigint PK | |
+| `clinic_id` | FK → clinics | Required; belongs to clinic (Milestone 07); not yet used at login |
 | `name` | string | Display name |
 | `email` | string unique | Login identifier |
 | `email_verified_at` | timestamp nullable | |
@@ -451,6 +460,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 
 **Relationships:**
 
+- `belongsTo` clinic
 - `hasMany` audit_logs (as actor via `user_id`)
 - Sanctum `personal_access_tokens`
 
@@ -515,6 +525,10 @@ doctor_fixed_fees ── doctors + treatments
 ---
 
 ## What Changed
+
+**Updated — 2026-06-26**
+
+- `clinic_id` on configuration tables: users, doctors, labs, treatments, lab_prices, doctor_fixed_fees (Milestone 07, ADR-026)
 
 **Updated — 2026-06-25**
 

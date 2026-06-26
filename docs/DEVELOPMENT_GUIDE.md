@@ -411,11 +411,11 @@ Multi Clinic must never be implemented partially.
 
 Implementation order:
 
-Clinic
+Clinic ✅
 
 ↓
 
-clinic_id
+clinic_id (configuration models) ✅
 
 ↓
 

@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Enums\UserRole;
 use App\Models\User;
+use Database\Seeders\Concerns\ResolvesDefaultClinic;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -14,8 +15,12 @@ use Illuminate\Support\Facades\Hash;
  */
 class UserSeeder extends Seeder
 {
+    use ResolvesDefaultClinic;
+
     public function run(): void
     {
+        $clinic = $this->defaultClinic();
+
         User::query()->updateOrCreate(
             ['email' => 'admin@clinic.test'],
             [
@@ -23,6 +28,7 @@ class UserSeeder extends Seeder
                 'password' => Hash::make('password'),
                 'role' => UserRole::Admin,
                 'is_active' => true,
+                'clinic_id' => $clinic->id,
             ],
         );
 
@@ -33,6 +39,7 @@ class UserSeeder extends Seeder
                 'password' => Hash::make('password'),
                 'role' => UserRole::Accountant,
                 'is_active' => true,
+                'clinic_id' => $clinic->id,
             ],
         );
 
@@ -43,6 +50,7 @@ class UserSeeder extends Seeder
                 'password' => Hash::make('password'),
                 'role' => UserRole::Viewer,
                 'is_active' => true,
+                'clinic_id' => $clinic->id,
             ],
         );
     }

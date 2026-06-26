@@ -8,8 +8,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * Root tenant entity for independent clinic accounting (ADR-026).
  *
- * Table: `clinics`. Future milestones will scope users, doctors, labs, and
- * accounting data through `clinic_id` — not used in Milestone 06.
+ * Table: `clinics`. Configuration models are scoped by `clinic_id` (Milestone 07).
+ * Query isolation and runtime resolver arrive in Milestone 08.
  */
 class Clinic extends Model
 {
@@ -31,27 +31,33 @@ class Clinic extends Model
         ];
     }
 
-    /**
-     * Future: users will belong to a clinic via `clinic_id`.
-     */
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
     }
 
-    /**
-     * Future: doctors will belong to a clinic via `clinic_id`.
-     */
     public function doctors(): HasMany
     {
         return $this->hasMany(Doctor::class);
     }
 
-    /**
-     * Future: laboratories will belong to a clinic via `clinic_id`.
-     */
     public function labs(): HasMany
     {
         return $this->hasMany(Lab::class);
+    }
+
+    public function treatments(): HasMany
+    {
+        return $this->hasMany(Treatment::class);
+    }
+
+    public function labPrices(): HasMany
+    {
+        return $this->hasMany(LabPrice::class);
+    }
+
+    public function doctorFixedFees(): HasMany
+    {
+        return $this->hasMany(DoctorFixedFee::class);
     }
 }

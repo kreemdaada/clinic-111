@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Treatment;
+use Database\Seeders\Concerns\ResolvesDefaultClinic;
 use Illuminate\Database\Seeder;
 
 /**
@@ -14,8 +15,12 @@ use Illuminate\Database\Seeder;
  */
 class TreatmentSeeder extends Seeder
 {
+    use ResolvesDefaultClinic;
+
     public function run(): void
     {
+        $clinic = $this->defaultClinic();
+
         $labCostNames = [
             'MC' => 'Metal Ceramic Crown',
             'ZIR' => 'Zircon Crown',
@@ -35,6 +40,7 @@ class TreatmentSeeder extends Seeder
                     'name' => $labCostNames[$code] ?? $code,
                     'has_lab_cost' => true,
                     'is_active' => true,
+                    'clinic_id' => $clinic->id,
                 ],
             );
         }
@@ -59,7 +65,7 @@ class TreatmentSeeder extends Seeder
         foreach ($withoutLabCost as $code => $name) {
             Treatment::query()->updateOrCreate(
                 ['code' => $code],
-                ['name' => $name, 'has_lab_cost' => false, 'is_active' => true],
+                ['name' => $name, 'has_lab_cost' => false, 'is_active' => true, 'clinic_id' => $clinic->id],
             );
         }
     }

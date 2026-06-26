@@ -150,6 +150,10 @@ Patient name, MRN, and file number are **never stored or exposed** in API respon
 
 **Updated — 2026-06-26**
 
+- Configuration models now belong to `CLINIC_111` via `clinic_id` (Milestone 07, ADR-026)
+
+**Updated — 2026-06-26**
+
 - Clinic tenant model and administration (Milestone 06, ADR-026)
 
 **Updated — 2026-06-26**
