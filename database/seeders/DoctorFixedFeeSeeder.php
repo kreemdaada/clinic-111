@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Doctor;
 use App\Models\DoctorFixedFee;
 use App\Models\Treatment;
+use Database\Seeders\Concerns\ResolvesDefaultClinic;
 use Illuminate\Database\Seeder;
 
 /**
@@ -14,8 +15,11 @@ use Illuminate\Database\Seeder;
  */
 class DoctorFixedFeeSeeder extends Seeder
 {
+    use ResolvesDefaultClinic;
+
     public function run(): void
     {
+        $clinic = $this->defaultClinic();
         $doctorWa = Doctor::query()->where('code', 'WA')->firstOrFail();
 
         $fixedFees = [
@@ -36,6 +40,7 @@ class DoctorFixedFeeSeeder extends Seeder
                     'fee_amount' => $feeData['fee_amount'],
                     'currency' => $feeData['currency'],
                     'is_active' => true,
+                    'clinic_id' => $clinic->id,
                 ],
             );
         }

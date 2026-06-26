@@ -89,4 +89,16 @@ enum AuditAction: string
 
     /** A doctor fixed fee row was reactivated. */
     case DoctorFixedFeeActivated = 'doctor_fixed_fee_activated';
+
+    /** A clinic tenant record was created. */
+    case ClinicCreated = 'clinic_created';
+
+    /** A clinic tenant record was updated. */
+    case ClinicUpdated = 'clinic_updated';
+
+    /** A clinic was deactivated (never physically deleted). */
+    case ClinicDeactivated = 'clinic_deactivated';
+
+    /** A clinic was reactivated. */
+    case ClinicActivated = 'clinic_activated';
 }

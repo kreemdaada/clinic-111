@@ -31,7 +31,7 @@ All business rules (doctors, treatments, lab prices, commission rules) are store
 2. **Daily Report Review** — View calculated report, validation summary, extraction logs (no patient names in API).
 3. **Monthly Income Report** — Aggregate payments and lab costs per doctor for a calendar month.
 
-4. **Administration** — Configuration dashboard and modules for doctors, laboratories, treatments, lab prices, no-commission fees, and users (Milestones 01–05).
+4. **Administration** — Configuration dashboard and modules for clinics, doctors, laboratories, treatments, lab prices, no-commission fees, and users (Milestones 01–06).
 
 See [WORKFLOWS.md](./WORKFLOWS.md) for step-by-step details.
 
@@ -60,7 +60,7 @@ See [WORKFLOWS.md](./WORKFLOWS.md) for step-by-step details.
 ┌──────────────────────────▼──────────────────────────────────┐
 │                   Eloquent Models / DB                      │
 │  doctors | labs | treatments | lab_prices | doctor_fixed_fees│
-│  daily_reports | daily_work_rows | work_items | lab_jobs    │
+│  clinics | daily_reports | daily_work_rows | work_items | lab_jobs    │
 │  payments | daily_report_import_warnings | audit_logs      │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -112,6 +112,7 @@ See [WORKFLOWS.md](./WORKFLOWS.md) for step-by-step details.
 
 After `php artisan migrate --seed`, the system includes:
 
+- **Clinic:** `CLINIC_111` (Clinic 111, AED, Asia/Dubai — ADR-026)
 - **Labs:** `MAIN_LAB`, `RIYADH_LAB`
 - **Doctors:** `JACK` (35%), `RIYAD` (35%, Riyad lab), `PURIYA` (25%), `WA` (fixed fees)
 - **Treatments with lab cost (JOB):** MC (105 AED), ZIR, IMPL-CR, IMPL-ZIR, POST, ABT, IMPL, REMOV (100 AED)
@@ -146,6 +147,14 @@ Patient name, MRN, and file number are **never stored or exposed** in API respon
 ---
 
 ## What Changed
+
+**Updated — 2026-06-26**
+
+- Configuration models now belong to `CLINIC_111` via `clinic_id` (Milestone 07, ADR-026)
+
+**Updated — 2026-06-26**
+
+- Clinic tenant model and administration (Milestone 06, ADR-026)
 
 **Updated — 2026-06-26**
 

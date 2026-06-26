@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToClinic;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Lab extends Model
 {
+    use BelongsToClinic;
+
     protected $fillable = [
         'name',
         'code',

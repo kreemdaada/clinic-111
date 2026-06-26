@@ -30,4 +30,9 @@ abstract class TestCase extends BaseTestCase
 
         return $user;
     }
+
+    protected function clinic111(): \App\Models\Clinic
+    {
+        return \App\Models\Clinic::query()->where('code', 'CLINIC_111')->firstOrFail();
+    }
 }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CommissionType;
+use App\Models\Concerns\BelongsToClinic;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  */
 class Doctor extends Model
 {
+    use BelongsToClinic;
+
     protected $fillable = [
         'name',
         'code',

@@ -27,6 +27,9 @@ php artisan test --testsuite=Unit
 | `DoctorFixedFeeManagementServiceTest` | Fixed fee CRUD, overlap guard, duplicate/activate |
 | `DoctorFixedFeeResolverTest` | Active fee resolution by doctor/treatment/date |
 | `ConfigurationDashboardServiceTest` | Dashboard stats, audit activity, health warnings |
+| `ClinicManagementServiceTest` | Clinic CRUD, audit logging, soft deactivate/activate |
+| `ClinicRelationshipsTest` | Clinic hasMany / belongsTo configuration relations |
+| `ConfigurationClinicOwnershipTest` | Seeder ownership, backfill, NOT NULL constraint |
 | `LabCostTreatmentCatalogTest` | Which codes generate JOB vs clinical-only |
 | `NonLabTreatmentJobTest` | CF/SXP/RCT persist as work_items but never create lab_jobs |
 | `PatientPrivacyTest` | HMAC hash + PII stripped from `raw_data_json` |

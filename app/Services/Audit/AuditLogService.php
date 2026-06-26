@@ -4,6 +4,7 @@ namespace App\Services\Audit;
 
 use App\Enums\AuditAction;
 use App\Models\AuditLog;
+use App\Models\Clinic;
 use App\Models\DailyReport;
 use App\Models\Doctor;
 use App\Models\DoctorFixedFee;
@@ -394,6 +395,68 @@ class AuditLogService
             'name' => $lab->name,
             'code' => $lab->code,
             'is_active' => $lab->is_active,
+        ];
+    }
+
+    public function logClinicCreated(Clinic $clinic): AuditLog
+    {
+        return $this->log(
+            AuditAction::ClinicCreated,
+            $clinic,
+            null,
+            $this->clinicSnapshot($clinic),
+        );
+    }
+
+    public function logClinicUpdated(Clinic $clinic, array $oldValues, array $newValues): ?AuditLog
+    {
+        if (($oldValues['is_active'] ?? true) && ! ($newValues['is_active'] ?? true)) {
+            return $this->logClinicDeactivated($clinic, $oldValues);
+        }
+
+        if (! ($oldValues['is_active'] ?? true) && ($newValues['is_active'] ?? true)) {
+            return $this->log(
+                AuditAction::ClinicActivated,
+                $clinic,
+                $oldValues,
+                $newValues,
+            );
+        }
+
+        if ($oldValues === $newValues) {
+            return null;
+        }
+
+        return $this->log(
+            AuditAction::ClinicUpdated,
+            $clinic,
+            $oldValues,
+            $newValues,
+        );
+    }
+
+    public function logClinicDeactivated(Clinic $clinic, array $oldValues): AuditLog
+    {
+        return $this->log(
+            AuditAction::ClinicDeactivated,
+            $clinic,
+            $oldValues,
+            $this->clinicSnapshot($clinic),
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function clinicSnapshot(Clinic $clinic): array
+    {
+        return [
+            'name' => $clinic->name,
+            'code' => $clinic->code,
+            'currency' => $clinic->currency,
+            'timezone' => $clinic->timezone,
+            'country' => $clinic->country,
+            'is_active' => $clinic->is_active,
         ];
     }
 

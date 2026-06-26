@@ -6,6 +6,7 @@ use App\Models\Doctor;
 use App\Models\Lab;
 use App\Models\LabPrice;
 use App\Models\Treatment;
+use Database\Seeders\Concerns\ResolvesDefaultClinic;
 use Illuminate\Database\Seeder;
 
 /**
@@ -16,8 +17,11 @@ use Illuminate\Database\Seeder;
  */
 class LabPriceSeeder extends Seeder
 {
+    use ResolvesDefaultClinic;
+
     public function run(): void
     {
+        $clinic = $this->defaultClinic();
         $mainLab = Lab::query()->where('code', 'MAIN_LAB')->firstOrFail();
         $riyadhLab = Lab::query()->where('code', 'RIYADH_LAB')->firstOrFail();
         $doctorRiyad = Doctor::query()->where('code', 'RIYAD')->firstOrFail();
@@ -46,6 +50,7 @@ class LabPriceSeeder extends Seeder
                 [
                     'unit_cost' => $priceData['unit_cost'],
                     'currency' => 'AED',
+                    'clinic_id' => $clinic->id,
                 ],
             );
         }
@@ -68,6 +73,7 @@ class LabPriceSeeder extends Seeder
                 [
                     'unit_cost' => $priceData['unit_cost'],
                     'currency' => 'AED',
+                    'clinic_id' => $clinic->id,
                 ],
             );
         }

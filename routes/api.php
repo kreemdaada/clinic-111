@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\ClinicAdminController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DoctorFixedFeeAdminController;
 use App\Http\Controllers\Api\DailyReportController;
@@ -30,6 +31,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/daily-reports/import', [DailyReportController::class, 'import'])
         ->middleware(['role:admin,accountant', 'throttle:20,1']);
+
+    Route::middleware('role:admin')->prefix('admin/clinics')->group(function () {
+        Route::get('/', [ClinicAdminController::class, 'index']);
+        Route::post('/', [ClinicAdminController::class, 'store']);
+        Route::put('/{clinic}', [ClinicAdminController::class, 'update']);
+        Route::delete('/{clinic}', [ClinicAdminController::class, 'destroy']);
+        Route::post('/{clinic}/activate', [ClinicAdminController::class, 'activate']);
+    });
 
     Route::middleware('role:admin')->prefix('admin/labs')->group(function () {
         Route::get('/', [LabAdminController::class, 'index']);

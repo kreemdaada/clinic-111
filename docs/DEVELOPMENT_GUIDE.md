@@ -411,11 +411,11 @@ Multi Clinic must never be implemented partially.
 
 Implementation order:
 
-Clinic
+Clinic ✅
 
 ↓
 
-clinic_id
+clinic_id (configuration models) ✅
 
 ↓
 
@@ -438,6 +438,27 @@ Registration
 Testing
 
 No shortcuts.
+
+---
+
+# Configuration clinic_id (Milestone 07)
+
+`clinic_id` is required on configuration tables:
+
+* users
+* doctors
+* labs
+* treatments
+* lab_prices
+* doctor_fixed_fees
+
+Rules:
+
+* Migration backfills existing rows to `CLINIC_111`
+* Seeders resolve clinic by code — never hardcode IDs
+* `BelongsToClinic` trait assigns `CLINIC_111` on create when unset (transitional until Milestone 08)
+* No query isolation, no resolver, no global scopes
+* Accounting engine and import pipeline unchanged
 
 ---
 

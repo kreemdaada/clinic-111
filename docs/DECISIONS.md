@@ -396,6 +396,376 @@ Milestone 05 — Configuration Dashboard
 
 ---
 
+## ADR-026
+
+### Title
+
+Clinic Entity as Tenant Root
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-26
+
+### Milestone
+
+Milestone 06 — Clinic Model
+
+### Context
+
+The system started as a single-clinic accounting application for Clinic 111.
+
+The project has now evolved into a configurable accounting platform.
+
+The following modules are already configurable:
+
+* Doctors
+* Laboratories
+* Treatments
+* Lab Prices
+* Doctor Fixed Fees
+* Users
+* Configuration Dashboard
+
+The next architectural step is to prepare the system for multiple independent clinics.
+
+Each clinic may have:
+
+* Different doctors
+* Different laboratories
+* Different treatment catalog
+* Different lab prices
+* Different fixed fees
+* Different users
+* Different currency
+* Different timezone
+* Different accounting rules in the future
+
+The application must support this without duplicating the codebase.
+
+---
+
+### Decision
+
+Introduce `Clinic` as the root tenant entity.
+
+A clinic represents one independent accounting tenant.
+
+Every authenticated user belongs to exactly one clinic.
+
+Future clinic-scoped data will be linked to `clinics.id` through `clinic_id`.
+
+The following data will eventually be scoped by clinic:
+
+* Users
+* Doctors
+* Laboratories
+* Treatments
+* Lab Prices
+* Doctor Fixed Fees
+* Daily Reports
+* Daily Work Rows
+* Payments
+* Work Items
+* Lab Jobs
+* Audit Logs
+
+The initial implementation must not introduce global query scopes.
+
+Tenant isolation must be explicit.
+
+Clinic context will be resolved through a dedicated service in a later milestone:
+
+`CurrentClinicResolver`
+
+---
+
+### Registration Decision
+
+The future registration flow will be:
+
+1. User submits registration form.
+2. Application creates a new clinic.
+3. Application creates the first admin/owner user and assigns it to the clinic.
+4. Application seeds or initializes default configuration for that clinic.
+5. User is redirected to the Configuration Dashboard.
+
+The clinic and first user must be created inside one database transaction.
+
+A user must not remain permanently without a clinic.
+
+---
+
+## ADR-027
+
+### Title
+
+Current Clinic Resolver
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-26
+
+### Milestone
+
+Milestone 08
+
+### Context
+
+After Milestone 07, every configuration record belongs to a clinic through `clinic_id`.
+
+However, new records are still assigned to `CLINIC_111` through a temporary default. The application has ownership information but no runtime clinic context.
+
+The system now requires a single source that determines the active clinic for each authenticated request.
+
+### Decision
+
+Introduce a `CurrentClinicResolver`.
+
+The resolver determines the current clinic from the authenticated user's `clinic_id`.
+
+Rules:
+
+* Every authenticated user belongs to exactly one clinic.
+* Every request has exactly one current clinic.
+* Services create new configuration records using the current clinic.
+* No Global Scopes.
+* No automatic query filtering yet.
+* Controllers never resolve the clinic directly.
+* Services receive the clinic from the resolver.
+
+The transitional `CLINIC_111` default introduced in Milestone 07 must be removed.
+
+### Alternatives Considered
+
+**Global Scope**
+
+Rejected.
+
+Hidden query modifications make debugging difficult and increase maintenance complexity.
+
+**Passing clinic_id through every controller**
+
+Rejected.
+
+Creates duplicated code and increases the chance of inconsistencies.
+
+**Resolver Service**
+
+Accepted.
+
+Provides a single, explicit source of the current clinic while keeping business logic independent from authentication.
+
+### Consequences
+
+Advantages
+
+* Single source of truth.
+* Removes hardcoded Clinic 111 fallback.
+* Services become tenant-aware.
+* Ready for query isolation in later milestones.
+* Easy to test.
+
+Disadvantages
+
+* Resolver becomes required for configuration creation.
+* Future background jobs will also require clinic context.
+
+Technical Impact
+
+* Remove transitional default from `BelongsToClinic`.
+* Add `CurrentClinicResolver`.
+* Inject resolver into configuration services.
+* New records receive `clinic_id` from the resolver.
+
+### Affected Components
+
+Models
+
+* User
+
+Services
+
+* CurrentClinicResolver
+* ClinicManagementService
+* DoctorManagementService
+* LabManagementService
+* TreatmentManagementService
+* LabPriceManagementService
+* DoctorFixedFeeManagementService
+
+Controllers
+
+* none (remain thin)
+
+Database
+
+* unchanged
+
+API
+
+* unchanged
+
+UI
+
+* unchanged
+
+Tests
+
+* Resolver tests
+* Create ownership tests
+* Cross-clinic ownership tests
+
+### Related Documentation
+
+* PROJECT_OVERVIEW.md
+* SERVICES.md
+* WORKFLOWS.md
+* DEVELOPMENT_GUIDE.md
+* MULTI_CLINIC_ARCHITECTURE.md
+
+### Notes
+
+Query isolation is intentionally postponed to the next milestone.
+---
+
+### No Global Scope Decision
+
+The project will not use Laravel Global Scopes for clinic isolation.
+
+Reason:
+
+* Global scopes hide query behavior.
+* They can break admin/reporting queries.
+* They make debugging harder.
+* They may accidentally affect imports, exports, audits, and background jobs.
+
+Instead, clinic isolation will be implemented explicitly using:
+
+* `CurrentClinicResolver`
+* route middleware
+* service-layer query scoping
+* authorization checks
+* tests verifying no cross-clinic leakage
+
+---
+
+### Alternatives Considered
+
+#### Alternative 1 — Separate Database per Clinic
+
+Rejected.
+
+Reason:
+
+* More operational complexity
+* Harder backups
+* Harder reporting
+* Too early for current stage
+
+#### Alternative 2 — Laravel Global Scopes
+
+Rejected.
+
+Reason:
+
+* Hidden query behavior
+* Higher debugging risk
+* Possible accidental filtering in admin/reporting contexts
+
+#### Alternative 3 — Single Shared Database with Explicit clinic_id
+
+Accepted.
+
+Reason:
+
+* Simple operational model
+* Easier SaaS evolution
+* Clear tenant boundaries
+* Testable isolation
+* Fits the current Laravel architecture
+
+---
+
+### Consequences
+
+Advantages:
+
+* The system can evolve toward Multi-Clinic SaaS.
+* Each clinic can own independent configuration.
+* Future query isolation becomes explicit and testable.
+* The accounting engine can remain shared.
+
+Disadvantages:
+
+* More explicit scoping is required in services.
+* Developers must consistently pass or resolve clinic context.
+* More tests are required to prevent cross-clinic data leakage.
+
+---
+
+### Affected Components
+
+Future changes will affect:
+
+* Clinic Model
+* User Model
+* Doctor Model
+* Lab Model
+* Treatment Model
+* LabPrice Model
+* DoctorFixedFee Model
+* DailyReport Model
+* AuditLog Model
+* ConfigurationDashboardService
+* Admin Controllers
+* Import Services
+* Accounting Resolvers
+
+---
+
+### Related Documentation
+
+* ROADMAP.md
+* DEVELOPMENT_GUIDE.md
+* ARCHITECTURE_PRINCIPLES.md
+* DATABASE_SCHEMA.md
+* SERVICES.md
+* WORKFLOWS.md
+* API.md
+
+---
+
+### Related Future Milestones
+
+* Milestone 06 — Clinic Model
+* Milestone 07 — Attach clinic_id
+* Milestone 08 — Current Clinic Resolver
+* Milestone 09 — Query Isolation
+* Milestone 10 — Dynamic Business Rules
+* Milestone 11 — Multi-Clinic Testing
+
+---
+
+### Notes
+
+Clinic 111 remains the first tenant.
+
+During migration, all existing data will eventually be assigned to `CLINIC_111`.
+
+Multi-Clinic must be implemented gradually.
+
+No milestone may introduce partial tenant isolation without tests.
+
+---
+
 # ADR Index
 
 | ADR     | Title                               | Status   |
@@ -425,6 +795,7 @@ Milestone 05 — Configuration Dashboard
 | ADR-023 | Admin-Managed Lab Price Catalog     | Accepted |
 | ADR-024 | Admin-Managed Doctor Fixed Fee Catalog | Accepted |
 | ADR-025 | Configuration Layer                 | Accepted |
+| ADR-026 | Clinic Entity as Tenant Root        | Accepted |
 
 ---
 
@@ -432,40 +803,28 @@ Milestone 05 — Configuration Dashboard
 
 The following architectural topics are expected to receive future ADRs.
 
-ADR-026
-
-Clinic Entity
-
 ADR-027
-
 Attach clinic_id
 
-ADR-027
-
+ADR-028
 Current Clinic Resolver
 
-ADR-028
-
+ADR-029
 Query Isolation
 
-ADR-029
-
+ADR-030
 Dynamic Business Rules
 
-ADR-030
-
+ADR-031
 Multi-Clinic Registration Wizard
 
-ADR-031
-
+ADR-032
 Tenant Security
 
-ADR-032
-
+ADR-033
 Multi-Currency Strategy
 
-ADR-033
-
+ADR-034
 Accounting Rule Engine
 
 ---

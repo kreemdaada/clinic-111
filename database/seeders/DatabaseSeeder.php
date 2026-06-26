@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
+            ClinicSeeder::class,
             LabSeeder::class,
             DoctorSeeder::class,
             TreatmentSeeder::class,

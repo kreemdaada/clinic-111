@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Enums\CommissionType;
 use App\Models\Doctor;
 use App\Models\Lab;
+use Database\Seeders\Concerns\ResolvesDefaultClinic;
 use Illuminate\Database\Seeder;
 
 /**
@@ -14,8 +15,11 @@ use Illuminate\Database\Seeder;
  */
 class DoctorSeeder extends Seeder
 {
+    use ResolvesDefaultClinic;
+
     public function run(): void
     {
+        $clinic = $this->defaultClinic();
         $mainLab = Lab::query()->where('code', 'MAIN_LAB')->firstOrFail();
         $riyadhLab = Lab::query()->where('code', 'RIYADH_LAB')->firstOrFail();
 
@@ -27,6 +31,7 @@ class DoctorSeeder extends Seeder
                 'commission_percentage' => 35,
                 'default_lab_id' => $mainLab->id,
                 'is_active' => true,
+                'clinic_id' => $clinic->id,
             ],
         );
 
@@ -38,6 +43,7 @@ class DoctorSeeder extends Seeder
                 'commission_percentage' => 35,
                 'default_lab_id' => $riyadhLab->id,
                 'is_active' => true,
+                'clinic_id' => $clinic->id,
             ],
         );
 
@@ -49,6 +55,7 @@ class DoctorSeeder extends Seeder
                 'commission_percentage' => 25,
                 'default_lab_id' => $mainLab->id,
                 'is_active' => true,
+                'clinic_id' => $clinic->id,
             ],
         );
 
@@ -60,6 +67,7 @@ class DoctorSeeder extends Seeder
                 'commission_percentage' => null,
                 'default_lab_id' => $mainLab->id,
                 'is_active' => true,
+                'clinic_id' => $clinic->id,
             ],
         );
     }

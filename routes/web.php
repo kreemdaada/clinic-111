@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Web\ClinicAdminController;
 use App\Http\Controllers\Web\ConfigurationDashboardController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\DailyReportEditorController;
@@ -72,6 +73,14 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:admin')->prefix('configuration')->name('configuration.')->group(function () {
         Route::get('/', [ConfigurationDashboardController::class, 'index'])->name('dashboard');
+    });
+
+    Route::middleware('role:admin')->prefix('clinics')->name('clinics.')->group(function () {
+        Route::get('/', [ClinicAdminController::class, 'index'])->name('index');
+        Route::post('/', [ClinicAdminController::class, 'store'])->name('store');
+        Route::put('/{clinic}', [ClinicAdminController::class, 'update'])->name('update');
+        Route::delete('/{clinic}', [ClinicAdminController::class, 'destroy'])->name('destroy');
+        Route::post('/{clinic}/activate', [ClinicAdminController::class, 'activate'])->name('activate');
     });
 
     Route::middleware('role:admin')->prefix('doctors')->name('doctors.')->group(function () {
