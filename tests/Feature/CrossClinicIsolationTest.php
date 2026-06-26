@@ -216,4 +216,31 @@ class CrossClinicIsolationTest extends TestCase
             ])
             ->assertNotFound();
     }
+
+    public function test_two_clinics_can_use_the_same_treatment_code(): void
+    {
+        $admin111 = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+
+        $this->actingAs($this->clinic222['admin'])
+            ->post(route('treatments.store'), [
+                'code' => 'ZIR',
+                'name' => 'Clinic 222 Zirconia',
+                'has_lab_cost' => true,
+            ])
+            ->assertRedirect(route('treatments.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('treatments', [
+            'clinic_id' => $this->clinic222['clinic']->id,
+            'code' => 'ZIR',
+        ]);
+
+        $this->actingAs($admin111)
+            ->post(route('treatments.store'), [
+                'code' => 'ZIR',
+                'name' => 'Duplicate attempt in clinic 111',
+                'has_lab_cost' => true,
+            ])
+            ->assertSessionHasErrors('code');
+    }
 }

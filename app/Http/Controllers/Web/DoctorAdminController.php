@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Doctors\StoreDoctorRequest;
 use App\Http\Requests\Doctors\UpdateDoctorRequest;
 use App\Models\Doctor;
 use App\Services\Accounting\LabManagementService;
@@ -26,6 +27,15 @@ class DoctorAdminController extends Controller
             'doctors' => $this->doctorManagementService->listForAdministration(),
             'labs' => $this->labManagementService->listActive(),
         ]);
+    }
+
+    public function store(StoreDoctorRequest $request): RedirectResponse
+    {
+        $doctor = $this->doctorManagementService->create($request->validated());
+
+        return redirect()
+            ->route('doctors.index')
+            ->with('success', "Doctor {$doctor->code} created.");
     }
 
     public function update(UpdateDoctorRequest $request, Doctor $doctor): RedirectResponse

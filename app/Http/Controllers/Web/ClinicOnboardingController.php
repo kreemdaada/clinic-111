@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Onboarding\RegisterClinicRequest;
 use App\Services\Configuration\ClinicOnboardingService;
+use App\Support\ClinicRegistrationOptions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -26,7 +27,10 @@ class ClinicOnboardingController extends Controller
             return redirect()->route('configuration.dashboard');
         }
 
-        return view('onboarding.register-clinic');
+        return view('onboarding.register-clinic', [
+            'currencies' => ClinicRegistrationOptions::currencies(),
+            'timezones' => ClinicRegistrationOptions::timezones(),
+        ]);
     }
 
     public function store(RegisterClinicRequest $request): RedirectResponse

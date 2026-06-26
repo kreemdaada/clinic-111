@@ -4,6 +4,7 @@ namespace App\Services\DailyReport;
 
 use App\Enums\CommissionType;
 use App\Models\Doctor;
+use App\Models\DoctorLabBilling;
 use App\Models\Lab;
 use App\Models\Treatment;
 use App\Services\Accounting\DoctorFixedFeeResolver;
@@ -30,6 +31,8 @@ class DoctorTreatmentCatalogService
     {
         $workDate ??= now()->startOfDay();
 
+        $this->ensureLabBillingSynced($doctor);
+
         return $this->allowedTreatments($doctor)
             ->map(function (Treatment $treatment) use ($doctor, $workDate) {
                 $fixedFee = $this->fixedFeeFor($doctor, $treatment, $workDate);
@@ -37,7 +40,10 @@ class DoctorTreatmentCatalogService
                 $labPrice = null;
 
                 if ($billsLab) {
-                    $activeLabs = Lab::query()->where('is_active', true)->get();
+                    $activeLabs = Lab::query()
+                        ->where('clinic_id', $doctor->clinic_id)
+                        ->where('is_active', true)
+                        ->get();
                     $resolved = $this->labPriceResolver->resolveWithLabFallback(
                         $doctor,
                         $treatment,
@@ -47,6 +53,7 @@ class DoctorTreatmentCatalogService
 
                     if ($resolved !== null) {
                         $labPrice = [
+                            'unit_cost' => (string) $resolved['price']->unit_cost,
                             'unit_cost_aed' => (string) $resolved['price']->unit_cost,
                             'currency' => $resolved['price']->currency,
                             'lab_code' => $resolved['lab']->code,
@@ -74,6 +81,7 @@ class DoctorTreatmentCatalogService
     {
         if ($doctor->commission_type === CommissionType::Fixed) {
             return Treatment::query()
+                ->where('clinic_id', $doctor->clinic_id)
                 ->where('is_active', true)
                 ->whereHas('doctorFixedFees', fn ($query) => $query
                     ->where('doctor_id', $doctor->id)
@@ -82,20 +90,36 @@ class DoctorTreatmentCatalogService
                 ->get();
         }
 
-        $doctor->loadMissing('doctorLabBillings');
-        $labTreatmentIds = $doctor->doctorLabBillings
-            ->where('bill_lab_job', true)
-            ->pluck('treatment_id');
-
         return Treatment::query()
+            ->where('clinic_id', $doctor->clinic_id)
             ->where('is_active', true)
-            ->where(function ($query) use ($labTreatmentIds) {
-                $query
-                    ->where('has_lab_cost', false)
-                    ->orWhereIn('id', $labTreatmentIds);
-            })
             ->orderBy('code')
             ->get();
+    }
+
+    private function ensureLabBillingSynced(Doctor $doctor): void
+    {
+        if ($doctor->commission_type !== CommissionType::Percentage) {
+            return;
+        }
+
+        $labCostTreatmentIds = Treatment::query()
+            ->where('clinic_id', $doctor->clinic_id)
+            ->where('has_lab_cost', true)
+            ->where('is_active', true)
+            ->pluck('id');
+
+        foreach ($labCostTreatmentIds as $treatmentId) {
+            DoctorLabBilling::query()->firstOrCreate(
+                [
+                    'doctor_id' => $doctor->id,
+                    'treatment_id' => $treatmentId,
+                ],
+                [
+                    'bill_lab_job' => true,
+                ],
+            );
+        }
     }
 
     /**

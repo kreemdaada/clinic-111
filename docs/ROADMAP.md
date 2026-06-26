@@ -70,6 +70,34 @@ Only after that may the next milestone begin.
 
 ---
 
+# Test Database Isolation
+
+Local development and automated tests must **never share the same SQLite file**.
+
+| File | Purpose |
+|------|---------|
+| `database/database.sqlite` | **Dev** — `php artisan serve`, manual UI work, registered clinics |
+| `database/testing.sqlite` | **Tests only** — `php artisan test` (via `phpunit.xml` + `.env.testing`) |
+
+Configuration
+
+* `.env` / `.env.example` — dev app (`database/database.sqlite` when using SQLite)
+* `.env.testing` — test env with `DB_DATABASE=database/testing.sqlite`
+* `phpunit.xml` — sets `APP_ENV=testing` and the test database path
+
+Rules
+
+* Run **`php artisan test`** freely — it uses `testing.sqlite` only; dev data stays intact.
+* **`php artisan migrate:fresh`** without `--env=testing` wipes the **dev** database (users, clinics, reports).
+* Do not point tests at `database/database.sqlite`.
+* Both `*.sqlite` files are gitignored under `database/.gitignore`.
+
+After accidental dev DB loss: `php artisan db:seed` restores Clinic 111 demo users (`admin@clinic.test` / `password`).
+
+See also `docs/DEVELOPMENT_GUIDE.md` (Git Workflow section).
+
+---
+
 # Milestone Roadmap
 
 ## Milestone 01

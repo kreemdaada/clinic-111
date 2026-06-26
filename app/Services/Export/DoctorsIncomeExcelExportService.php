@@ -8,8 +8,10 @@ use App\Models\DailyWorkRow;
 use App\Models\Doctor;
 use App\Services\Accounting\Concerns\ScopesAccountingQueries;
 use App\Services\Accounting\IncomeReconciliationService;
+use App\Services\Accounting\PaymentCalculationService;
 use App\Services\Accounting\WaelFixedFeeCalculator;
 use App\Services\Configuration\CurrentClinicResolver;
+use App\Support\ClinicCurrencySupport;
 use App\Support\DoctorLabelNormalizer;
 use App\Support\MoneyCalculator;
 use App\Support\ReportMonthResolver;
@@ -18,6 +20,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use RuntimeException;
@@ -45,6 +49,7 @@ class DoctorsIncomeExcelExportService
         private readonly DoctorIncomeExportProfileService $exportProfileService,
         private readonly WaelFixedFeeCalculator $waelFixedFeeCalculator,
         private readonly CurrentClinicResolver $currentClinicResolver,
+        private readonly PaymentCalculationService $paymentCalculationService,
         private readonly string $defaultUsdExchangeRate = '3.65',
     ) {}
 
@@ -70,7 +75,8 @@ class DoctorsIncomeExcelExportService
             );
         }
 
-        $monthStart = ReportMonthResolver::requireFromFilename($dailyReport->source_file_name);
+        $monthStart = ReportMonthResolver::parseFromFilename($dailyReport->source_file_name)
+            ?? Carbon::parse($dailyReport->report_date)->startOfMonth();
         $monthEnd = $monthStart->copy()->endOfMonth();
 
         return $this->exportForMonth($monthStart, $monthEnd, $dailyReport);
@@ -99,6 +105,9 @@ class DoctorsIncomeExcelExportService
         }
 
         $spreadsheet = IOFactory::load($templatePath);
+        $clinicCurrency = ClinicCurrencySupport::normalize(
+            $this->currentClinicResolver->resolve()->currency ?? 'AED',
+        );
 
         $workRowsQuery = $this->forCurrentClinic(DailyWorkRow::class)
             ->with(['doctor', 'workItems.treatment', 'workItems.labJob']);
@@ -113,29 +122,42 @@ class DoctorsIncomeExcelExportService
         $workRows = $workRowsQuery->get();
 
         $rowsByDoctor = $workRows->groupBy('doctor_id');
+        $exportedSheetNames = [];
 
         foreach ($this->forCurrentClinic(Doctor::class)->where('is_active', true)->get() as $doctor) {
+            $doctorRows = $rowsByDoctor->get($doctor->id, collect());
+
+            if ($doctorRows->isEmpty()) {
+                continue;
+            }
+
             $profile = $this->resolveExportProfile($doctor);
 
             if ($profile === null) {
-                continue;
+                $profile = $this->buildFallbackProfile($doctor, $doctorRows);
             }
 
             $sheetName = $profile['sheet_name'];
-            $sheet = $spreadsheet->getSheetByName($sheetName);
-
-            if ($sheet === null) {
-                continue;
-            }
-
-            $doctorRows = $rowsByDoctor->get($doctor->id, collect());
+            $sheet = $this->ensureDoctorSheet($spreadsheet, $sheetName);
 
             if ($profile['layout'] === 'wael') {
                 $this->fillWaelSheet($sheet, $doctor, $doctorRows, $monthStart, $monthEnd);
             } else {
-                $this->fillStandardDoctorSheet($sheet, $profile, $doctor, $doctorRows, $monthStart, $monthEnd);
+                $this->fillStandardDoctorSheet(
+                    $sheet,
+                    $profile,
+                    $doctor,
+                    $doctorRows,
+                    $monthStart,
+                    $monthEnd,
+                    $clinicCurrency,
+                );
             }
+
+            $exportedSheetNames[] = $sheetName;
         }
+
+        $this->removeSheetsExcept($spreadsheet, $exportedSheetNames);
 
         $fileName = $this->buildFileName($monthStart);
         $relativePath = 'exports/' . $fileName;
@@ -173,7 +195,8 @@ class DoctorsIncomeExcelExportService
      */
     public function downloadFileName(DailyReport $dailyReport): string
     {
-        $monthStart = ReportMonthResolver::requireFromFilename($dailyReport->source_file_name);
+        $monthStart = ReportMonthResolver::parseFromFilename($dailyReport->source_file_name)
+            ?? Carbon::parse($dailyReport->report_date)->startOfMonth();
 
         return $this->buildFileName($monthStart);
     }
@@ -195,6 +218,7 @@ class DoctorsIncomeExcelExportService
         Collection $doctorRows,
         Carbon $monthStart,
         Carbon $monthEnd,
+        string $clinicCurrency,
     ): void {
         $daysInMonth = (int) $monthStart->daysInMonth;
         $firstDayRow = (int) $profile['first_day_row'];
@@ -203,7 +227,7 @@ class DoctorsIncomeExcelExportService
         $clearToColumn = $this->resolveClearToColumn($profile);
 
         $this->clearDataArea($sheet, $firstDayRow, $totalRow + 12, $clearToColumn);
-        $this->writeStandardHeaders($sheet, $profile);
+        $this->writeStandardHeaders($sheet, $profile, $clinicCurrency);
 
         $paymentsOnly = ($profile['treatment_columns'] ?? []) === [];
         /** @var array<string, string> $treatmentColumns */
@@ -211,6 +235,7 @@ class DoctorsIncomeExcelExportService
         $dailyData = $this->aggregateStandardDailyData(
             $doctorRows,
             $monthStart,
+            $clinicCurrency,
             $paymentsOnly,
             array_keys($treatmentColumns),
         );
@@ -279,6 +304,8 @@ class DoctorsIncomeExcelExportService
             }
         }
 
+        $this->applyDayColumnDateFormat($sheet, $firstDayRow, $lastDayRow);
+
         $sheet->setCellValue('A' . $totalRow, 'TOTAL');
         $this->writeStandardPaymentCells($sheet, $paymentColumns, $totalRow, $columnTotals);
 
@@ -302,11 +329,12 @@ class DoctorsIncomeExcelExportService
             $columnTotals,
             $labCostTotal,
             $doctor,
+            $clinicCurrency,
         );
     }
 
     /**
-     * Writes the bottom summary block (DHS, USD, VISA, INURANCE, TOTAL, LAB COST-, commission).
+     * Writes the bottom summary block (cash, card, TOTAL, LAB COST-, commission).
      *
      * @param  array<string, mixed>  $profile
      * @param  array{dhs: string, usd: string, usd_to_aed: string, visa: string, total: string}  $columnTotals
@@ -318,10 +346,18 @@ class DoctorsIncomeExcelExportService
         array $columnTotals,
         string $labCostTotal,
         Doctor $doctor,
+        string $clinicCurrency,
     ): void {
+        $isLegacyAed = ClinicCurrencySupport::isLegacyAedClinic($clinicCurrency);
+        $foreignCurrency = ClinicCurrencySupport::foreignCashCurrency($clinicCurrency);
+        $primaryLabel = $isLegacyAed ? 'DHS' : $clinicCurrency;
+        $foreignLabel = $isLegacyAed
+            ? 'USD'
+            : ($foreignCurrency ?? 'FOREIGN');
+
         $summaryRows = [
-            ['label' => 'DHS', 'value' => $columnTotals['dhs']],
-            ['label' => 'USD', 'value' => $columnTotals['usd_to_aed']],
+            ['label' => $primaryLabel, 'value' => $columnTotals['dhs']],
+            ['label' => $foreignLabel, 'value' => $columnTotals['usd_to_aed']],
             ['label' => 'VISA', 'value' => $columnTotals['visa']],
             ['label' => 'INURANCE', 'value' => null],
             ['label' => 'TOTAL', 'value' => $columnTotals['total']],
@@ -569,11 +605,13 @@ class DoctorsIncomeExcelExportService
     private function aggregateStandardDailyData(
         Collection $doctorRows,
         Carbon $monthStart,
+        string $clinicCurrency,
         bool $paymentsOnly = false,
         array $treatmentColumnCodes = [],
     ): array {
         /** @var array<string, array<string, mixed>> $daily */
         $daily = [];
+        $isLegacyAed = ClinicCurrencySupport::isLegacyAedClinic($clinicCurrency);
 
         foreach ($doctorRows as $workRow) {
             $sheetDay = null;
@@ -601,13 +639,37 @@ class DoctorsIncomeExcelExportService
                 ];
             }
 
-            $daily[$dateKey]['dhs'] = MoneyCalculator::add($daily[$dateKey]['dhs'], (string) $workRow->dhs_amount);
-            $daily[$dateKey]['cheque'] = MoneyCalculator::add($daily[$dateKey]['cheque'], (string) $workRow->cheque_amount);
-            $daily[$dateKey]['tabby'] = MoneyCalculator::add($daily[$dateKey]['tabby'], (string) $workRow->tabby_amount);
-            $daily[$dateKey]['usd'] = MoneyCalculator::add($daily[$dateKey]['usd'], (string) $workRow->usd_amount);
-            $daily[$dateKey]['usd_to_aed'] = MoneyCalculator::add($daily[$dateKey]['usd_to_aed'], (string) $workRow->usd_to_aed_amount);
-            $daily[$dateKey]['visa'] = MoneyCalculator::add($daily[$dateKey]['visa'], (string) $workRow->visa_amount);
-            $daily[$dateKey]['total'] = MoneyCalculator::add($daily[$dateKey]['total'], (string) $workRow->paid_total_aed);
+            if ($isLegacyAed) {
+                $daily[$dateKey]['dhs'] = MoneyCalculator::add($daily[$dateKey]['dhs'], (string) $workRow->dhs_amount);
+                $daily[$dateKey]['cheque'] = MoneyCalculator::add($daily[$dateKey]['cheque'], (string) $workRow->cheque_amount);
+                $daily[$dateKey]['tabby'] = MoneyCalculator::add($daily[$dateKey]['tabby'], (string) $workRow->tabby_amount);
+                $daily[$dateKey]['usd'] = MoneyCalculator::add($daily[$dateKey]['usd'], (string) $workRow->usd_amount);
+                $daily[$dateKey]['usd_to_aed'] = MoneyCalculator::add($daily[$dateKey]['usd_to_aed'], (string) $workRow->usd_to_aed_amount);
+                $daily[$dateKey]['visa'] = MoneyCalculator::add($daily[$dateKey]['visa'], (string) $workRow->visa_amount);
+                $daily[$dateKey]['total'] = MoneyCalculator::add($daily[$dateKey]['total'], (string) $workRow->paid_total_aed);
+            } else {
+                $paymentTotals = $this->paymentCalculationService->calculateTotalCollected(
+                    $clinicCurrency,
+                    (string) $workRow->dhs_amount,
+                    (string) $workRow->usd_amount,
+                    (string) $workRow->visa_amount,
+                    chequeAmount: (string) $workRow->cheque_amount,
+                    tabbyAmount: (string) $workRow->tabby_amount,
+                );
+                $foreignInClinic = ClinicCurrencySupport::foreignCashInClinicCurrency(
+                    (string) $workRow->usd_amount,
+                    $clinicCurrency,
+                    $this->defaultUsdExchangeRate,
+                );
+
+                $daily[$dateKey]['dhs'] = MoneyCalculator::add($daily[$dateKey]['dhs'], (string) $workRow->dhs_amount);
+                $daily[$dateKey]['cheque'] = MoneyCalculator::add($daily[$dateKey]['cheque'], (string) $workRow->cheque_amount);
+                $daily[$dateKey]['tabby'] = MoneyCalculator::add($daily[$dateKey]['tabby'], (string) $workRow->tabby_amount);
+                $daily[$dateKey]['usd'] = MoneyCalculator::add($daily[$dateKey]['usd'], (string) $workRow->usd_amount);
+                $daily[$dateKey]['usd_to_aed'] = MoneyCalculator::add($daily[$dateKey]['usd_to_aed'], $foreignInClinic);
+                $daily[$dateKey]['visa'] = MoneyCalculator::add($daily[$dateKey]['visa'], (string) $workRow->visa_amount);
+                $daily[$dateKey]['total'] = MoneyCalculator::add($daily[$dateKey]['total'], $paymentTotals['paid_total']);
+            }
 
             if ($paymentsOnly) {
                 continue;
@@ -625,9 +687,19 @@ class DoctorsIncomeExcelExportService
                 }
 
                 if ($workItem->labJob !== null) {
+                    $jobAmount = (string) $workItem->labJob->total_cost_aed;
+
+                    if (! $isLegacyAed) {
+                        $jobAmount = ClinicCurrencySupport::fromStoredAedEquivalent(
+                            $jobAmount,
+                            $clinicCurrency,
+                            $this->defaultUsdExchangeRate,
+                        );
+                    }
+
                     $daily[$dateKey]['job'] = MoneyCalculator::add(
                         $daily[$dateKey]['job'],
-                        (string) $workItem->labJob->total_cost_aed,
+                        $jobAmount,
                     );
                 }
             }
@@ -749,22 +821,34 @@ class DoctorsIncomeExcelExportService
      * @param  Worksheet  $sheet  Target worksheet.
      * @param  array<string, mixed>  $profile  Export profile with header flags.
      */
-    private function writeStandardHeaders(Worksheet $sheet, array $profile): void
+    private function writeStandardHeaders(Worksheet $sheet, array $profile, string $clinicCurrency): void
     {
+        if ($profile['first_day_row'] > 2) {
+            $sheet->setCellValue('A' . ($profile['first_day_row'] - 1), 'Date');
+        }
+
         if (! ($profile['write_payment_headers'] ?? false)) {
             return;
         }
 
+        $isLegacyAed = ClinicCurrencySupport::isLegacyAedClinic($clinicCurrency);
+        $foreignCurrency = ClinicCurrencySupport::foreignCashCurrency($clinicCurrency);
+        $primaryLabel = $isLegacyAed ? 'DHS' : $clinicCurrency;
+        $foreignLabel = $isLegacyAed
+            ? 'USD'
+            : ($foreignCurrency ?? 'FOREIGN');
+        $foreignConvertedLabel = $isLegacyAed ? 'to AED' : 'in ' . $clinicCurrency;
+
         /** @var array<string, string> $paymentColumns */
         $paymentColumns = $profile['payment_columns'] ?? [];
 
-        $sheet->setCellValue('B1', 'DHS');
+        $sheet->setCellValue('B1', $primaryLabel);
 
         if (array_key_exists('cheque', $paymentColumns)) {
             $sheet->setCellValue('C1', 'cheque');
             $sheet->setCellValue('D1', 'Tabby');
-            $sheet->setCellValue('E1', 'USD');
-            $sheet->setCellValue('F1', 'to AED');
+            $sheet->setCellValue('E1', $foreignLabel);
+            $sheet->setCellValue('F1', $foreignConvertedLabel);
             $sheet->setCellValue('G1', 'visa');
             $sheet->setCellValue('H1', 'DAILY TOTAL');
             $sheet->setCellValue('I1', 'JOB');
@@ -783,8 +867,8 @@ class DoctorsIncomeExcelExportService
             return;
         }
 
-        $sheet->setCellValue('C1', 'USD');
-        $sheet->setCellValue('D1', 'to AED');
+        $sheet->setCellValue('C1', $foreignLabel);
+        $sheet->setCellValue('D1', $foreignConvertedLabel);
         $sheet->setCellValue('E1', 'VISA');
         $sheet->setCellValue('F1', 'DAILY TOTAL');
         $sheet->setCellValue('G1', 'JOB');
@@ -817,6 +901,13 @@ class DoctorsIncomeExcelExportService
                 $sheet->setCellValue($column . $row, null);
             }
         }
+    }
+
+    private function applyDayColumnDateFormat(Worksheet $sheet, int $firstDayRow, int $lastDayRow): void
+    {
+        $sheet->getStyle('A' . $firstDayRow . ':A' . $lastDayRow)
+            ->getNumberFormat()
+            ->setFormatCode(NumberFormat::FORMAT_DATE_DDMMYYYY);
     }
 
     /**
@@ -864,6 +955,98 @@ class DoctorsIncomeExcelExportService
     private function resolveExportProfile(Doctor $doctor): ?array
     {
         return $this->exportProfileService->resolveForDoctor($doctor);
+    }
+
+    /**
+     * @param  Collection<int, DailyWorkRow>  $doctorRows
+     * @return array<string, mixed>
+     */
+    private function buildFallbackProfile(Doctor $doctor, Collection $doctorRows): array
+    {
+        $treatmentColumns = [];
+        $columnIndex = 0;
+        $columnLetters = array_merge(range('H', 'Z'), ['AA', 'AB', 'AC', 'AD']);
+
+        foreach ($doctorRows as $workRow) {
+            foreach ($workRow->workItems as $workItem) {
+                $code = strtoupper(trim($workItem->treatment->code));
+
+                if ($code === '' || array_key_exists($code, $treatmentColumns)) {
+                    continue;
+                }
+
+                if (! array_key_exists($columnIndex, $columnLetters)) {
+                    break;
+                }
+
+                $treatmentColumns[$code] = $columnLetters[$columnIndex];
+                $columnIndex++;
+            }
+        }
+
+        return [
+            'sheet_name' => $this->fallbackSheetName($doctor),
+            'layout' => 'standard',
+            'first_day_row' => 3,
+            'write_payment_headers' => true,
+            'summary_shows_net_total' => true,
+            'payment_columns' => [
+                'dhs' => 'B',
+                'usd' => 'C',
+                'usd_to_aed' => 'D',
+                'visa' => 'E',
+                'total' => 'F',
+                'job' => 'G',
+            ],
+            'treatment_columns' => $treatmentColumns,
+        ];
+    }
+
+    private function fallbackSheetName(Doctor $doctor): string
+    {
+        $label = trim($doctor->name);
+
+        if ($label === '') {
+            $label = trim($doctor->code);
+        }
+
+        return 'Dr. ' . $label;
+    }
+
+    private function ensureDoctorSheet(Spreadsheet $spreadsheet, string $sheetName): Worksheet
+    {
+        $existing = $spreadsheet->getSheetByName($sheetName);
+
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $spreadsheet->createSheet();
+        $sheet = $spreadsheet->getSheet($spreadsheet->getSheetCount() - 1);
+        $sheet->setTitle($sheetName);
+
+        return $sheet;
+    }
+
+    /**
+     * @param  array<int, string>  $sheetNamesToKeep
+     */
+    private function removeSheetsExcept(Spreadsheet $spreadsheet, array $sheetNamesToKeep): void
+    {
+        if ($sheetNamesToKeep === []) {
+            return;
+        }
+
+        $keep = array_flip($sheetNamesToKeep);
+
+        for ($index = $spreadsheet->getSheetCount() - 1; $index >= 0; $index--) {
+            $sheet = $spreadsheet->getSheet($index);
+            $title = $sheet->getTitle();
+
+            if (! array_key_exists($title, $keep)) {
+                $spreadsheet->removeSheetByIndex($index);
+            }
+        }
     }
 
     private function shouldRemapJackTreatmentCounts(Doctor $doctor): bool

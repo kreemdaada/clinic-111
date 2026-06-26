@@ -74,14 +74,16 @@ class LabPriceResolver
                 }
             })
             ->where(function ($builder) use ($effectiveDate) {
+                $date = $effectiveDate->toDateString();
                 $builder
                     ->whereNull('valid_from')
-                    ->orWhere('valid_from', '<=', $effectiveDate->toDateString());
+                    ->orWhereDate('valid_from', '<=', $date);
             })
             ->where(function ($builder) use ($effectiveDate) {
+                $date = $effectiveDate->toDateString();
                 $builder
                     ->whereNull('valid_to')
-                    ->orWhere('valid_to', '>=', $effectiveDate->toDateString());
+                    ->orWhereDate('valid_to', '>=', $date);
             });
 
         return $query->first();
@@ -109,9 +111,10 @@ class LabPriceResolver
     }
 
     /**
-     * Resolve lab + price, falling back to MAIN_LAB when the doctor's lab has no price row.
+     * Resolve lab + price, trying the doctor's primary lab first, then any other active clinic lab.
      *
-     * Dr Riyad uses RIYADH_LAB for ZIR / IMPL-ZIR / POST overrides; other treatments may price on MAIN_LAB.
+     * Clinic 111: Dr Riyad's RIYADH_LAB price wins on primary; other treatments may resolve on MAIN_LAB.
+     * New clinics: onboarding labs use `{CLINIC_CODE}_MAIN_LAB`, not a hardcoded MAIN_LAB code.
      *
      * @return array{lab: Lab, price: LabPrice}|null
      */
@@ -121,6 +124,10 @@ class LabPriceResolver
         Collection $activeLabs,
         ?CarbonInterface $effectiveDate = null,
     ): ?array {
+        if ($activeLabs->isEmpty()) {
+            return null;
+        }
+
         $primaryLab = $this->resolveLabForDoctor($doctor, $activeLabs);
         $price = $this->resolve($doctor, $treatment, $primaryLab, $effectiveDate);
 
@@ -128,13 +135,15 @@ class LabPriceResolver
             return ['lab' => $primaryLab, 'price' => $price];
         }
 
-        $mainLab = $activeLabs->firstWhere('code', 'MAIN_LAB');
+        foreach ($activeLabs as $lab) {
+            if ($lab->id === $primaryLab->id) {
+                continue;
+            }
 
-        if ($mainLab !== null && $mainLab->id !== $primaryLab->id) {
-            $price = $this->resolve($doctor, $treatment, $mainLab, $effectiveDate);
+            $price = $this->resolve($doctor, $treatment, $lab, $effectiveDate);
 
             if ($price !== null) {
-                return ['lab' => $mainLab, 'price' => $price];
+                return ['lab' => $lab, 'price' => $price];
             }
         }
 

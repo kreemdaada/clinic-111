@@ -68,13 +68,17 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('role:admin')->prefix('daily-report')->name('daily-report.')->group(function () {
+        Route::post('/doctors', [DailyReportEditorController::class, 'storeDoctor'])->name('doctors.store');
         Route::post('/{dailyReport}/approve', [ReportLockController::class, 'approve'])->name('approve');
         Route::post('/{dailyReport}/unlock', [ReportLockController::class, 'unlock'])->name('unlock');
     });
 
-    Route::post('/doctors', [DailyReportEditorController::class, 'storeDoctor'])
-        ->middleware('role:admin')
-        ->name('doctors.store');
+    Route::middleware('role:admin')->prefix('doctors')->name('doctors.')->group(function () {
+        Route::get('/', [DoctorAdminController::class, 'index'])->name('index');
+        Route::post('/', [DoctorAdminController::class, 'store'])->name('store');
+        Route::put('/{doctor}', [DoctorAdminController::class, 'update'])->name('update');
+        Route::delete('/{doctor}', [DoctorAdminController::class, 'destroy'])->name('destroy');
+    });
 
     Route::middleware('role:admin')->prefix('configuration')->name('configuration.')->group(function () {
         Route::get('/', [ConfigurationDashboardController::class, 'index'])->name('dashboard');
@@ -86,12 +90,6 @@ Route::middleware('auth')->group(function () {
         Route::put('/{clinic}', [ClinicAdminController::class, 'update'])->name('update');
         Route::delete('/{clinic}', [ClinicAdminController::class, 'destroy'])->name('destroy');
         Route::post('/{clinic}/activate', [ClinicAdminController::class, 'activate'])->name('activate');
-    });
-
-    Route::middleware('role:admin')->prefix('doctors')->name('doctors.')->group(function () {
-        Route::get('/', [DoctorAdminController::class, 'index'])->name('index');
-        Route::put('/{doctor}', [DoctorAdminController::class, 'update'])->name('update');
-        Route::delete('/{doctor}', [DoctorAdminController::class, 'destroy'])->name('destroy');
     });
 
     Route::middleware('role:admin')->prefix('labs')->name('labs.')->group(function () {

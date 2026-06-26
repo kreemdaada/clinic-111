@@ -220,7 +220,42 @@ class ClinicOnboardingTest extends TestCase
     {
         $this->get(route('register-clinic.create'))
             ->assertOk()
-            ->assertSee('Register Your Clinic');
+            ->assertSee('Register Your Clinic')
+            ->assertSee('AED — UAE Dirham')
+            ->assertSee('Asia/Dubai (UAE)')
+            ->assertSee('America/New_York (US Eastern)');
+    }
+
+    public function test_onboarding_accepts_selected_currency_and_timezone(): void
+    {
+        $this->post(route('register-clinic.store'), $this->validPayload([
+            'clinic_code' => 'EURO_CLINIC',
+            'currency' => 'EUR',
+            'timezone' => 'Europe/Berlin',
+            'owner_email' => 'owner@euro.test',
+        ]))->assertRedirect(route('configuration.dashboard'));
+
+        $this->assertDatabaseHas('clinics', [
+            'code' => 'EURO_CLINIC',
+            'currency' => 'EUR',
+            'timezone' => 'Europe/Berlin',
+        ]);
+    }
+
+    public function test_onboarding_rejects_invalid_currency(): void
+    {
+        $this->post(route('register-clinic.store'), $this->validPayload([
+            'currency' => 'XYZ',
+            'owner_email' => 'owner@invalid-currency.test',
+        ]))->assertSessionHasErrors('currency');
+    }
+
+    public function test_onboarding_rejects_invalid_timezone(): void
+    {
+        $this->post(route('register-clinic.store'), $this->validPayload([
+            'timezone' => 'Not/A/Timezone',
+            'owner_email' => 'owner@invalid-timezone.test',
+        ]))->assertSessionHasErrors('timezone');
     }
 
     public function test_authenticated_user_is_redirected_from_onboarding_form(): void

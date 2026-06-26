@@ -20,6 +20,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use App\Support\ClinicCurrencySupport;
+use App\Support\MoneyCalculator;
 use RuntimeException;
 
 /**
@@ -136,6 +138,10 @@ class DailyReportEditorController extends Controller
             'labs' => $this->referenceDataService->activeLabs(),
             'rows' => $rows,
             'readOnly' => $dailyReport->isLocked(),
+            'clinicCurrency' => auth()->user()?->clinic?->currency ?? 'AED',
+            'foreignCashCurrency' => ClinicCurrencySupport::foreignCashCurrency(
+                auth()->user()?->clinic?->currency ?? 'AED',
+            ),
         ]);
     }
 
@@ -283,13 +289,17 @@ class DailyReportEditorController extends Controller
      */
     private function serializeRow(DailyWorkRow $row): array
     {
-        $labTotal = '0.00';
+        $clinicCurrency = auth()->user()?->clinic?->currency ?? 'AED';
+        $labTotalAed = '0.00';
 
         foreach ($row->workItems as $workItem) {
             if ($workItem->labJob !== null) {
-                $labTotal = bcadd($labTotal, (string) $workItem->labJob->total_cost_aed, 2);
+                $labTotalAed = bcadd($labTotalAed, (string) $workItem->labJob->total_cost_aed, 2);
             }
         }
+
+        $paidTotal = ClinicCurrencySupport::fromStoredAedEquivalent((string) $row->paid_total_aed, $clinicCurrency);
+        $labTotal = ClinicCurrencySupport::fromStoredAedEquivalent($labTotalAed, $clinicCurrency);
 
         return [
             'id' => $row->id,
@@ -309,8 +319,9 @@ class DailyReportEditorController extends Controller
             'tabby_amount' => (string) $row->tabby_amount,
             'usd_amount' => (string) $row->usd_amount,
             'visa_amount' => (string) $row->visa_amount,
-            'paid_total_aed' => (string) $row->paid_total_aed,
+            'paid_total_aed' => $paidTotal,
             'lab_total_aed' => $labTotal,
+            'currency' => $clinicCurrency,
             'source' => is_array($row->raw_data_json) && ($row->raw_data_json['source'] ?? '') === 'manual_v2'
                 ? 'manual'
                 : 'import',

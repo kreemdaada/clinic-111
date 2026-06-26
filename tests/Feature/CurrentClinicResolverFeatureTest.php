@@ -50,7 +50,7 @@ class CurrentClinicResolverFeatureTest extends TestCase
                 'commission_percentage' => 30,
                 'default_lab_id' => $mainLab->id,
             ])
-            ->assertRedirect();
+            ->assertRedirect(route('doctors.index'));
 
         $doctor = Doctor::query()->where('code', 'FEAT_DOC')->firstOrFail();
         $this->assertSame($admin->clinic_id, $doctor->clinic_id);

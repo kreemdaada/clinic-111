@@ -5,11 +5,11 @@ namespace App\Services\DailyReport;
 use App\Enums\CommissionType;
 use App\Models\Doctor;
 use App\Models\DoctorLabBilling;
+use App\Models\Lab;
 use App\Models\Treatment;
 use App\Services\Audit\AuditLogService;
 use App\Services\Configuration\Concerns\ScopesConfigurationQueries;
 use App\Services\Configuration\CurrentClinicResolver;
-use App\Support\LabCostTreatmentCatalog;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -83,7 +83,7 @@ class DoctorManagementService
                 'commission_percentage' => $data['commission_type'] === CommissionType::Percentage->value
                     ? $data['commission_percentage'] ?? null
                     : null,
-                'default_lab_id' => $data['default_lab_id'] ?? null,
+                'default_lab_id' => $data['default_lab_id'] ?? $this->resolveDefaultLabId(),
                 'is_active' => true,
             ]);
 
@@ -156,17 +156,51 @@ class DoctorManagementService
         });
     }
 
+    private function resolveDefaultLabId(): ?int
+    {
+        $labId = Lab::query()
+            ->where('clinic_id', $this->currentClinicId())
+            ->where('is_active', true)
+            ->orderBy('id')
+            ->value('id');
+
+        return $labId !== null ? (int) $labId : null;
+    }
+
     private function seedFullLabBilling(Doctor $doctor): void
     {
-        foreach (LabCostTreatmentCatalog::codes() as $treatmentCode) {
-            $treatment = $this->forCurrentClinic(Treatment::class)
-                ->where('code', $treatmentCode)
-                ->first();
+        $treatments = Treatment::query()
+            ->where('clinic_id', $doctor->clinic_id)
+            ->where('has_lab_cost', true)
+            ->where('is_active', true)
+            ->get();
 
-            if ($treatment === null) {
-                continue;
-            }
+        foreach ($treatments as $treatment) {
+            DoctorLabBilling::query()->updateOrCreate(
+                [
+                    'doctor_id' => $doctor->id,
+                    'treatment_id' => $treatment->id,
+                ],
+                [
+                    'bill_lab_job' => true,
+                ],
+            );
+        }
+    }
 
+    public function syncLabBillingForTreatment(Treatment $treatment): void
+    {
+        if (! $treatment->has_lab_cost) {
+            return;
+        }
+
+        $doctors = Doctor::query()
+            ->where('clinic_id', $treatment->clinic_id)
+            ->where('commission_type', CommissionType::Percentage)
+            ->where('is_active', true)
+            ->get();
+
+        foreach ($doctors as $doctor) {
             DoctorLabBilling::query()->updateOrCreate(
                 [
                     'doctor_id' => $doctor->id,

@@ -5,6 +5,7 @@ namespace App\Services\Accounting;
 use App\Enums\PaymentMethod;
 use App\Models\DailyWorkRow;
 use App\Models\Payment;
+use App\Support\ClinicCurrencySupport;
 use App\Support\MoneyCalculator;
 use Carbon\CarbonInterface;
 
@@ -73,6 +74,65 @@ class PaymentCalculationService
             'usd_to_aed_amount' => $usdToAedAmount,
             'rubl_to_aed_amount' => $rublToAedAmount,
             'paid_total_aed' => $totalCollectedAed,
+        ];
+    }
+
+    /**
+     * Compute TOTAL collected in the clinic's base currency and normalized AED.
+     *
+     * Primary payment fields (cash, cheque, Tabby, card) are always in the clinic currency.
+     * The legacy `usd_amount` column holds foreign USD cash for AED clinics, or foreign AED cash for USD clinics.
+     *
+     * @return array{paid_total: string, paid_total_aed: string, usd_to_aed_amount: string, currency: string}
+     */
+    public function calculateTotalCollected(
+        string $clinicCurrency,
+        string $dhsAmount,
+        string $usdAmount,
+        string $visaAmount,
+        ?string $usdExchangeRate = null,
+        string $chequeAmount = '0.00',
+        string $tabbyAmount = '0.00',
+    ): array {
+        $clinicCurrency = strtoupper($clinicCurrency);
+        $exchangeRate = $usdExchangeRate ?? $this->defaultUsdExchangeRate;
+
+        if (ClinicCurrencySupport::isLegacyAedClinic($clinicCurrency)) {
+            $result = $this->calculateTotalCollectedAed(
+                $dhsAmount,
+                $usdAmount,
+                $visaAmount,
+                $exchangeRate,
+                chequeAmount: $chequeAmount,
+                tabbyAmount: $tabbyAmount,
+            );
+
+            return [
+                'paid_total' => $result['paid_total_aed'],
+                'paid_total_aed' => $result['paid_total_aed'],
+                'usd_to_aed_amount' => $result['usd_to_aed_amount'],
+                'currency' => 'AED',
+            ];
+        }
+
+        $primaryTotal = MoneyCalculator::add($dhsAmount, $chequeAmount, $tabbyAmount, $visaAmount);
+        $foreignInClinic = ClinicCurrencySupport::foreignCashInClinicCurrency(
+            $usdAmount,
+            $clinicCurrency,
+            $exchangeRate,
+        );
+        $paidTotal = MoneyCalculator::add($primaryTotal, $foreignInClinic);
+        $paidTotalAed = ClinicCurrencySupport::toStoredAedEquivalent($paidTotal, $clinicCurrency, $exchangeRate);
+
+        return [
+            'paid_total' => $paidTotal,
+            'paid_total_aed' => $paidTotalAed,
+            'usd_to_aed_amount' => ClinicCurrencySupport::toStoredAedEquivalent(
+                $foreignInClinic,
+                $clinicCurrency,
+                $exchangeRate,
+            ),
+            'currency' => $clinicCurrency,
         ];
     }
 

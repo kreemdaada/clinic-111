@@ -6,6 +6,7 @@ use App\Models\Treatment;
 use App\Services\Audit\AuditLogService;
 use App\Services\Configuration\Concerns\ScopesConfigurationQueries;
 use App\Services\Configuration\CurrentClinicResolver;
+use App\Services\DailyReport\DoctorManagementService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,7 @@ class TreatmentManagementService
     public function __construct(
         private readonly AuditLogService $auditLogService,
         private readonly CurrentClinicResolver $currentClinicResolver,
+        private readonly DoctorManagementService $doctorManagementService,
     ) {}
 
     public function listQuery(?string $search = null, string $status = 'all'): Builder
@@ -91,6 +93,7 @@ class TreatmentManagementService
             $treatment->save();
 
             $this->auditLogService->logTreatmentCreated($treatment->fresh());
+            $this->doctorManagementService->syncLabBillingForTreatment($treatment->fresh());
 
             return $treatment->fresh();
         });
@@ -133,6 +136,10 @@ class TreatmentManagementService
             $freshTreatment = $treatment->fresh();
             $newValues = $this->auditLogService->treatmentSnapshot($freshTreatment);
             $this->auditLogService->logTreatmentUpdated($freshTreatment, $oldValues, $newValues);
+
+            if ($freshTreatment->has_lab_cost) {
+                $this->doctorManagementService->syncLabBillingForTreatment($freshTreatment);
+            }
 
             return $freshTreatment;
         });

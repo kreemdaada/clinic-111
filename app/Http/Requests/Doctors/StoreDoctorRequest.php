@@ -3,14 +3,16 @@
 namespace App\Http\Requests\Doctors;
 
 use App\Enums\CommissionType;
+use App\Http\Requests\Concerns\ValidatesClinicScopedCode;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreDoctorRequest extends FormRequest
 {
+    use ValidatesClinicScopedCode;
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->isAdmin() ?? false;
     }
 
     /**
@@ -20,7 +22,7 @@ class StoreDoctorRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:120'],
-            'code' => ['required', 'string', 'max:32', 'unique:doctors,code'],
+            'code' => ['required', 'string', 'max:32', $this->uniqueCodeWithinClinic('doctors')],
             'commission_type' => ['required', Rule::enum(CommissionType::class)],
             'commission_percentage' => [
                 'nullable',
