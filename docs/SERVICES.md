@@ -528,6 +528,42 @@ activeLabs()
 
 ---
 
+### `ClinicOnboardingService`
+
+**Path:** `app/Services/Configuration/ClinicOnboardingService.php`
+
+**Purpose:** Transactional clinic onboarding — creates clinic, owner/admin user, and minimal default configuration (ADR-030).
+
+**Input:**
+
+```php
+register([
+    'clinic_name' => 'Sunrise Dental',
+    'clinic_code' => 'SUNRISE',
+    'country' => 'United Arab Emirates',
+    'currency' => 'AED',
+    'timezone' => 'Asia/Dubai',
+    'owner_name' => 'Dr Owner',
+    'owner_email' => 'owner@sunrise.test',
+    'owner_password' => 'password123',
+])
+```
+
+**Output:** `['clinic' => Clinic, 'owner' => User, 'default_lab' => Lab]`
+
+**Business rules:**
+
+- Runs inside one database transaction — partial clinics are forbidden
+- Does not use `CurrentClinicResolver` (no authenticated user yet)
+- Owner role is always `admin`; `clinic_id` and `is_active` are assigned internally
+- Creates one default lab (`{CLINIC_CODE}_MAIN_LAB`) — no doctors, treatments, prices, or accounting records
+- Clinic 111 is never copied as a template
+- Writes audit logs for clinic, user, and lab creation
+
+**Dependencies:** `AuditLogService`, `Clinic`, `User`, `Lab` models
+
+---
+
 ### `ClinicManagementService`
 
 **Path:** `app/Services/Configuration/ClinicManagementService.php`
@@ -664,6 +700,7 @@ Import validation warning and per-row persist result.
 **Updated — 2026-06-26**
 
 - Documented explicit query isolation: `ScopesConfigurationQueries`, `ReferenceDataService`, clinic-scoped list methods (Milestone 09, ADR-028)
+- Documented `ClinicOnboardingService` (Milestone 11, ADR-030)
 - Documented `CurrentClinicResolver` (Milestone 08, ADR-027)
 - Documented configuration `clinic_id` ownership (Milestone 07, ADR-026)
 - Documented `ClinicManagementService` (Milestone 06, ADR-026)

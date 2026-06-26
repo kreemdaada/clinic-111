@@ -46,7 +46,11 @@
             <button type="submit" class="btn btn-primary" style="width:100%;">Sign in</button>
         </form>
 
-        <p style="margin-top:1rem;font-size:0.8rem;color:#94a3b8;">
+        <p style="margin-top:1rem;font-size:0.85rem;color:#64748b;text-align:center;">
+            <a href="{{ route('register-clinic.create') }}">Register a new clinic</a>
+        </p>
+
+        <p style="margin-top:0.75rem;font-size:0.8rem;color:#94a3b8;text-align:center;">
             Demo: accountant@clinic.test / password
         </p>
     </div>

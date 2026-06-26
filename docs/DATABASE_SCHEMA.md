@@ -39,6 +39,12 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 - Configuration models belong to a clinic via `clinic_id` (Milestone 07)
 - Accounting and transactional tables (`daily_reports`, `daily_work_rows`, `payments`, `work_items`, `lab_jobs`, `audit_logs`) own `clinic_id` (Milestone 10, ADR-029)
 
+**Onboarding rules (Milestone 11, ADR-030):**
+
+- New clinics are created via `ClinicOnboardingService` (public `/register-clinic` or `POST /api/register-clinic`)
+- Onboarding creates clinic + owner/admin user + one default lab (`{CLINIC_CODE}_MAIN_LAB`) inside a transaction
+- No doctors, treatments, lab prices, fixed fees, or accounting records during onboarding
+
 ---
 
 ### `labs`

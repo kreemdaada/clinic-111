@@ -1205,7 +1205,7 @@ Multi-Clinic must be implemented gradually.
 
 No milestone may introduce partial tenant isolation without tests.
 
-Public clinic registration remains disabled until ADR-029 and ADR-030 are complete.
+Public clinic registration is enabled via `/register-clinic` and `POST /api/register-clinic` (Milestone 11, ADR-030).
 
 ---
 
@@ -1849,7 +1849,7 @@ This ADR isolates **accounting data** after configuration isolation (ADR-028).
 
 Clinic 111 remains the first tenant. During migration, all existing data was assigned to `CLINIC_111`.
 
-Registration Wizard (ADR-030) begins only after Milestone 10 is validated.
+* Registration Wizard (ADR-030) is implemented — see `/register-clinic`
 
 ---
 
@@ -2149,27 +2149,19 @@ Milestone 11 is complete only when:
 * Rollback is tested.
 * Cross-clinic isolation remains intact.
 * All tests pass.
+
 ---
 
-### Consequences
+### Implementation (Milestone 11)
 
-**Advantages**
+Implemented 2026-06-27 on branch `feature/clinic-onboarding`:
 
-* Enables self-service SaaS onboarding.
-* Each new tenant starts with usable defaults.
-* Reuses the registration flow defined in ADR-026.
-
-**Disadvantages**
-
-* Requires additional security, validation, and abuse prevention (see ADR-032).
-* Must not bypass accounting or configuration isolation rules.
-
-### Related Documentation
-
-* PROJECT_OVERVIEW.md
-* MULTI_CLINIC_ARCHITECTURE.md
-* WORKFLOWS.md
-* ROADMAP.md
+* `ClinicOnboardingService` — transactional clinic + owner + default lab creation (ADR-030)
+* `RegisterClinicRequest` — validates clinic and owner fields; rejects `clinic_id`, role, and accounting data
+* Web `/register-clinic` (GET form, POST submit) — guest-only POST; logs in owner and redirects to `/configuration`
+* API `POST /api/register-clinic` — returns Sanctum token, clinic, and user (201)
+* Default configuration: one lab (`{CLINIC_CODE}_MAIN_LAB`) only — no doctors, treatments, prices, or accounting records
+* `ClinicOnboardingTest` + `ClinicOnboardingServiceTest` (313 tests green)
 
 ### Notes
 
@@ -2213,15 +2205,13 @@ Tenant security hardening (ADR-032) should follow or run in parallel before publ
 | ADR-027 | Current Clinic Resolver                | Accepted |
 | ADR-028 | Explicit Query Isolation               | Accepted |
 | ADR-029 | Accounting Ownership and Isolation     | Accepted |
-| ADR-030 | Clinic Onboarding Workflow             | Proposed |
+| ADR-030 | Clinic Onboarding Workflow             | Accepted |
 
 ---
 
 # Future ADR Roadmap
 
 The following architectural topics are expected to receive future ADRs.
-
-**ADR-030** — Clinic Onboarding Workflow
 
 **ADR-031** — Clinic Business Configuration
 

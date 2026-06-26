@@ -529,7 +529,21 @@ Rules:
 * Never query through parent relations — use `AccountingScopedQuery` with `clinic_id` + parent key
 * `AuditLogService` sets `clinic_id` from the auditable model or current clinic
 * Cross-clinic accounting access returns **404**
-* Registration Wizard remains disabled until M10 is validated
+* New clinics onboard via `ClinicOnboardingService` (ADR-030)
+
+---
+
+# Clinic Onboarding (Milestone 11, ADR-030)
+
+`ClinicOnboardingService` creates new tenants without `CurrentClinicResolver` (no authenticated user yet).
+
+Rules:
+
+* One database transaction — clinic, owner, and default lab commit together or roll back entirely
+* Owner is always `admin`; `clinic_id` and `is_active` are assigned by the service, never from HTTP input
+* Default configuration is one lab only — business rules are configured later via the Configuration Dashboard
+* No accounting records, imports, or Clinic 111 template copying during onboarding
+* Web flow logs in the owner and redirects to `/configuration`; API flow returns a Sanctum token
 
 ---
 

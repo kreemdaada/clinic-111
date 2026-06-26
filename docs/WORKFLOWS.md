@@ -598,7 +598,40 @@ sequenceDiagram
 
 ---
 
-## 20. Environment Variables (import / privacy)
+## 20. Clinic Onboarding (Milestone 11, ADR-030)
+
+```mermaid
+sequenceDiagram
+    actor Guest
+    participant Web as ClinicOnboardingController
+    participant Req as RegisterClinicRequest
+    participant Svc as ClinicOnboardingService
+    participant DB as Database
+
+    Guest->>Web: POST /register-clinic
+    Web->>Req: validate clinic + owner fields
+    Web->>Svc: register(validated)
+    Svc->>DB: BEGIN TRANSACTION
+    Svc->>DB: INSERT clinic (is_active=true)
+    Svc->>DB: INSERT owner user (role=admin, clinic_id)
+    Svc->>DB: INSERT default lab ({CODE}_MAIN_LAB)
+    Svc->>DB: COMMIT
+    Web->>Web: Auth::login(owner)
+    Web->>Guest: Redirect /configuration
+```
+
+**Rules:**
+
+- Public onboarding — no authentication required (guest-only POST)
+- Transaction is atomic — clinic without owner is forbidden
+- No doctors, treatments, lab prices, fixed fees, or accounting records during onboarding
+- Owner role, `clinic_id`, and `is_active` are never accepted from the client
+- After onboarding, owner sees only their clinic via existing query isolation (ADR-028)
+- API equivalent: `POST /api/register-clinic` returns Sanctum token (201)
+
+---
+
+## 21. Environment Variables (import / privacy)
 
 | Variable | Purpose |
 |---|---|
@@ -618,10 +651,12 @@ Same pipeline after row creation: `TreatmentImportValidationService` → `LabJob
 
 **Updated — 2026-06-27**
 
+- Clinic onboarding workflow (Milestone 11, ADR-030)
 - Accounting ownership and isolation (Milestone 10, ADR-029)
 
 **Updated — 2026-06-26**
 
+- Clinic onboarding workflow (Milestone 11, ADR-030)
 - Explicit query isolation workflow (Milestone 09, ADR-028)
 - Configuration clinic ownership workflow (Milestone 07, ADR-026)
 - Current clinic resolver workflow (Milestone 08, ADR-027)

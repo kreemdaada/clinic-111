@@ -33,6 +33,8 @@ All business rules (doctors, treatments, lab prices, commission rules) are store
 
 4. **Administration** — Configuration dashboard and modules for clinics, doctors, laboratories, treatments, lab prices, no-commission fees, and users (Milestones 01–06).
 
+5. **Clinic Onboarding** — Public registration creates a new clinic, owner/admin user, and minimal default lab; owner is logged in and redirected to the Configuration Dashboard (Milestone 11, ADR-030).
+
 See [WORKFLOWS.md](./WORKFLOWS.md) for step-by-step details.
 
 ---
@@ -150,6 +152,7 @@ Patient name, MRN, and file number are **never stored or exposed** in API respon
 
 **Updated — 2026-06-27**
 
+- Clinic onboarding workflow — public registration creates clinic, owner/admin, and default lab (Milestone 11, ADR-030)
 - Accounting tables are clinic-owned; all accounting services filter by `clinic_id` (Milestone 10, ADR-029)
 - Explicit query isolation for all configuration reads (Milestone 09, ADR-028)
 - `CurrentClinicResolver` assigns clinic on configuration create (Milestone 08, ADR-027)

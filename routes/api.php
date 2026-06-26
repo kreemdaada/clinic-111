@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ClinicAdminController;
+use App\Http\Controllers\Api\ClinicOnboardingController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DoctorFixedFeeAdminController;
 use App\Http\Controllers\Api\DailyReportController;
@@ -13,6 +14,9 @@ use App\Http\Controllers\Api\ReferenceDataController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login'])
+    ->middleware('throttle:10,1');
+
+Route::post('/register-clinic', [ClinicOnboardingController::class, 'store'])
     ->middleware('throttle:10,1');
 
 Route::middleware(['auth:sanctum'])->group(function () {

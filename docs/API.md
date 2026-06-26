@@ -27,6 +27,7 @@ For drag-and-drop Excel import without curl, use the web interface:
 | Route | Method | Role |
 |---|---|---|
 | `/login` | GET/POST | guest |
+| `/register-clinic` | GET/POST | guest (POST only) |
 | `/imports` | GET/POST | admin, accountant |
 | `/imports/{id}` | GET | admin, accountant, viewer |
 | `/logs` | GET | admin, accountant |
@@ -74,6 +75,71 @@ For drag-and-drop Excel import without curl, use the web interface:
 ```
 
 **Error `422`:** Invalid credentials.
+
+---
+
+### POST /api/register-clinic
+
+**Purpose:** Register a new clinic and obtain an API token for the owner/admin user (ADR-030).
+
+**Role:** Public (no auth required)
+
+**Rate limit:** 10 requests/minute
+
+**Request:**
+
+```json
+{
+  "clinic_name": "Sunrise Dental",
+  "clinic_code": "SUNRISE",
+  "country": "United Arab Emirates",
+  "currency": "AED",
+  "timezone": "Asia/Dubai",
+  "owner_name": "Dr Owner",
+  "owner_email": "owner@sunrise.test",
+  "owner_password": "password123",
+  "owner_password_confirmation": "password123"
+}
+```
+
+**Validation (`RegisterClinicRequest`):**
+
+| Field | Rules |
+|---|---|
+| `clinic_name` | required, string, max 120 |
+| `clinic_code` | required, unique on `clinics.code`, uppercase alphanumeric/`_`/`-` |
+| `country` | required, string, max 120 |
+| `currency` | required, 3-letter ISO code |
+| `timezone` | required, valid IANA timezone |
+| `owner_name` | required, string, max 120 |
+| `owner_email` | required, email, unique on `users.email` |
+| `owner_password` | required, confirmed, `Password::defaults()` |
+
+**Rejected fields:** `clinic_id`, `role`, `is_active`, and all accounting/configuration ownership fields.
+
+**Response `201`:**
+
+```json
+{
+  "token": "1|abc123...",
+  "clinic": {
+    "id": 2,
+    "name": "Sunrise Dental",
+    "code": "SUNRISE",
+    "currency": "AED",
+    "timezone": "Asia/Dubai",
+    "country": "United Arab Emirates"
+  },
+  "user": {
+    "id": 5,
+    "name": "Dr Owner",
+    "email": "owner@sunrise.test",
+    "role": "admin"
+  }
+}
+```
+
+**Error `422`:** Validation failure (duplicate clinic code, duplicate email, invalid timezone, etc.).
 
 ---
 
@@ -1089,6 +1155,11 @@ Web-only — no API endpoint in Milestone 05. Entry point for the Configuration 
 ---
 
 ## What Changed
+
+**Updated — 2026-06-27**
+
+- Clinic onboarding API `POST /api/register-clinic` (Milestone 11, ADR-030)
+- Web onboarding route `GET/POST /register-clinic`
 
 **Updated — 2026-06-26**
 
