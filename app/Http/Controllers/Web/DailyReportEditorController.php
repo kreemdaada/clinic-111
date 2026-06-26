@@ -9,6 +9,7 @@ use App\Http\Requests\Doctors\StoreDoctorRequest;
 use App\Models\DailyReport;
 use App\Models\DailyWorkRow;
 use App\Models\Doctor;
+use App\Services\Configuration\CurrentClinicResolver;
 use App\Services\Configuration\ReferenceDataService;
 use App\Services\DailyReport\DailyReportEditorService;
 use App\Services\DailyReport\DailyReportQueryService;
@@ -35,6 +36,7 @@ class DailyReportEditorController extends Controller
         private readonly DoctorManagementService $doctorManagementService,
         private readonly DailyReportQueryService $dailyReportQueryService,
         private readonly ReferenceDataService $referenceDataService,
+        private readonly CurrentClinicResolver $currentClinicResolver,
     ) {}
 
     public function index(): View
@@ -130,6 +132,8 @@ class DailyReportEditorController extends Controller
             ->orderBy('id')
             ->get();
 
+        $clinicCurrency = $this->clinicCurrency();
+
         return view('daily-reports.editor', [
             'dailyReport' => $dailyReport,
             'monthStart' => $monthStart,
@@ -138,10 +142,8 @@ class DailyReportEditorController extends Controller
             'labs' => $this->referenceDataService->activeLabs(),
             'rows' => $rows,
             'readOnly' => $dailyReport->isLocked(),
-            'clinicCurrency' => auth()->user()?->clinic?->currency ?? 'AED',
-            'foreignCashCurrency' => ClinicCurrencySupport::foreignCashCurrency(
-                auth()->user()?->clinic?->currency ?? 'AED',
-            ),
+            'clinicCurrency' => $clinicCurrency,
+            'foreignCashCurrency' => ClinicCurrencySupport::foreignCashCurrency($clinicCurrency),
         ]);
     }
 
@@ -289,7 +291,7 @@ class DailyReportEditorController extends Controller
      */
     private function serializeRow(DailyWorkRow $row): array
     {
-        $clinicCurrency = auth()->user()?->clinic?->currency ?? 'AED';
+        $clinicCurrency = $this->clinicCurrency();
         $labTotalAed = '0.00';
 
         foreach ($row->workItems as $workItem) {
@@ -326,5 +328,12 @@ class DailyReportEditorController extends Controller
                 ? 'manual'
                 : 'import',
         ];
+    }
+
+    private function clinicCurrency(): string
+    {
+        return ClinicCurrencySupport::normalize(
+            $this->currentClinicResolver->resolve()->currency ?? 'AED',
+        );
     }
 }
