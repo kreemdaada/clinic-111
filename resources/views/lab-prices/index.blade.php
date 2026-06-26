@@ -31,7 +31,7 @@
 
 @section('content')
 <h1 class="page-title">Lab prices</h1>
-<p class="page-subtitle">Admin — configure unit costs per lab and treatment. General prices apply to all doctors; doctor overrides take precedence. Deactivate instead of delete.</p>
+<p class="page-subtitle">Admin — configure unit costs per lab and treatment. Delete soft-deactivates; historical lab jobs keep their references.</p>
 
 @if (session('success'))
 <div class="alert alert-success">{{ session('success') }}</div>
@@ -146,6 +146,22 @@
                             data-destroy-url="{{ route('lab-prices.destroy', $price) }}"
                             data-duplicate-url="{{ route('lab-prices.duplicate', $price) }}"
                         >Edit</button>
+                        @if ($price->is_active)
+                        <form method="POST" action="{{ route('lab-prices.destroy', $price) }}" class="inline-form"
+                            data-confirm-title="Delete"
+                            data-confirm-ok="Delete"
+                            data-confirm-danger="1"
+                            data-confirm="Soft delete lab price #{{ $price->id }}? Historical lab jobs are preserved.">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Delete</button>
+                        </form>
+                        @else
+                        <form method="POST" action="{{ route('lab-prices.activate', $price) }}" class="inline-form">
+                            @csrf
+                            <button type="submit" class="btn btn-secondary btn-sm">Activate</button>
+                        </form>
+                        @endif
                     </div>
                 </td>
             </tr>
@@ -215,7 +231,11 @@
             </div>
         </form>
         <div style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
-            <form method="POST" id="lp-deactivate-form" onsubmit="return confirm('Deactivate this price?');">
+            <form method="POST" id="lp-deactivate-form"
+                data-confirm-title="Delete"
+                data-confirm-ok="Delete"
+                data-confirm-danger="1"
+                data-confirm="Soft delete this lab price? Historical lab jobs are preserved.">
                 @csrf
                 @method('DELETE')
             </form>
@@ -225,7 +245,7 @@
             <form method="POST" id="lp-duplicate-form">
                 @csrf
             </form>
-            <button type="submit" form="lp-deactivate-form" class="btn btn-ghost btn-sm" id="lp-deactivate-btn" style="color:var(--danger);">Deactivate</button>
+            <button type="submit" form="lp-deactivate-form" class="btn btn-ghost btn-sm" id="lp-deactivate-btn" style="color:var(--danger);">Delete</button>
             <button type="submit" form="lp-activate-form" class="btn btn-secondary btn-sm" id="lp-activate-btn">Activate</button>
             <button type="submit" form="lp-duplicate-form" class="btn btn-ghost btn-sm" id="lp-duplicate-btn">Duplicate</button>
         </div>

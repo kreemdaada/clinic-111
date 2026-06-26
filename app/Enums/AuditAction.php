@@ -80,4 +80,13 @@ enum AuditAction: string
 
     /** A treatment was reactivated. */
     case TreatmentActivated = 'treatment_activated';
+
+    /** A doctor fixed fee row was created. */
+    case DoctorFixedFeeCreated = 'doctor_fixed_fee_created';
+
+    /** A doctor fixed fee row was deactivated. */
+    case DoctorFixedFeeDeactivated = 'doctor_fixed_fee_deactivated';
+
+    /** A doctor fixed fee row was reactivated. */
+    case DoctorFixedFeeActivated = 'doctor_fixed_fee_activated';
 }

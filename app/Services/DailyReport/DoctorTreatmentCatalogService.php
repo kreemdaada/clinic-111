@@ -4,9 +4,9 @@ namespace App\Services\DailyReport;
 
 use App\Enums\CommissionType;
 use App\Models\Doctor;
-use App\Models\DoctorFixedFee;
 use App\Models\Lab;
 use App\Models\Treatment;
+use App\Services\Accounting\DoctorFixedFeeResolver;
 use App\Services\Accounting\LabBillingResolver;
 use App\Services\Accounting\LabPriceResolver;
 use Carbon\Carbon;
@@ -20,6 +20,7 @@ class DoctorTreatmentCatalogService
     public function __construct(
         private readonly LabBillingResolver $labBillingResolver,
         private readonly LabPriceResolver $labPriceResolver,
+        private readonly DoctorFixedFeeResolver $doctorFixedFeeResolver,
     ) {}
 
     /**
@@ -31,7 +32,7 @@ class DoctorTreatmentCatalogService
 
         return $this->allowedTreatments($doctor)
             ->map(function (Treatment $treatment) use ($doctor, $workDate) {
-                $fixedFee = $this->fixedFeeFor($doctor, $treatment);
+                $fixedFee = $this->fixedFeeFor($doctor, $treatment, $workDate);
                 $billsLab = $this->labBillingResolver->shouldBillLabJob($doctor, $treatment);
                 $labPrice = null;
 
@@ -74,7 +75,9 @@ class DoctorTreatmentCatalogService
         if ($doctor->commission_type === CommissionType::Fixed) {
             return Treatment::query()
                 ->where('is_active', true)
-                ->whereHas('doctorFixedFees', fn ($query) => $query->where('doctor_id', $doctor->id))
+                ->whereHas('doctorFixedFees', fn ($query) => $query
+                    ->where('doctor_id', $doctor->id)
+                    ->where('is_active', true))
                 ->orderBy('code')
                 ->get();
         }
@@ -98,16 +101,13 @@ class DoctorTreatmentCatalogService
     /**
      * @return array{amount: string, currency: string}|null
      */
-    private function fixedFeeFor(Doctor $doctor, Treatment $treatment): ?array
+    private function fixedFeeFor(Doctor $doctor, Treatment $treatment, Carbon $workDate): ?array
     {
         if ($doctor->commission_type !== CommissionType::Fixed) {
             return null;
         }
 
-        /** @var DoctorFixedFee|null $fee */
-        $fee = $doctor->doctorFixedFees()
-            ->where('treatment_id', $treatment->id)
-            ->first();
+        $fee = $this->doctorFixedFeeResolver->resolve($doctor, $treatment, $workDate);
 
         if ($fee === null) {
             return null;

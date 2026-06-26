@@ -50,6 +50,6 @@ class DoctorAdminController extends Controller
 
         return redirect()
             ->route('doctors.index')
-            ->with('success', "Doctor {$code} deactivated.");
+            ->with('success', "Doctor {$code} deleted.");
     }
 }

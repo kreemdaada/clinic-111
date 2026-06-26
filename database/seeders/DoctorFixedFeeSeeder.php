@@ -35,6 +35,7 @@ class DoctorFixedFeeSeeder extends Seeder
                 [
                     'fee_amount' => $feeData['fee_amount'],
                     'currency' => $feeData['currency'],
+                    'is_active' => true,
                 ],
             );
         }

@@ -85,7 +85,7 @@ class LabPriceAdminController extends Controller
 
         return redirect()
             ->route('lab-prices.index')
-            ->with('success', "Lab price #{$id} deactivated.");
+            ->with('success', "Lab price #{$id} deleted.");
     }
 
     public function activate(LabPrice $labPrice): RedirectResponse

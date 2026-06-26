@@ -23,6 +23,9 @@ php artisan test --testsuite=Unit
 | `LabPriceResolverTest` | Doctor-specific vs default lab prices (incl. REMOV 100 AED) |
 | `LabPriceAdministrationWorkflowTest` | End-to-end lab price create, duplicate, validity, overlap, resolver |
 | `LabPriceManagementServiceTest` | Lab price CRUD, overlap guard, duplicate/activate |
+| `DoctorFixedFeeAdministrationWorkflowTest` | End-to-end fixed fee create, duplicate, validity, overlap, resolver |
+| `DoctorFixedFeeManagementServiceTest` | Fixed fee CRUD, overlap guard, duplicate/activate |
+| `DoctorFixedFeeResolverTest` | Active fee resolution by doctor/treatment/date |
 | `LabCostTreatmentCatalogTest` | Which codes generate JOB vs clinical-only |
 | `NonLabTreatmentJobTest` | CF/SXP/RCT persist as work_items but never create lab_jobs |
 | `PatientPrivacyTest` | HMAC hash + PII stripped from `raw_data_json` |

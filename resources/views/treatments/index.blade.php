@@ -30,7 +30,7 @@
 
 @section('content')
 <h1 class="page-title">Treatments</h1>
-<p class="page-subtitle">Admin — configure procedure codes. Deactivate instead of delete; historical work items keep their references.</p>
+<p class="page-subtitle">Admin — configure procedure codes. Delete soft-deactivates; historical work items keep their references.</p>
 
 @if (session('success'))
 <div class="alert alert-success">{{ session('success') }}</div>
@@ -106,6 +106,22 @@
                             data-activate-url="{{ route('treatments.activate', $treatment) }}"
                             data-destroy-url="{{ route('treatments.destroy', $treatment) }}"
                         >Edit</button>
+                        @if ($treatment->is_active)
+                        <form method="POST" action="{{ route('treatments.destroy', $treatment) }}" class="inline-form"
+                            data-confirm-title="Delete"
+                            data-confirm-ok="Delete"
+                            data-confirm-danger="1"
+                            data-confirm="Soft delete {{ $treatment->code }}? Historical work items are preserved.">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Delete</button>
+                        </form>
+                        @else
+                        <form method="POST" action="{{ route('treatments.activate', $treatment) }}" class="inline-form">
+                            @csrf
+                            <button type="submit" class="btn btn-secondary btn-sm">Activate</button>
+                        </form>
+                        @endif
                     </div>
                 </td>
             </tr>
@@ -200,14 +216,18 @@
             </div>
         </form>
         <div style="margin-top:0.75rem;display:flex;gap:0.5rem;">
-            <form method="POST" id="tx-deactivate-form" onsubmit="return confirm('Deactivate this treatment?');">
+            <form method="POST" id="tx-deactivate-form"
+                data-confirm-title="Delete"
+                data-confirm-ok="Delete"
+                data-confirm-danger="1"
+                data-confirm="Soft delete this treatment? Historical work items are preserved.">
                 @csrf
                 @method('DELETE')
             </form>
             <form method="POST" id="tx-activate-form">
                 @csrf
             </form>
-            <button type="submit" form="tx-deactivate-form" class="btn btn-ghost btn-sm" id="tx-deactivate-btn" style="color:var(--danger);">Deactivate</button>
+            <button type="submit" form="tx-deactivate-form" class="btn btn-ghost btn-sm" id="tx-deactivate-btn" style="color:var(--danger);">Delete</button>
             <button type="submit" form="tx-activate-form" class="btn btn-secondary btn-sm" id="tx-activate-btn">Activate</button>
         </div>
     </div>

@@ -149,7 +149,9 @@ This means lab expenses reduce the doctor's income share (not the clinic's colle
 DOCTOR INCOME = SUM(fixed_fee_amount_aed × work_item.quantity)
 ```
 
-Fixed fees come from `doctor_fixed_fees` matched by `doctor_id` + `treatment_id`. For Dr Wa, BG/SINUS payout currency follows the patient row payment (see below); monthly totals may still use AED equivalents for USD lines.
+Fixed fees come from `doctor_fixed_fees` matched by `doctor_id` + `treatment_id` + work date (`valid_from` / `valid_to`) via `DoctorFixedFeeResolver`. Only **active** rows apply. For Dr Wa, BG/SINUS payout currency follows the patient row payment (see below); monthly totals may still use AED equivalents for USD lines.
+
+Administrators manage fixed fees from `/doctor-fixed-fees` (Milestone 04). Percentage doctors ignore these rules.
 
 #### Dr Wa Fixed Fees (seeded)
 

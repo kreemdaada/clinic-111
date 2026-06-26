@@ -106,7 +106,11 @@
                             <a href="{{ route('logs.extraction', $report) }}" class="btn btn-secondary btn-sm">Extraction log</a>
                             <a href="{{ route('daily-report.edit', $report) }}" class="btn btn-secondary btn-sm">Edit rows</a>
                             <a href="{{ route('imports.income', $report) }}" class="btn btn-secondary btn-sm">Income Excel</a>
-                            <form method="POST" action="{{ route('imports.destroy', $report) }}" class="inline-form" onsubmit="return confirm('Delete this import and all its data?');">
+                            <form method="POST" action="{{ route('imports.destroy', $report) }}" class="inline-form"
+                                data-confirm-title="Delete import"
+                                data-confirm-ok="Delete"
+                                data-confirm-danger="1"
+                                data-confirm="Delete this import and all its data? This cannot be undone.">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-secondary btn-sm">Delete</button>

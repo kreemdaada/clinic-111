@@ -250,6 +250,45 @@ Milestone 03 — Laboratory Price Administration
 
 ---
 
+## ADR-024
+
+### Title
+
+Admin-Managed Doctor Fixed Fee Catalog
+
+### Status
+
+Accepted
+
+### Context
+
+Fixed per-procedure fees for doctors with `commission_type = fixed` (e.g. Dr Wa: IMPL, BG, SINUS) were seeded in `DoctorFixedFeeSeeder` only. Milestone 04 requires full UI/API administration without changing `WaelFixedFeeCalculator`, `MonthlyIncomeCalculationService`, or other accounting engine services.
+
+### Decision
+
+- `DoctorFixedFeeManagementService` owns create, update, activate, deactivate, and duplicate
+- `DoctorFixedFeeOverlapValidator` enforces one active fee per doctor + treatment + validity period
+- `DoctorFixedFeeResolver` resolves active fees by work date (used by editor catalog)
+- Soft deactivate only; `is_active` column added; unique `(doctor_id, treatment_id)` removed to allow scheduled fee changes
+- Admin UI at `/doctor-fixed-fees` and API at `/api/admin/doctor-fixed-fees`
+
+### Consequences
+
+- Administrators can change fixed fees without code deploy
+- Accounting engine calculation logic unchanged; seeded single-row fees remain compatible
+- Duplicate creates inactive copy — admin adjusts validity before activation
+- Future `clinic_id` scoping can attach without hardcoding a single catalog
+
+### Related Milestone
+
+Milestone 04 — Doctor Fixed Fee Administration
+
+### Date
+
+2026-06-26
+
+---
+
 # ADR Index
 
 | ADR     | Title                               | Status   |
@@ -277,6 +316,7 @@ Milestone 03 — Laboratory Price Administration
 | ADR-021 | Laboratory Soft Deactivate          | Accepted |
 | ADR-022 | Database-Driven Treatment Catalog   | Accepted |
 | ADR-023 | Admin-Managed Lab Price Catalog     | Accepted |
+| ADR-024 | Admin-Managed Doctor Fixed Fee Catalog | Accepted |
 
 ---
 
@@ -284,19 +324,15 @@ Milestone 03 — Laboratory Price Administration
 
 The following architectural topics are expected to receive future ADRs.
 
-ADR-024
-
-Doctor Fixed Fee Administration
-
-ADR-024
+ADR-025
 
 Configuration Dashboard
 
-ADR-025
+ADR-026
 
 Clinic Entity
 
-ADR-026
+ADR-027
 
 Attach clinic_id
 

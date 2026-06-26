@@ -31,7 +31,7 @@ All business rules (doctors, treatments, lab prices, commission rules) are store
 2. **Daily Report Review** — View calculated report, validation summary, extraction logs (no patient names in API).
 3. **Monthly Income Report** — Aggregate payments and lab costs per doctor for a calendar month.
 
-4. **Administration** — Doctors, laboratories, treatments, lab prices, and users configurable from admin UI (Milestones 01–03).
+4. **Administration** — Doctors, laboratories, treatments, lab prices, doctor fixed fees, and users configurable from admin UI (Milestones 01–04).
 
 See [WORKFLOWS.md](./WORKFLOWS.md) for step-by-step details.
 

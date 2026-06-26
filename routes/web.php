@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\DailyReportEditorController;
+use App\Http\Controllers\Web\DoctorFixedFeeAdminController;
 use App\Http\Controllers\Web\DoctorAdminController;
 use App\Http\Controllers\Web\ImportController;
 use App\Http\Controllers\Web\LabAdminController;
@@ -89,6 +90,15 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{labPrice}', [LabPriceAdminController::class, 'destroy'])->name('destroy');
         Route::post('/{labPrice}/activate', [LabPriceAdminController::class, 'activate'])->name('activate');
         Route::post('/{labPrice}/duplicate', [LabPriceAdminController::class, 'duplicate'])->name('duplicate');
+    });
+
+    Route::middleware('role:admin')->prefix('doctor-fixed-fees')->name('doctor-fixed-fees.')->group(function () {
+        Route::get('/', [DoctorFixedFeeAdminController::class, 'index'])->name('index');
+        Route::post('/', [DoctorFixedFeeAdminController::class, 'store'])->name('store');
+        Route::put('/{doctorFixedFee}', [DoctorFixedFeeAdminController::class, 'update'])->name('update');
+        Route::delete('/{doctorFixedFee}', [DoctorFixedFeeAdminController::class, 'destroy'])->name('destroy');
+        Route::post('/{doctorFixedFee}/activate', [DoctorFixedFeeAdminController::class, 'activate'])->name('activate');
+        Route::post('/{doctorFixedFee}/duplicate', [DoctorFixedFeeAdminController::class, 'duplicate'])->name('duplicate');
     });
 
     Route::middleware('role:admin')->prefix('treatments')->name('treatments.')->group(function () {

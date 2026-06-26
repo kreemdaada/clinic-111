@@ -65,7 +65,7 @@ class LabAdminController extends Controller
 
         return redirect()
             ->route('labs.index')
-            ->with('success', "Laboratory {$code} deactivated.");
+            ->with('success', "Laboratory {$code} deleted.");
     }
 
     public function activate(Lab $lab): RedirectResponse

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DoctorFixedFeeAdminController;
 use App\Http\Controllers\Api\DailyReportController;
 use App\Http\Controllers\Api\LabAdminController;
 use App\Http\Controllers\Api\LabPriceAdminController;
@@ -45,6 +46,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('/{labPrice}', [LabPriceAdminController::class, 'destroy']);
         Route::post('/{labPrice}/activate', [LabPriceAdminController::class, 'activate']);
         Route::post('/{labPrice}/duplicate', [LabPriceAdminController::class, 'duplicate']);
+    });
+
+    Route::middleware('role:admin')->prefix('admin/doctor-fixed-fees')->group(function () {
+        Route::get('/', [DoctorFixedFeeAdminController::class, 'index']);
+        Route::post('/', [DoctorFixedFeeAdminController::class, 'store']);
+        Route::put('/{doctorFixedFee}', [DoctorFixedFeeAdminController::class, 'update']);
+        Route::delete('/{doctorFixedFee}', [DoctorFixedFeeAdminController::class, 'destroy']);
+        Route::post('/{doctorFixedFee}/activate', [DoctorFixedFeeAdminController::class, 'activate']);
+        Route::post('/{doctorFixedFee}/duplicate', [DoctorFixedFeeAdminController::class, 'duplicate']);
     });
 
     Route::middleware('role:admin')->prefix('admin/treatments')->group(function () {

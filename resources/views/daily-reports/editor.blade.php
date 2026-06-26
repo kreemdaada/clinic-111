@@ -180,7 +180,7 @@
                 <label class="form-label">Commission type</label>
                 <select class="form-input" name="commission_type" id="dr-commission-type">
                     <option value="percentage">Percentage</option>
-                    <option value="fixed">Fixed fee</option>
+                    <option value="fixed">Without commission (per treatment)</option>
                 </select>
             </div>
             <div class="form-group" style="margin:0;" id="dr-commission-pct-wrap">
@@ -295,7 +295,7 @@
             return `Lab ${t.lab_price.unit_cost_aed} AED${labHint}`;
         }
         if (t.fixed_fee) {
-            return `Fee ${t.fixed_fee.amount} ${t.fixed_fee.currency}`;
+            return `${t.fixed_fee.amount} ${t.fixed_fee.currency} per treatment`;
         }
         if (t.bills_lab_job) {
             return 'Lab price not configured';
@@ -421,6 +421,17 @@
         }
         rowList.querySelectorAll('[data-delete-row]').forEach(btn => {
             btn.addEventListener('click', async () => {
+                const confirmed = typeof window.clinicConfirm === 'function'
+                    ? await window.clinicConfirm({
+                        title: 'Delete row',
+                        message: 'Delete this patient row and all its treatments?',
+                        okText: 'Delete',
+                        danger: true,
+                    })
+                    : true;
+                if (!confirmed) {
+                    return;
+                }
                 if (String(editingRowId) === btn.dataset.deleteRow) clearForm();
                 await api(`/daily-report/${reportId}/rows/${btn.dataset.deleteRow}`, { method: 'DELETE' });
                 await loadRows();

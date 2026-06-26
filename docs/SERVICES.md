@@ -399,6 +399,54 @@ duplicate($labPrice)  // creates inactive copy for new validity period
 
 ---
 
+### `DoctorFixedFeeManagementService`
+
+**Path:** `app/Services/Accounting/DoctorFixedFeeManagementService.php`
+
+**Purpose:** Admin CRUD for doctor fixed procedure fees (`doctor_fixed_fees` table).
+
+**Input:**
+
+```php
+create(['doctor_id' => 1, 'treatment_id' => 2, 'fee_amount' => '500.00', 'currency' => 'AED', 'valid_from' => null, 'valid_to' => null])
+update($doctorFixedFee, ['fee_amount' => '...', 'is_active' => bool, ...])
+deactivate($doctorFixedFee)
+activate($doctorFixedFee)
+duplicate($doctorFixedFee)  // creates inactive copy for new validity period
+```
+
+**Output:** `DoctorFixedFee` model (with `doctor`, `treatment` loaded)
+
+**Business rules:**
+
+- Never physically deletes rows
+- Doctor must have `commission_type = fixed`
+- Only one active fee per doctor + treatment + overlapping validity period (`DoctorFixedFeeOverlapValidator`)
+- Inactive fees excluded from `DoctorFixedFeeResolver`; accounting engine services unchanged
+- Duplicate creates an **inactive** copy — adjust dates before activating
+
+**Dependencies:** `AuditLogService`, `DoctorFixedFeeOverlapValidator`, `DoctorFixedFee` model
+
+---
+
+### `DoctorFixedFeeResolver`
+
+**Path:** `app/Services/Accounting/DoctorFixedFeeResolver.php`
+
+**Purpose:** Resolve the effective fixed fee for a doctor/treatment on a given work date.
+
+**Business rules:** Active rows only; respects `valid_from` / `valid_to` when set.
+
+---
+
+### `DoctorFixedFeeOverlapValidator`
+
+**Path:** `app/Support/DoctorFixedFeeOverlapValidator.php`
+
+**Purpose:** Detect overlapping active fixed fee rows for the same doctor/treatment scope.
+
+---
+
 ## Audit Services
 
 ### `AuditLogService`
@@ -452,6 +500,7 @@ Import validation warning and per-row persist result.
 
 **Updated — 2026-06-26**
 
+- Documented `DoctorFixedFeeManagementService`, `DoctorFixedFeeResolver`, and `DoctorFixedFeeOverlapValidator` (Milestone 04)
 - Documented `LabPriceManagementService` and `LabPriceOverlapValidator` (Milestone 03)
 - Documented `TreatmentManagementService` (Milestone 02)
 - `LabCostTreatmentCatalog` now reads `has_lab_cost` from database

@@ -6,6 +6,7 @@ use App\Enums\AuditAction;
 use App\Models\AuditLog;
 use App\Models\DailyReport;
 use App\Models\Doctor;
+use App\Models\DoctorFixedFee;
 use App\Models\Lab;
 use App\Models\LabPrice;
 use App\Models\Treatment;
@@ -111,6 +112,35 @@ class AuditLogService
         );
     }
 
+    public function logDoctorFixedFeeCreated(DoctorFixedFee $doctorFixedFee): AuditLog
+    {
+        return $this->log(
+            AuditAction::DoctorFixedFeeCreated,
+            $doctorFixedFee,
+            null,
+            $this->doctorFixedFeeSnapshot($doctorFixedFee),
+        );
+    }
+
+    public function logDoctorFixedFeeUpdated(DoctorFixedFee $doctorFixedFee, array $oldValues, array $newValues): AuditLog
+    {
+        $action = ($oldValues['is_active'] ?? true) && ! ($newValues['is_active'] ?? true)
+            ? AuditAction::DoctorFixedFeeDeactivated
+            : AuditAction::PriceChange;
+
+        return $this->log($action, $doctorFixedFee, $oldValues, $newValues);
+    }
+
+    public function logDoctorFixedFeeActivated(DoctorFixedFee $doctorFixedFee, array $oldValues): AuditLog
+    {
+        return $this->log(
+            AuditAction::DoctorFixedFeeActivated,
+            $doctorFixedFee,
+            $oldValues,
+            $this->doctorFixedFeeSnapshot($doctorFixedFee),
+        );
+    }
+
     public function logReportApproved(DailyReport $dailyReport, string $oldStatus): AuditLog
     {
         return $this->log(
@@ -175,6 +205,22 @@ class AuditLogService
             'valid_from' => $labPrice->valid_from?->toDateString(),
             'valid_to' => $labPrice->valid_to?->toDateString(),
             'is_active' => $labPrice->is_active,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function doctorFixedFeeSnapshot(DoctorFixedFee $doctorFixedFee): array
+    {
+        return [
+            'doctor_id' => $doctorFixedFee->doctor_id,
+            'treatment_id' => $doctorFixedFee->treatment_id,
+            'fee_amount' => (string) $doctorFixedFee->fee_amount,
+            'currency' => $doctorFixedFee->currency,
+            'valid_from' => $doctorFixedFee->valid_from?->toDateString(),
+            'valid_to' => $doctorFixedFee->valid_to?->toDateString(),
+            'is_active' => $doctorFixedFee->is_active,
         ];
     }
 
