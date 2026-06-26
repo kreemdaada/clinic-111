@@ -289,6 +289,113 @@ Milestone 04 — Doctor Fixed Fee Administration
 
 ---
 
+## ADR-025
+
+### Title
+
+Configuration Layer
+
+### Status
+
+Accepted
+
+### Context
+
+The project has evolved from a single accounting MVP into a configurable accounting platform.
+
+The following modules are now fully managed through the administration interface:
+
+- Doctors
+- Laboratories
+- Treatments
+- Lab Prices
+- Doctor Fixed Fees
+- Users
+
+These modules are no longer runtime configuration stored inside PHP code or Seeders.
+
+Before introducing Multi-Clinic support, the architecture must explicitly define a Configuration Layer.
+
+### Decision
+
+Introduce a dedicated Configuration Layer.
+
+The Configuration Layer is responsible for managing all business configuration required by the Accounting Engine.
+
+It includes:
+
+- Doctors
+- Laboratories
+- Treatments
+- Lab Prices
+- Doctor Fixed Fees
+- Users
+
+Business Logic must never read configuration directly from Seeder classes, PHP arrays or hardcoded constants.
+
+Business Logic must access configuration only through:
+
+- Services
+- Resolver classes
+
+Controllers must never implement configuration logic.
+
+The Accounting Engine must remain completely independent from the Administration UI.
+
+### Alternatives Considered
+
+**Alternative A — Continue using individual CRUD modules**
+
+Rejected because they do not express the architectural relationship.
+
+**Alternative B — Store configuration inside PHP configuration files**
+
+Rejected because runtime administration would become impossible.
+
+### Consequences
+
+**Advantages**
+
+- Clear separation between Accounting Engine and Configuration.
+- Easier Multi-Clinic implementation.
+- Easier testing.
+- Runtime configuration.
+- Better maintainability.
+
+**Disadvantages**
+
+- More service classes.
+- Slightly higher architectural complexity.
+
+### Affected Components
+
+- Doctors
+- Labs
+- Treatments
+- Lab Prices
+- Doctor Fixed Fees
+- Users
+- Future Configuration Dashboard
+- Future Clinic Module
+
+### Related Documentation
+
+- PROJECT_OVERVIEW.md
+- SERVICES.md
+- WORKFLOWS.md
+- DATABASE_SCHEMA.md
+- DEVELOPMENT_GUIDE.md
+
+### Related Milestone
+
+Milestone 05 — Configuration Dashboard
+
+### Date
+
+2026-06-26
+
+---
+
 # ADR Index
 
 | ADR     | Title                               | Status   |
@@ -317,16 +424,13 @@ Milestone 04 — Doctor Fixed Fee Administration
 | ADR-022 | Database-Driven Treatment Catalog   | Accepted |
 | ADR-023 | Admin-Managed Lab Price Catalog     | Accepted |
 | ADR-024 | Admin-Managed Doctor Fixed Fee Catalog | Accepted |
+| ADR-025 | Configuration Layer                 | Accepted |
 
 ---
 
 # Future ADR Roadmap
 
 The following architectural topics are expected to receive future ADRs.
-
-ADR-025
-
-Configuration Dashboard
 
 ADR-026
 

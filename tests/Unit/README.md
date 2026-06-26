@@ -26,6 +26,7 @@ php artisan test --testsuite=Unit
 | `DoctorFixedFeeAdministrationWorkflowTest` | End-to-end fixed fee create, duplicate, validity, overlap, resolver |
 | `DoctorFixedFeeManagementServiceTest` | Fixed fee CRUD, overlap guard, duplicate/activate |
 | `DoctorFixedFeeResolverTest` | Active fee resolution by doctor/treatment/date |
+| `ConfigurationDashboardServiceTest` | Dashboard stats, audit activity, health warnings |
 | `LabCostTreatmentCatalogTest` | Which codes generate JOB vs clinical-only |
 | `NonLabTreatmentJobTest` | CF/SXP/RCT persist as work_items but never create lab_jobs |
 | `PatientPrivacyTest` | HMAC hash + PII stripped from `raw_data_json` |

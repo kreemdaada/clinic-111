@@ -960,10 +960,31 @@ Same capabilities as the API. Admin-only. Nav link visible when logged in as adm
 
 ---
 
+## Configuration Dashboard (admin only)
+
+Web-only — no API endpoint in Milestone 05. Entry point for the Configuration Layer (ADR-025).
+
+### Web UI: `/configuration`
+
+| Route | Method | Action |
+|---|---|---|
+| `/configuration` | GET | Dashboard: module statistics, recent configuration audit activity, health warnings |
+
+**Role:** admin
+
+**Dashboard sections:**
+
+- **Module cards** — Doctors, Laboratories, Treatments, Lab Prices, No-commission fees, Users (total / active / inactive + quick links)
+- **Recent activity** — Latest configuration-related `audit_logs` (date, user, action, target)
+- **Configuration health** — Read-only warnings (e.g. no active labs, missing fee rules); never auto-modifies data
+
+---
+
 ## What Changed
 
 **Updated — 2026-06-26**
 
+- Configuration dashboard web UI `/configuration` (Milestone 05)
 - Lab price administration API (`/api/admin/lab-prices`) and web `/lab-prices` (Milestone 03)
 - Doctor fixed fee administration API (`/api/admin/doctor-fixed-fees`) and web `/doctor-fixed-fees` (Milestone 04)
 - Treatment administration API (`/api/admin/treatments`) and web `/treatments`

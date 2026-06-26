@@ -246,6 +246,7 @@ Unchanged — Sanctum bearer tokens, rate-limited login.
 | Manage treatments (`/treatments`) | ✓ | ✗ | ✗ |
 | Manage lab prices (`/lab-prices`) | ✓ | ✗ | ✗ |
 | Manage doctor fixed fees (`/doctor-fixed-fees`) | ✓ | ✗ | ✗ |
+| Configuration dashboard (`/configuration`) | ✓ | ✗ | ✗ |
 | Approve / unlock reports | ✓ | ✗ | ✗ |
 | Manage doctors | ✓ | ✗ | ✗ |
 
@@ -425,7 +426,35 @@ sequenceDiagram
 
 ---
 
-## 12. Environment Variables (import / privacy)
+## 13. Configuration Dashboard (admin only)
+
+```mermaid
+sequenceDiagram
+    actor Admin
+    participant UI as /configuration
+    participant Svc as ConfigurationDashboardService
+    participant DB as config tables + audit_logs
+
+    Admin->>UI: Open dashboard
+    UI->>Svc: buildDashboard()
+    Svc->>DB: COUNT modules (total/active/inactive)
+    Svc->>DB: SELECT recent configuration audit_logs
+    Svc->>DB: Run health checks (warnings only)
+    Svc-->>UI: cards + activity + warnings
+    Admin->>UI: Quick link to module admin page
+```
+
+**Rules:**
+
+- Single entry point for all configuration modules (ADR-025)
+- Health warnings are informational only — never auto-modify data
+- Recent activity shows configuration-related audit actions only
+- Accounting engine is not invoked from the dashboard
+- Designed for future `clinic_id` filtering without schema changes in Milestone 05
+
+---
+
+## 14. Environment Variables (import / privacy)
 
 | Variable | Purpose |
 |---|---|

@@ -446,12 +446,7 @@
             <a href="{{ route('imports.index') }}" @class(['active'=> request()->routeIs('imports.*') || request()->routeIs('logs.*')])>Import</a>
             <a href="{{ route('daily-report.index') }}" @class(['active'=> request()->routeIs('daily-report.*')])>Daily Report</a>
             @if (auth()->user()->isAdmin())
-            <a href="{{ route('doctors.index') }}" @class(['active'=> request()->routeIs('doctors.*')])>Doctors</a>
-            <a href="{{ route('labs.index') }}" @class(['active'=> request()->routeIs('labs.*')])>Labs</a>
-            <a href="{{ route('treatments.index') }}" @class(['active'=> request()->routeIs('treatments.*')])>Treatments</a>
-            <a href="{{ route('lab-prices.index') }}" @class(['active'=> request()->routeIs('lab-prices.*')])>Lab prices</a>
-            <a href="{{ route('doctor-fixed-fees.index') }}" @class(['active'=> request()->routeIs('doctor-fixed-fees.*')])>No-commission fees</a>
-            <a href="{{ route('admin.users.index') }}" @class(['active'=> request()->routeIs('admin.users.*')])>Users</a>
+            <a href="{{ route('configuration.dashboard') }}" @class(['active'=> request()->routeIs('configuration.*') || request()->routeIs('doctors.*') || request()->routeIs('labs.*') || request()->routeIs('treatments.*') || request()->routeIs('lab-prices.*') || request()->routeIs('doctor-fixed-fees.*') || request()->routeIs('admin.users.*')])>Configuration</a>
             @endif
             <span class="topbar-user">{{ auth()->user()->email }} ({{ auth()->user()->role->value }})</span>
             <form method="POST" action="{{ route('logout') }}" style="display:inline;">
