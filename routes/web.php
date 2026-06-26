@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Web\ConfigurationDashboardController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\DailyReportEditorController;
 use App\Http\Controllers\Web\DoctorFixedFeeAdminController;
@@ -68,6 +69,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/doctors', [DailyReportEditorController::class, 'storeDoctor'])
         ->middleware('role:admin')
         ->name('doctors.store');
+
+    Route::middleware('role:admin')->prefix('configuration')->name('configuration.')->group(function () {
+        Route::get('/', [ConfigurationDashboardController::class, 'index'])->name('dashboard');
+    });
 
     Route::middleware('role:admin')->prefix('doctors')->name('doctors.')->group(function () {
         Route::get('/', [DoctorAdminController::class, 'index'])->name('index');

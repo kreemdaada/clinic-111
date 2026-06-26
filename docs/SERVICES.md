@@ -447,6 +447,35 @@ duplicate($doctorFixedFee)  // creates inactive copy for new validity period
 
 ---
 
+## Configuration Services
+
+### `ConfigurationDashboardService`
+
+**Path:** `app/Services/Configuration/ConfigurationDashboardService.php`
+
+**Purpose:** Aggregate statistics, recent configuration audit activity, and health warnings for the admin configuration dashboard.
+
+**Input:**
+
+```php
+buildDashboard(?int $clinicId = null)
+moduleStatistics(?int $clinicId = null)
+recentActivity(?int $clinicId = null, int $limit = 15)
+healthWarnings(?int $clinicId = null)
+```
+
+**Output:** Module card data (total/active/inactive counts), recent audit rows, warning messages (read-only — never auto-fixes data).
+
+**Business rules:**
+
+- Covers Doctors, Labs, Treatments, Lab Prices, Doctor Fixed Fees, Users
+- Health warnings only — no automatic data changes
+- Optional `$clinicId` reserved for future multi-clinic scoping (currently ignored)
+
+**Dependencies:** Configuration models, `AuditLog`, `AuditAction`
+
+---
+
 ## Audit Services
 
 ### `AuditLogService`
@@ -500,6 +529,7 @@ Import validation warning and per-row persist result.
 
 **Updated — 2026-06-26**
 
+- Documented `ConfigurationDashboardService` (Milestone 05)
 - Documented `DoctorFixedFeeManagementService`, `DoctorFixedFeeResolver`, and `DoctorFixedFeeOverlapValidator` (Milestone 04)
 - Documented `LabPriceManagementService` and `LabPriceOverlapValidator` (Milestone 03)
 - Documented `TreatmentManagementService` (Milestone 02)
