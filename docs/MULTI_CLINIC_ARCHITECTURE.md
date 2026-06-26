@@ -1,0 +1,684 @@
+# MULTI_CLINIC_ARCHITECTURE.md
+
+# Dental Clinic Accounting System
+
+## Multi-Clinic Architecture
+
+---
+
+# 1. Purpose
+
+This document defines the Multi-Clinic architecture for the Dental Clinic Accounting System.
+
+The purpose is to make the system support multiple independent clinics using one shared codebase.
+
+Each clinic must be able to manage its own:
+
+* Users
+* Doctors
+* Laboratories
+* Treatments
+* Lab Prices
+* Doctor Fixed Fees
+* Daily Reports
+* Accounting Reports
+* Currency
+* Timezone
+* Future accounting rules
+
+without affecting another clinic.
+
+This document is the architectural basis for all milestones after the Clinic Model milestone.
+
+---
+
+# 2. What Multi-Clinic Means
+
+In this system, a clinic is a tenant.
+
+A tenant is an isolated business unit.
+
+One clinic must not see, edit, import, export, or calculate another clinic's data.
+
+Example:
+
+Clinic 111
+
+* Currency: AED
+* Timezone: Asia/Dubai
+* Doctors: Dr Jack, Dr Riyad, Dr Puriya, Dr Wa
+* Labs: Main Lab, Riyadh Lab
+* Accounting rule: percentage after lab cost
+
+Clinic 222
+
+* Currency: EUR
+* Timezone: Europe/Berlin
+* Different doctors
+* Different labs
+* Different prices
+* May not use doctor percentage at all
+
+Both clinics use the same codebase.
+
+They do not share business data.
+
+---
+
+# 3. Core Rule
+
+One shared Accounting Engine.
+
+Many clinic-specific configurations.
+
+The Accounting Engine must remain shared.
+
+The Configuration Layer becomes clinic-scoped.
+
+---
+
+# 4. Current Architecture
+
+The current system already has:
+
+* Clinic model
+* Configuration Dashboard
+* Doctors Administration
+* Laboratories Administration
+* Treatments Administration
+* Lab Prices Administration
+* Doctor Fixed Fees Administration
+* Users Administration
+* Excel Import
+* Daily Reports
+* Monthly Income
+* Audit Logs
+* RBAC
+* Privacy Protection
+
+Currently, Clinic 111 exists as the first clinic.
+
+However, most data is still not scoped by `clinic_id`.
+
+The next milestones will gradually attach data to clinics.
+
+---
+
+# 5. Tenant Root
+
+`Clinic` is the tenant root.
+
+All clinic-owned data must eventually belong to one clinic.
+
+Root entity:
+
+```text
+clinics
+```
+
+A clinic has many:
+
+```text
+users
+doctors
+labs
+treatments
+lab_prices
+doctor_fixed_fees
+daily_reports
+audit_logs
+```
+
+Transactional data is connected either directly or indirectly through `daily_reports` and configuration models.
+
+---
+
+# 6. Tables That Must Be Clinic-Scoped
+
+The following tables must receive `clinic_id` in future milestones.
+
+## Configuration Tables
+
+```text
+users
+doctors
+labs
+treatments
+lab_prices
+doctor_fixed_fees
+daily_reports
+audit_logs
+```
+
+## Transactional Tables
+
+These may receive `clinic_id` directly or be scoped through parent records.
+
+```text
+daily_work_rows
+payments
+work_items
+lab_jobs
+daily_report_import_warnings
+```
+
+Preferred strategy:
+
+* `daily_reports` gets `clinic_id`
+* `daily_work_rows` belongs to `daily_report`
+* `payments` belong to `daily_work_row`
+* `work_items` belong to `daily_work_row`
+* `lab_jobs` belong to `work_item`
+
+Direct `clinic_id` on every transactional table is optional and should only be added if performance, reporting, or safety requires it.
+
+---
+
+# 7. Tables That Should Not Be Clinic-Scoped
+
+The following are global technical tables unless future requirements say otherwise:
+
+```text
+migrations
+password_reset_tokens
+personal_access_tokens
+jobs
+failed_jobs
+cache
+sessions
+```
+
+---
+
+# 8. User and Clinic Relationship
+
+Every authenticated user belongs to exactly one clinic.
+
+Planned structure:
+
+```text
+users.clinic_id
+```
+
+A user without a clinic is invalid after registration is complete.
+
+Temporary user-without-clinic state is allowed only inside a database transaction during registration.
+
+---
+
+# 9. Registration Workflow
+
+The registration form is clinic registration, not only user registration.
+
+The form collects:
+
+## Clinic Information
+
+* Clinic Name
+* Country
+* Base Currency
+* Timezone
+
+## Owner Information
+
+* Owner Name
+* Owner Email
+* Owner Password
+
+The registration process runs inside one database transaction:
+
+```text
+Start transaction
+↓
+Create Clinic
+↓
+Create Owner/Admin User
+↓
+Assign user.clinic_id = clinic.id
+↓
+Initialize default configuration
+↓
+Commit transaction
+↓
+Login owner
+↓
+Redirect to Configuration Dashboard
+```
+
+If any step fails, the transaction is rolled back.
+
+A clinic must not exist without an owner.
+
+An owner must not exist without a clinic.
+
+---
+
+# 10. Clinic 111 Migration Strategy
+
+Clinic 111 is the existing first tenant.
+
+The migration strategy is:
+
+```text
+Create CLINIC_111
+↓
+Add clinic_id columns gradually
+↓
+Backfill existing data with CLINIC_111.id
+↓
+Make clinic_id required where safe
+↓
+Resolve current clinic from authenticated user
+↓
+Add query isolation
+↓
+Add cross-clinic leakage tests
+```
+
+No existing accounting behavior should change during the migration.
+
+Clinic 111 must continue producing the same reports before and after migration.
+
+---
+
+# 11. No Global Scopes
+
+The system will not use Laravel Global Scopes for tenant isolation.
+
+Reason:
+
+* Hidden query behavior
+* Harder debugging
+* Risky exports
+* Risky imports
+* Risky background jobs
+* Difficult admin/reporting scenarios
+
+Instead, clinic isolation is explicit.
+
+---
+
+# 12. Current Clinic Resolution
+
+Current clinic will be resolved by a dedicated service:
+
+```text
+CurrentClinicResolver
+```
+
+Expected behavior:
+
+```text
+Authenticated user
+↓
+user.clinic_id
+↓
+Clinic
+```
+
+If a user has no clinic, the request must fail.
+
+The resolver must be used by services that query clinic-owned data.
+
+---
+
+# 13. Query Isolation Strategy
+
+Do not rely on hidden behavior.
+
+Preferred style:
+
+```php
+Doctor::query()
+    ->where('clinic_id', $currentClinic->id)
+    ->get();
+```
+
+or service-level methods:
+
+```php
+$doctorService->listForClinic($clinic);
+```
+
+Every clinic-scoped query must be explicit.
+
+---
+
+# 14. Configuration Ownership
+
+Each clinic owns its configuration.
+
+Clinic A can have:
+
+* Different doctors
+* Different labs
+* Different treatments
+* Different lab prices
+* Different doctor fixed fees
+
+Clinic B can have completely different configuration.
+
+The Accounting Engine must not care which clinic is currently active.
+
+It only receives resolved configuration.
+
+---
+
+# 15. Accounting Engine
+
+The Accounting Engine remains shared.
+
+Do not duplicate the Accounting Engine per clinic.
+
+Shared services include:
+
+* PaymentCalculationService
+* LabJobCalculationService
+* MonthlyIncomeCalculationService
+* TreatmentParserService
+* MoneyCalculator
+* Import pipeline
+
+These services may receive clinic context through resolved models or services, but the core formulas remain shared.
+
+---
+
+# 16. Currency Strategy
+
+Each clinic has one base currency.
+
+Example:
+
+Clinic 111
+
+```text
+AED
+```
+
+Clinic 222
+
+```text
+EUR
+```
+
+Future strategy:
+
+* Rename AED-specific normalized fields where necessary
+* Use `amount_base_currency`
+* Store original amount and original currency
+* Store exchange rate used at transaction time
+
+Do not perform this refactor until a dedicated Multi-Currency milestone.
+
+---
+
+# 17. Configuration Templates
+
+Future clinic registration may use configuration templates.
+
+Example templates:
+
+```text
+Blank Clinic
+Dental Clinic Default
+Clinic 111 Copy
+Europe Basic
+```
+
+Initial implementation may start with a blank configuration.
+
+Later, templates can create:
+
+* default treatments
+* default labs
+* default lab prices
+* default doctor compensation modes
+
+Templates must be optional.
+
+---
+
+# 18. Security
+
+Tenant security requires:
+
+* authentication
+* clinic_id on user
+* explicit clinic-scoped queries
+* authorization checks
+* audit logs
+* cross-clinic leakage tests
+
+A user from Clinic A must never access Clinic B data.
+
+This must be enforced in:
+
+* Web controllers
+* API controllers
+* Services
+* Exports
+* Imports
+* Reports
+* Audit views
+
+---
+
+# 19. Audit Logs
+
+Audit logs should eventually belong to a clinic.
+
+Reason:
+
+* Admins should see only their clinic's audit history
+* SaaS operators may later need global audit views
+
+Future approach:
+
+```text
+audit_logs.clinic_id
+```
+
+Clinic admin sees clinic audit logs.
+
+Platform admin may see global audit logs.
+
+Platform admin is out of scope for current milestones.
+
+---
+
+# 20. Import Isolation
+
+Excel imports must run inside the current clinic context.
+
+Import pipeline must eventually enforce:
+
+```text
+Uploaded report
+↓
+current clinic
+↓
+doctors/treatments/labs from that clinic only
+↓
+calculated report for that clinic only
+```
+
+Unknown doctor or treatment from another clinic must not be resolved accidentally.
+
+---
+
+# 21. Export Isolation
+
+Exports must use current clinic context.
+
+A clinic must never export another clinic's reports.
+
+Future export services must scope by clinic explicitly.
+
+---
+
+# 22. Configuration Dashboard
+
+The Configuration Dashboard will become clinic-aware.
+
+Future behavior:
+
+```text
+Current clinic
+↓
+ConfigurationDashboardService
+↓
+Counts only for this clinic
+Warnings only for this clinic
+Audit only for this clinic
+```
+
+No global counts for clinic admins.
+
+---
+
+# 23. Milestone Strategy
+
+Multi-Clinic must be implemented gradually.
+
+Recommended sequence:
+
+## Milestone 06
+
+Clinic Model
+
+Status:
+
+Done
+
+## Milestone 07
+
+Attach clinic_id to core configuration tables.
+
+## Milestone 08
+
+CurrentClinicResolver.
+
+## Milestone 09
+
+Query Isolation.
+
+## Milestone 10
+
+Dynamic Business Rules.
+
+## Milestone 11
+
+Multi-Clinic Testing.
+
+## Future
+
+Registration Wizard.
+
+## Future
+
+Multi-Currency.
+
+---
+
+# 24. Milestone 07 Scope
+
+Milestone 07 should attach `clinic_id` to the first group of tables.
+
+Recommended first group:
+
+```text
+users
+doctors
+labs
+treatments
+lab_prices
+doctor_fixed_fees
+daily_reports
+audit_logs
+```
+
+Milestone 07 must:
+
+* add nullable clinic_id
+* backfill with CLINIC_111
+* add indexes
+* add foreign keys
+* update models
+* update seeders
+* keep existing tests green
+* not implement query isolation yet
+
+Milestone 07 must not:
+
+* add global scopes
+* change accounting formulas
+* change imports
+* change exports
+* implement registration
+* implement multi-currency
+
+---
+
+# 25. Cross-Clinic Leakage Risks
+
+Risks:
+
+* Admin from Clinic A sees Clinic B doctors
+* Import resolves treatment from wrong clinic
+* Lab price resolver uses another clinic's lab price
+* Audit dashboard shows another clinic's audit log
+* Monthly report aggregates another clinic's data
+* User management edits another clinic's users
+
+These must be tested in later milestones.
+
+---
+
+# 26. Design Principles
+
+```text
+Clinic owns configuration.
+Configuration feeds Accounting Engine.
+Accounting Engine remains shared.
+Tenant isolation is explicit.
+No global scopes.
+No hidden query behavior.
+Every clinic-specific query is testable.
+```
+
+---
+
+# 27. Definition of Done for Multi-Clinic
+
+Multi-Clinic is complete only when:
+
+* Every user belongs to a clinic
+* Every configuration record belongs to a clinic
+* Every report belongs to a clinic
+* Imports are clinic-scoped
+* Exports are clinic-scoped
+* Dashboard is clinic-scoped
+* Admin screens are clinic-scoped
+* Cross-clinic leakage tests exist
+* Clinic registration works
+* Clinic 111 reports remain unchanged
+* Documentation is updated
+* ADRs are complete
+
+---
+
+# 28. Final Rule
+
+Do not move fast on Multi-Clinic.
+
+Tenant isolation bugs are serious.
+
+Small milestones are mandatory.
+
+Each milestone must end with:
+
+```text
+php artisan test
+```
+
+and all tests green.
