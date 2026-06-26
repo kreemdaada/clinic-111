@@ -77,10 +77,10 @@ class ConfigurationDashboardServiceTest extends TestCase
 
     public function test_health_warnings_for_lab_cost_treatment_without_price(): void
     {
-        $treatment = Treatment::query()->create([
+        $treatment = Treatment::query()->create($this->withClinicId([
             'code' => 'WARN_LP',
             'name' => 'Warning Treatment',
-        ]);
+        ]));
         $treatment->has_lab_cost = true;
         $treatment->is_active = true;
         $treatment->save();

@@ -44,13 +44,13 @@ class DoctorTreatmentCatalogServiceTest extends TestCase
     {
         $this->seed();
 
-        $doctor = Doctor::query()->create([
+        $doctor = Doctor::query()->create($this->withClinicId([
             'name' => 'Dr Test',
             'code' => 'TESTDOC',
             'commission_type' => CommissionType::Percentage,
             'commission_percentage' => '30.00',
             'is_active' => true,
-        ]);
+        ]));
 
         Treatment::query()->firstOrCreate(
             ['code' => 'CF'],

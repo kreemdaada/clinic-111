@@ -17,7 +17,7 @@ use Laravel\Sanctum\HasApiTokens;
  *
  * Table: `users`. Role drives route access via `EnsureUserHasRole` middleware.
  */
-#[Fillable(['name', 'email', 'role'])]
+#[Fillable(['name', 'email', 'role', 'clinic_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {

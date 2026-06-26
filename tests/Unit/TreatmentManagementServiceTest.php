@@ -47,7 +47,7 @@ class TreatmentManagementServiceTest extends TestCase
     public function test_deactivate_sets_is_active_false_without_deleting_row(): void
     {
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
-        $treatment = Treatment::query()->create(['code' => 'DEACT_SVC', 'name' => 'Deactivate']);
+        $treatment = Treatment::query()->create($this->withClinicId(['code' => 'DEACT_SVC', 'name' => 'Deactivate']));
         $treatment->is_active = true;
         $treatment->save();
         $this->actingAs($admin);
@@ -69,7 +69,7 @@ class TreatmentManagementServiceTest extends TestCase
     public function test_changing_has_lab_cost_updates_catalog_resolution(): void
     {
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
-        $treatment = Treatment::query()->create(['code' => 'TOGGLE_TX', 'name' => 'Toggle']);
+        $treatment = Treatment::query()->create($this->withClinicId(['code' => 'TOGGLE_TX', 'name' => 'Toggle']));
         $treatment->has_lab_cost = false;
         $treatment->is_active = true;
         $treatment->save();

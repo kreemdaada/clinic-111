@@ -28,6 +28,7 @@ class DoctorFixedFeeAdministrationWorkflowTest extends TestCase
         parent::setUp();
 
         $this->seedAccountingData();
+        $this->authenticateAdmin();
 
         $this->service = app(DoctorFixedFeeManagementService::class);
         $this->resolver = app(DoctorFixedFeeResolver::class);

@@ -83,13 +83,13 @@ class DoctorAdminTest extends TestCase
         $this->seed();
 
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
-        $doctor = Doctor::query()->create([
+        $doctor = Doctor::query()->create($this->withClinicId([
             'name' => 'Dr Temp',
             'code' => 'TEMP',
             'commission_type' => 'percentage',
             'commission_percentage' => 10,
             'is_active' => true,
-        ]);
+        ]));
 
         $this->actingAs($admin)
             ->delete(route('doctors.destroy', $doctor))

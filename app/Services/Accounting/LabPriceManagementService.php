@@ -4,6 +4,7 @@ namespace App\Services\Accounting;
 
 use App\Models\LabPrice;
 use App\Services\Audit\AuditLogService;
+use App\Services\Configuration\CurrentClinicResolver;
 use App\Support\LabPriceOverlapValidator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -16,6 +17,7 @@ class LabPriceManagementService
     public function __construct(
         private readonly AuditLogService $auditLogService,
         private readonly LabPriceOverlapValidator $overlapValidator,
+        private readonly CurrentClinicResolver $currentClinicResolver,
     ) {}
 
     /**
@@ -49,6 +51,7 @@ class LabPriceManagementService
             }
 
             $price = LabPrice::query()->create([
+                'clinic_id' => $this->currentClinicResolver->resolveId(),
                 'lab_id' => $data['lab_id'],
                 'treatment_id' => $data['treatment_id'],
                 'doctor_id' => $doctorId,

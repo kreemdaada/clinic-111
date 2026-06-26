@@ -306,6 +306,8 @@ Current clinic will be resolved by a dedicated service:
 CurrentClinicResolver
 ```
 
+**Status (Milestone 08):** Implemented. Resolves `auth()->user()->clinic_id` to a `Clinic` model. No fallback clinic. Configuration services assign `clinic_id` on create.
+
 Expected behavior:
 
 ```text
@@ -561,6 +563,10 @@ Done
 ## Milestone 08
 
 CurrentClinicResolver.
+
+Status:
+
+Done
 
 ## Milestone 09
 

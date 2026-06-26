@@ -4,6 +4,7 @@ namespace App\Services\Accounting;
 
 use App\Models\DoctorFixedFee;
 use App\Services\Audit\AuditLogService;
+use App\Services\Configuration\CurrentClinicResolver;
 use App\Support\DoctorFixedFeeOverlapValidator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -16,6 +17,7 @@ class DoctorFixedFeeManagementService
     public function __construct(
         private readonly AuditLogService $auditLogService,
         private readonly DoctorFixedFeeOverlapValidator $overlapValidator,
+        private readonly CurrentClinicResolver $currentClinicResolver,
     ) {}
 
     /**
@@ -46,6 +48,7 @@ class DoctorFixedFeeManagementService
             }
 
             $fee = DoctorFixedFee::query()->create([
+                'clinic_id' => $this->currentClinicResolver->resolveId(),
                 'doctor_id' => $data['doctor_id'],
                 'treatment_id' => $data['treatment_id'],
                 'fee_amount' => $data['fee_amount'],

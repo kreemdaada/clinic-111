@@ -16,6 +16,7 @@ class DoctorFixedFee extends Model
     use BelongsToClinic;
 
     protected $fillable = [
+        'clinic_id',
         'doctor_id',
         'treatment_id',
         'fee_amount',

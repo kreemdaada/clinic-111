@@ -510,6 +510,34 @@ activate($clinic)
 
 ---
 
+### `CurrentClinicResolver`
+
+**Path:** `app/Services/Configuration/CurrentClinicResolver.php`
+
+**Purpose:** Resolve the active clinic for the current authenticated request (ADR-027).
+
+**Input:**
+
+```php
+resolve(): Clinic
+resolveId(): int
+```
+
+**Output:** `Clinic` model or clinic primary key
+
+**Business rules:**
+
+- Reads `auth()->user()->clinic_id` — no fallback clinic
+- Throws `CurrentClinicException` when user is unauthenticated, has no `clinic_id`, or clinic record is missing
+- Used by configuration management services on create — not for query filtering yet
+- No global scopes
+
+**Dependencies:** `Auth`, `Clinic`, `User`
+
+**Used by:** `LabManagementService`, `DoctorManagementService`, `TreatmentManagementService`, `LabPriceManagementService`, `DoctorFixedFeeManagementService`, `UserManagementService`
+
+---
+
 ## Audit Services
 
 ### `AuditLogService`
@@ -563,6 +591,7 @@ Import validation warning and per-row persist result.
 
 **Updated — 2026-06-26**
 
+- Documented `CurrentClinicResolver` (Milestone 08, ADR-027)
 - Documented configuration `clinic_id` ownership (Milestone 07, ADR-026)
 - Documented `ClinicManagementService` (Milestone 06, ADR-026)
 - Documented `ConfigurationDashboardService` (Milestone 05)

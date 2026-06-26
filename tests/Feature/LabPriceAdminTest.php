@@ -306,10 +306,10 @@ class LabPriceAdminTest extends TestCase
 
     private function createLabCostTreatment(string $code, string $name): Treatment
     {
-        $treatment = Treatment::query()->create([
+        $treatment = Treatment::query()->create($this->withClinicId([
             'code' => $code,
             'name' => $name,
-        ]);
+        ]));
         $treatment->has_lab_cost = true;
         $treatment->is_active = true;
         $treatment->save();
@@ -322,12 +322,12 @@ class LabPriceAdminTest extends TestCase
         $mainLab = Lab::query()->where('code', 'MAIN_LAB')->firstOrFail();
         $treatment = $this->createLabCostTreatment($treatmentCode, $treatmentCode);
 
-        $price = LabPrice::query()->create([
+        $price = LabPrice::query()->create($this->withClinicId([
             'lab_id' => $mainLab->id,
             'treatment_id' => $treatment->id,
             'unit_cost' => '150.00',
             'currency' => 'AED',
-        ]);
+        ]));
         $price->is_active = true;
         $price->save();
 

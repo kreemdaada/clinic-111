@@ -76,6 +76,7 @@ class UserAdminTest extends TestCase
             'name' => 'Test User',
             'email' => $email,
             'role' => $role,
+            'clinic_id' => $this->clinic111()->id,
         ]);
         $user->password = 'password';
         $user->is_active = true;

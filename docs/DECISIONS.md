@@ -796,6 +796,7 @@ No milestone may introduce partial tenant isolation without tests.
 | ADR-024 | Admin-Managed Doctor Fixed Fee Catalog | Accepted |
 | ADR-025 | Configuration Layer                 | Accepted |
 | ADR-026 | Clinic Entity as Tenant Root        | Accepted |
+| ADR-027 | Current Clinic Resolver           | Accepted |
 
 ---
 
@@ -803,11 +804,8 @@ No milestone may introduce partial tenant isolation without tests.
 
 The following architectural topics are expected to receive future ADRs.
 
-ADR-027
-Attach clinic_id
-
 ADR-028
-Current Clinic Resolver
+Attach clinic_id
 
 ADR-029
 Query Isolation

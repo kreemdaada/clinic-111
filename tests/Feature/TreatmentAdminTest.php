@@ -261,10 +261,10 @@ class TreatmentAdminTest extends TestCase
 
     private function createTreatment(string $code, string $name, bool $hasLabCost = false): Treatment
     {
-        $treatment = Treatment::query()->create([
+        $treatment = Treatment::query()->create($this->withClinicId([
             'code' => $code,
             'name' => $name,
-        ]);
+        ]));
         $treatment->has_lab_cost = $hasLabCost;
         $treatment->is_active = true;
         $treatment->save();

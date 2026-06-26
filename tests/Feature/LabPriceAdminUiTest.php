@@ -124,12 +124,12 @@ class LabPriceAdminUiTest extends TestCase
     {
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
         $existing = LabPrice::query()->where('is_active', true)->whereNull('doctor_id')->firstOrFail();
-        $duplicate = LabPrice::query()->create([
+        $duplicate = LabPrice::query()->create($this->withClinicId([
             'lab_id' => $existing->lab_id,
             'treatment_id' => $existing->treatment_id,
             'unit_cost' => '99.00',
             'currency' => 'AED',
-        ]);
+        ]));
         $duplicate->is_active = false;
         $duplicate->save();
 
@@ -188,10 +188,10 @@ class LabPriceAdminUiTest extends TestCase
 
     private function createLabCostTreatment(string $code, string $name): Treatment
     {
-        $treatment = Treatment::query()->create([
+        $treatment = Treatment::query()->create($this->withClinicId([
             'code' => $code,
             'name' => $name,
-        ]);
+        ]));
         $treatment->has_lab_cost = true;
         $treatment->is_active = true;
         $treatment->save();
@@ -204,14 +204,14 @@ class LabPriceAdminUiTest extends TestCase
         $mainLab = Lab::query()->where('code', 'MAIN_LAB')->firstOrFail();
         $treatment = $this->createLabCostTreatment($treatmentCode, $treatmentCode);
 
-        $price = LabPrice::query()->create([
+        $price = LabPrice::query()->create($this->withClinicId([
             'lab_id' => $mainLab->id,
             'treatment_id' => $treatment->id,
             'unit_cost' => '150.00',
             'currency' => 'AED',
             'valid_from' => '2035-01-01',
             'valid_to' => '2035-12-31',
-        ]);
+        ]));
         $price->is_active = true;
         $price->save();
 

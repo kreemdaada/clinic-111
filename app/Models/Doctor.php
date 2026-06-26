@@ -19,6 +19,7 @@ class Doctor extends Model
     use BelongsToClinic;
 
     protected $fillable = [
+        'clinic_id',
         'name',
         'code',
         'commission_type',

@@ -35,4 +35,21 @@ abstract class TestCase extends BaseTestCase
     {
         return \App\Models\Clinic::query()->where('code', 'CLINIC_111')->firstOrFail();
     }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    protected function withClinicId(array $attributes = []): array
+    {
+        return array_merge(['clinic_id' => $this->clinic111()->id], $attributes);
+    }
+
+    protected function authenticateAdmin(): User
+    {
+        $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $this->actingAs($admin);
+
+        return $admin;
+    }
 }

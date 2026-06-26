@@ -133,10 +133,10 @@ class TreatmentAdminUiTest extends TestCase
     public function test_activate_and_deactivate_via_ui_routes(): void
     {
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
-        $treatment = Treatment::query()->create([
+        $treatment = Treatment::query()->create($this->withClinicId([
             'code' => 'UIACT',
             'name' => 'UI Activate Test',
-        ]);
+        ]));
         $treatment->has_lab_cost = false;
         $treatment->is_active = true;
         $treatment->save();

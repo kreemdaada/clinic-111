@@ -89,10 +89,10 @@ class LabAdminTest extends TestCase
     public function test_admin_can_deactivate_laboratory_without_deleting_row(): void
     {
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
-        $lab = Lab::query()->create([
+        $lab = Lab::query()->create($this->withClinicId([
             'name' => 'Temp Lab',
             'code' => 'TEMP_LAB',
-        ]);
+        ]));
 
         $this->actingAs($admin)
             ->delete(route('labs.destroy', $lab))
@@ -108,10 +108,10 @@ class LabAdminTest extends TestCase
     public function test_admin_can_activate_laboratory(): void
     {
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
-        $lab = Lab::query()->create([
+        $lab = Lab::query()->create($this->withClinicId([
             'name' => 'Inactive Lab',
             'code' => 'INACTIVE_LAB',
-        ]);
+        ]));
         $lab->is_active = false;
         $lab->save();
 
@@ -136,10 +136,10 @@ class LabAdminTest extends TestCase
     public function test_status_filter_shows_only_inactive_laboratories(): void
     {
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
-        $hiddenLab = Lab::query()->create([
+        $hiddenLab = Lab::query()->create($this->withClinicId([
             'name' => 'Hidden Lab',
             'code' => 'HIDDEN_LAB',
-        ]);
+        ]));
         $hiddenLab->is_active = false;
         $hiddenLab->save();
 
@@ -167,10 +167,10 @@ class LabAdminTest extends TestCase
 
     public function test_reference_api_still_returns_only_active_labs(): void
     {
-        $inactiveLab = Lab::query()->create([
+        $inactiveLab = Lab::query()->create($this->withClinicId([
             'name' => 'Inactive Reference',
             'code' => 'INACTIVE_REF',
-        ]);
+        ]));
         $inactiveLab->is_active = false;
         $inactiveLab->save();
 
@@ -185,10 +185,10 @@ class LabAdminTest extends TestCase
     public function test_deactivation_audit_log_is_created(): void
     {
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
-        $lab = Lab::query()->create([
+        $lab = Lab::query()->create($this->withClinicId([
             'name' => 'Audit Lab',
             'code' => 'AUDIT_LAB',
-        ]);
+        ]));
 
         $this->actingAs($admin)
             ->delete(route('labs.destroy', $lab))

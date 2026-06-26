@@ -44,10 +44,10 @@ class LabManagementServiceTest extends TestCase
     public function test_deactivate_sets_is_active_false_without_deleting_row(): void
     {
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
-        $lab = Lab::query()->create([
+        $lab = Lab::query()->create($this->withClinicId([
             'name' => 'Deactivate Service Lab',
             'code' => 'DEACT_SVC',
-        ]);
+        ]));
         $this->actingAs($admin);
 
         $deactivated = $this->labManagementService->deactivate($lab);
@@ -63,10 +63,10 @@ class LabManagementServiceTest extends TestCase
     public function test_activate_sets_is_active_true_and_logs_audit(): void
     {
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
-        $lab = Lab::query()->create([
+        $lab = Lab::query()->create($this->withClinicId([
             'name' => 'Reactivate Service Lab',
             'code' => 'REACT_SVC',
-        ]);
+        ]));
         $lab->is_active = false;
         $lab->save();
         $this->actingAs($admin);

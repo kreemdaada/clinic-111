@@ -200,10 +200,10 @@ class DoctorFixedFeeAdminTest extends TestCase
 
     private function createTreatment(string $code, string $name): Treatment
     {
-        $treatment = Treatment::query()->create([
+        $treatment = Treatment::query()->create($this->withClinicId([
             'code' => $code,
             'name' => $name,
-        ]);
+        ]));
         $treatment->has_lab_cost = false;
         $treatment->is_active = true;
         $treatment->save();
@@ -216,14 +216,14 @@ class DoctorFixedFeeAdminTest extends TestCase
         $doctor = Doctor::query()->where('code', 'WA')->firstOrFail();
         $treatment = $this->createTreatment($treatmentCode, $treatmentCode);
 
-        $fee = DoctorFixedFee::query()->create([
+        $fee = DoctorFixedFee::query()->create($this->withClinicId([
             'doctor_id' => $doctor->id,
             'treatment_id' => $treatment->id,
             'fee_amount' => '150.00',
             'currency' => 'AED',
             'valid_from' => '2035-01-01',
             'valid_to' => '2035-12-31',
-        ]);
+        ]));
         $fee->is_active = true;
         $fee->save();
 

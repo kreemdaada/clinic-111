@@ -153,13 +153,13 @@ class ProductionAccessControlTest extends TestCase
     public function test_soft_deactivate_doctor_instead_of_delete(): void
     {
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
-        $doctor = Doctor::query()->create([
+        $doctor = Doctor::query()->create($this->withClinicId([
             'name' => 'Dr Soft',
             'code' => 'SOFT',
             'commission_type' => 'percentage',
             'commission_percentage' => 15,
             'is_active' => true,
-        ]);
+        ]));
 
         $this->actingAs($admin)
             ->delete(route('doctors.destroy', $doctor))

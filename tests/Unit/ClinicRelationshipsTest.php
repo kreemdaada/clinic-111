@@ -54,11 +54,13 @@ class ClinicRelationshipsTest extends TestCase
         $this->assertTrue($fixedFee->clinic->is($clinic));
     }
 
-    public function test_new_configuration_record_defaults_to_clinic_111(): void
+    public function test_service_create_assigns_authenticated_clinic(): void
     {
         $clinic = $this->clinic111();
+        $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $this->actingAs($admin);
 
-        $lab = Lab::query()->create([
+        $lab = app(\App\Services\Accounting\LabManagementService::class)->create([
             'name' => 'Relationship Test Lab',
             'code' => 'REL_TEST_LAB',
         ]);
