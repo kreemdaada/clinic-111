@@ -208,6 +208,10 @@ Temporary user-without-clinic state is allowed only inside a database transactio
 
 # 9. Registration Workflow
 
+**Status:** Implemented (Milestone 11, ADR-030).
+
+Routes: web `GET/POST /register-clinic`, API `POST /api/register-clinic`.
+
 The registration form is clinic registration, not only user registration.
 
 The form collects:
@@ -215,6 +219,7 @@ The form collects:
 ## Clinic Information
 
 * Clinic Name
+* Clinic Code
 * Country
 * Base Currency
 * Timezone
@@ -225,9 +230,11 @@ The form collects:
 * Owner Email
 * Owner Password
 
-The registration process runs inside one database transaction:
+The registration process runs inside one database transaction via `ClinicOnboardingService`:
 
 ```text
+Validate request
+↓
 Start transaction
 ↓
 Create Clinic
@@ -236,7 +243,7 @@ Create Owner/Admin User
 ↓
 Assign user.clinic_id = clinic.id
 ↓
-Initialize default configuration
+Create default lab ({CLINIC_CODE}_MAIN_LAB)
 ↓
 Commit transaction
 ↓
@@ -244,6 +251,8 @@ Login owner
 ↓
 Redirect to Configuration Dashboard
 ```
+
+Default configuration is minimal — one lab only. Doctors, treatments, lab prices, and fixed fees are configured after onboarding.
 
 If any step fails, the transaction is rolled back.
 
@@ -586,11 +595,15 @@ Accounting Ownership and Isolation (ADR-029) — **Done**
 
 ## Milestone 11
 
+Clinic Registration / Onboarding Wizard (ADR-030).
+
+Status:
+
+Done
+
+## Milestone 12
+
 Dynamic Business Rules.
-
-## Future
-
-Registration Wizard.
 
 ## Future
 

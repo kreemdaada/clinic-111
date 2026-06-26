@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Web\ClinicAdminController;
+use App\Http\Controllers\Web\ClinicOnboardingController;
 use App\Http\Controllers\Web\ConfigurationDashboardController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\DailyReportEditorController;
@@ -24,9 +25,13 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
+Route::get('/register-clinic', [ClinicOnboardingController::class, 'create'])->name('register-clinic.create');
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
+
+    Route::post('/register-clinic', [ClinicOnboardingController::class, 'store'])->name('register-clinic.store');
 });
 
 Route::middleware('auth')->group(function () {
