@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DailyReports\ImportDailyReportRequest;
 use App\Models\DailyReport;
+use App\Services\DailyReport\DailyReportQueryService;
 use App\Services\Export\DoctorsIncomeExcelExportService;
 use App\Services\Import\DailyReportImportService;
 use Illuminate\Http\RedirectResponse;
@@ -27,6 +28,7 @@ class ImportController extends Controller
     public function __construct(
         private readonly DailyReportImportService $importService,
         private readonly DoctorsIncomeExcelExportService $incomeExporter,
+        private readonly DailyReportQueryService $dailyReportQueryService,
     ) {}
 
     /**
@@ -36,11 +38,7 @@ class ImportController extends Controller
      */
     public function index(): View
     {
-        $recentReports = DailyReport::query()
-            ->withCount('dailyWorkRows')
-            ->latest('id')
-            ->limit(10)
-            ->get();
+        $recentReports = $this->dailyReportQueryService->listRecent(10);
 
         return view('imports.index', [
             'recentReports' => $recentReports,
@@ -77,6 +75,8 @@ class ImportController extends Controller
      */
     public function downloadIncome(DailyReport $dailyReport): BinaryFileResponse
     {
+        $this->dailyReportQueryService->assertAccessible($dailyReport);
+
         return $this->incomeExporter->downloadResponse($dailyReport);
     }
 
@@ -85,6 +85,8 @@ class ImportController extends Controller
      */
     public function destroy(DailyReport $dailyReport): RedirectResponse
     {
+        $this->dailyReportQueryService->assertAccessible($dailyReport);
+
         if ($dailyReport->isLocked()) {
             return back()->withErrors([
                 'delete' => 'Approved or locked reports cannot be deleted.',

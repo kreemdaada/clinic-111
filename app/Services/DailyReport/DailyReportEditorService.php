@@ -10,13 +10,16 @@ use App\Models\DailyWorkRow;
 use App\Models\Doctor;
 use App\Models\Lab;
 use App\Models\Treatment;
+use App\Services\Accounting\Concerns\ScopesAccountingQueries;
 use App\Services\Accounting\LabBillingResolver;
 use App\Services\Accounting\LabPriceResolver;
 use App\Services\Accounting\PaymentCalculationService;
 use App\Services\Accounting\TreatmentParserService;
 use App\Services\Accounting\WaelFixedFeeCalculator;
 use App\Services\Audit\AuditLogService;
+use App\Services\Configuration\CurrentClinicResolver;
 use App\Services\Import\DailyReportImportService;
+use App\Support\AccountingScopedQuery;
 use App\Support\MoneyCalculator;
 use App\Support\TreatmentTextBuilder;
 use Carbon\Carbon;
@@ -28,6 +31,8 @@ use RuntimeException;
  */
 class DailyReportEditorService
 {
+    use ScopesAccountingQueries;
+
     public function __construct(
         private readonly PaymentCalculationService $paymentCalculationService,
         private readonly TreatmentParserService $treatmentParserService,
@@ -35,13 +40,14 @@ class DailyReportEditorService
         private readonly LabPriceResolver $labPriceResolver,
         private readonly DailyReportImportService $dailyReportImportService,
         private readonly AuditLogService $auditLogService,
+        private readonly CurrentClinicResolver $currentClinicResolver,
     ) {}
 
     public function createManualReport(Carbon $monthStart, string $label): DailyReport
     {
         $reportDate = $monthStart->copy()->startOfMonth()->toDateString();
 
-        if (DailyReport::query()
+        if ($this->forCurrentClinic(DailyReport::class)
             ->where('report_date', $reportDate)
             ->whereIn('status', [ReportStatus::Approved, ReportStatus::Locked])
             ->exists()) {
@@ -49,6 +55,7 @@ class DailyReportEditorService
         }
 
         return DailyReport::query()->create([
+            'clinic_id' => $this->currentClinicId(),
             'report_date' => $reportDate,
             'source_type' => ReportSourceType::ManualEntry,
             'source_file_name' => $label,
@@ -69,11 +76,13 @@ class DailyReportEditorService
      */
     public function saveWorkRow(DailyReport $dailyReport, array $payload): DailyWorkRow
     {
+        $this->assertSameClinic($dailyReport);
+
         if ($dailyReport->isLocked()) {
             throw new RuntimeException('Approved or locked reports are read-only.');
         }
 
-        $doctor = Doctor::query()->where('is_active', true)->findOrFail($payload['doctor_id']);
+        $doctor = $this->forCurrentClinic(Doctor::class)->where('is_active', true)->findOrFail($payload['doctor_id']);
         $day = (int) $payload['day'];
         $monthStart = Carbon::parse($dailyReport->report_date)->startOfMonth();
 
@@ -121,10 +130,13 @@ class DailyReportEditorService
 
             /** @var DailyWorkRow $workRow */
             $workRow = $isCorrection
-                ? DailyWorkRow::query()
-                    ->where('daily_report_id', $dailyReport->id)
-                    ->findOrFail($payload['work_row_id'])
-                : new DailyWorkRow(['daily_report_id' => $dailyReport->id]);
+                ? AccountingScopedQuery::workRows((int) $dailyReport->clinic_id, $dailyReport->id)
+                    ->where('id', $payload['work_row_id'])
+                    ->firstOrFail()
+                : new DailyWorkRow([
+                    'clinic_id' => $dailyReport->clinic_id,
+                    'daily_report_id' => $dailyReport->id,
+                ]);
 
             if ($isCorrection) {
                 $oldCorrectionValues = [
@@ -165,7 +177,7 @@ class DailyReportEditorService
             }
 
             $workRow->save();
-            $workRow->payments()->delete();
+            AccountingScopedQuery::payments((int) $workRow->clinic_id, $workRow->id)->delete();
             $this->paymentCalculationService->createPaymentsForWorkRow($workRow);
 
             $this->dailyReportImportService->processParsedReport($dailyReport->fresh());
@@ -194,6 +206,9 @@ class DailyReportEditorService
 
     public function deleteWorkRow(DailyReport $dailyReport, DailyWorkRow $dailyWorkRow): void
     {
+        $this->assertSameClinic($dailyReport);
+        $this->assertSameClinic($dailyWorkRow);
+
         if ($dailyReport->isLocked()) {
             throw new RuntimeException('Approved or locked reports are read-only.');
         }
@@ -260,11 +275,12 @@ class DailyReportEditorService
      */
     public function dayCountsForDoctor(DailyReport $dailyReport, int $doctorId): array
     {
+        $this->assertSameClinic($dailyReport);
+
         $monthStart = Carbon::parse($dailyReport->report_date)->startOfMonth();
         $counts = [];
 
-        $rows = DailyWorkRow::query()
-            ->where('daily_report_id', $dailyReport->id)
+        $rows = AccountingScopedQuery::workRows((int) $dailyReport->clinic_id, $dailyReport->id)
             ->where('doctor_id', $doctorId)
             ->get(['work_date']);
 
@@ -288,11 +304,11 @@ class DailyReportEditorService
     private function estimateLabTotal(Doctor $doctor, string $treatmentText, Carbon $workDate): string
     {
         $parsed = $this->treatmentParserService->parse($treatmentText);
-        $activeLabs = Lab::query()->where('is_active', true)->get();
+        $activeLabs = $this->forCurrentClinic(Lab::class)->where('is_active', true)->get();
         $total = '0.00';
 
         foreach ($parsed as $item) {
-            $treatment = Treatment::query()->where('code', $item->treatmentCode)->first();
+            $treatment = $this->forCurrentClinic(Treatment::class)->where('code', $item->treatmentCode)->first();
 
             if ($treatment === null || ! $this->labBillingResolver->shouldBillLabJob($doctor, $treatment)) {
                 continue;
@@ -368,8 +384,7 @@ class DailyReportEditorService
 
     private function nextManualRowNumber(DailyReport $dailyReport, int $doctorId, int $day): int
     {
-        $max = DailyWorkRow::query()
-            ->where('daily_report_id', $dailyReport->id)
+        $max = AccountingScopedQuery::workRows((int) $dailyReport->clinic_id, $dailyReport->id)
             ->where('doctor_id', $doctorId)
             ->whereDate('work_date', Carbon::parse($dailyReport->report_date)->startOfMonth()->day($day))
             ->max('excel_row_number');

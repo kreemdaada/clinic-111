@@ -207,27 +207,24 @@ class LabPriceAdminTest extends TestCase
         $doctor = Doctor::query()->where('code', 'JACK')->firstOrFail();
         $treatment = Treatment::query()->findOrFail($price->treatment_id);
         $lab = Lab::query()->findOrFail($price->lab_id);
-        $report = DailyReport::query()->create([
+        $report = $this->createDailyReport([
             'report_date' => '2026-06-01',
             'source_type' => 'manual_entry',
             'source_file_name' => 'hist-lp',
             'status' => 'calculated',
         ]);
-        $workRow = DailyWorkRow::query()->create([
-            'daily_report_id' => $report->id,
+        $workRow = $this->createDailyWorkRow($report, [
             'doctor_id' => $doctor->id,
             'work_date' => '2026-06-01',
             'treatment_text' => $treatment->code.' x 1',
             'paid_total_aed' => '100.00',
         ]);
-        $workItem = WorkItem::query()->create([
-            'daily_work_row_id' => $workRow->id,
+        $workItem = $this->createWorkItem($workRow, [
             'treatment_id' => $treatment->id,
             'quantity' => 1,
             'confidence' => 100,
         ]);
-        $job = LabJob::query()->create([
-            'work_item_id' => $workItem->id,
+        $job = $this->createLabJob($workItem, [
             'lab_id' => $lab->id,
             'lab_price_id' => $price->id,
             'quantity' => 1,

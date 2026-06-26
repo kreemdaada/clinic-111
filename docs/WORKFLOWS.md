@@ -566,11 +566,39 @@ sequenceDiagram
 - Cross-clinic route-model binding returns **404** on update/deactivate/activate
 - Reference APIs (`/api/doctors`, `/api/treatments`, `/api/labs`) scoped via `ReferenceDataService`
 - Configuration dashboard counts, health warnings, and recent activity are clinic-specific
-- Accounting tables (`daily_reports`, `payments`, `lab_jobs`, …) remain unscoped
+- Accounting tables (`daily_reports`, `payments`, `lab_jobs`, …) are clinic-scoped via explicit service filtering (Milestone 10)
 
 ---
 
-## 18. Environment Variables (import / privacy)
+## 19. Accounting Ownership (Milestone 10, ADR-029)
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Ctrl as ImportController
+    participant Import as DailyReportImportService
+    participant Resolver as CurrentClinicResolver
+    participant DB as accounting tables
+
+    User->>Ctrl: Upload Excel / open report
+    Ctrl->>Import: import() / processParsedReport()
+    Import->>Resolver: resolveId()
+    Import->>DB: INSERT daily_reports (clinic_id)
+    Import->>DB: INSERT daily_work_rows, payments, work_items, lab_jobs (same clinic_id)
+    Note over DB: All reads filter WHERE clinic_id = current clinic
+```
+
+**Rules:**
+
+- Every accounting create assigns `clinic_id` from `CurrentClinicResolver` only
+- Import pipeline: Report → Work Rows → Payments → Work Items → Lab Jobs (same tenant)
+- Monthly income, exports, and editor mutations never mix clinics
+- Cross-clinic report access returns **404** via `DailyReportQueryService::assertAccessible()`
+- API response shapes unchanged — only filtering behaviour differs
+
+---
+
+## 20. Environment Variables (import / privacy)
 
 | Variable | Purpose |
 |---|---|
@@ -587,6 +615,10 @@ Same pipeline after row creation: `TreatmentImportValidationService` → `LabJob
 ---
 
 ## What Changed
+
+**Updated — 2026-06-27**
+
+- Accounting ownership and isolation (Milestone 10, ADR-029)
 
 **Updated — 2026-06-26**
 

@@ -110,6 +110,7 @@ class ProductionAccessControlTest extends TestCase
         $report = $this->createManualReport();
         $report->update(['status' => ReportStatus::Calculated]);
 
+        $this->actingAs($admin);
         app(DailyReportLockService::class)->approve($report->fresh(), $admin);
 
         $doctorId = Doctor::query()->where('code', 'JACK')->value('id');
@@ -180,7 +181,7 @@ class ProductionAccessControlTest extends TestCase
 
     private function createManualReport(): DailyReport
     {
-        return DailyReport::query()->create([
+        return $this->createDailyReport([
             'report_date' => '2026-06-01',
             'source_type' => ReportSourceType::ManualEntry,
             'source_file_name' => 'Test manual',

@@ -6,6 +6,8 @@ use App\DTOs\ParsedTreatmentItemDto;
 use App\Models\DailyWorkRow;
 use App\Models\Treatment;
 use App\Models\WorkItem;
+use App\Services\Configuration\CurrentClinicResolver;
+use App\Support\AccountingScopedQuery;
 use Illuminate\Support\Collection;
 
 /**
@@ -28,6 +30,10 @@ use Illuminate\Support\Collection;
 class TreatmentParserService
 {
     private const MAX_QUANTITY = 50;
+
+    public function __construct(
+        private readonly CurrentClinicResolver $currentClinicResolver,
+    ) {}
 
     /** @var array<int, string> */
     private const FILLING_CODES = ['SXP', 'RCF', 'CF', 'AF'];
@@ -67,6 +73,8 @@ class TreatmentParserService
 
     /** @var Collection<string, Treatment>|null */
     private ?Collection $treatmentCodes = null;
+
+    private ?int $treatmentCodesClinicId = null;
 
     /**
      * Parse treatment text into a list of treatment codes with quantities.
@@ -112,7 +120,7 @@ class TreatmentParserService
      */
     public function parseAndPersist(DailyWorkRow $dailyWorkRow): void
     {
-        $dailyWorkRow->workItems()->delete();
+        AccountingScopedQuery::workItems((int) $dailyWorkRow->clinic_id, $dailyWorkRow->id)->delete();
 
         if (blank($dailyWorkRow->treatment_text)) {
             return;
@@ -129,6 +137,7 @@ class TreatmentParserService
             }
 
             WorkItem::query()->create([
+                'clinic_id' => $dailyWorkRow->clinic_id,
                 'daily_work_row_id' => $dailyWorkRow->id,
                 'treatment_id' => $treatment->id,
                 'quantity' => $parsedItem->quantity,
@@ -638,8 +647,10 @@ class TreatmentParserService
      */
     private function getKnownTreatmentCodes(): Collection
     {
-        if ($this->treatmentCodes === null) {
+        if ($this->treatmentCodes === null || $this->treatmentCodesClinicId !== $this->currentClinicResolver->resolveId()) {
+            $this->treatmentCodesClinicId = $this->currentClinicResolver->resolveId();
             $this->treatmentCodes = Treatment::query()
+                ->where('clinic_id', $this->treatmentCodesClinicId)
                 ->where('is_active', true)
                 ->get()
                 ->keyBy('code');

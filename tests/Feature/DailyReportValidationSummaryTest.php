@@ -22,14 +22,13 @@ class DailyReportValidationSummaryTest extends TestCase
     {
         $doctor = Doctor::query()->where('code', 'RIYAD')->firstOrFail();
 
-        $dailyReport = DailyReport::query()->create([
+        $dailyReport = $this->createDailyReport([
             'report_date' => '2026-01-15',
             'source_type' => 'excel_upload',
             'status' => 'needs_review',
         ]);
 
-        $workRow = DailyWorkRow::query()->create([
-            'daily_report_id' => $dailyReport->id,
+        $workRow = $this->createDailyWorkRow($dailyReport, [
             'doctor_id' => $doctor->id,
             'work_date' => '2026-01-15',
             'excel_row_number' => 25,

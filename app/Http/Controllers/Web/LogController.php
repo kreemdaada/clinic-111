@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\DailyReport;
+use App\Services\DailyReport\DailyReportQueryService;
 use App\Services\Export\DoctorsIncomeExcelExportService;
 use App\Services\Import\ImportExtractionLogService;
 use App\Support\DoctorCodeResolver;
@@ -22,6 +23,7 @@ class LogController extends Controller
     public function __construct(
         private readonly ImportExtractionLogService $importExtractionLogService,
         private readonly DoctorsIncomeExcelExportService $incomeExporter,
+        private readonly DailyReportQueryService $dailyReportQueryService,
     ) {}
 
     /**
@@ -43,6 +45,8 @@ class LogController extends Controller
      */
     public function extraction(DailyReport $dailyReport): View
     {
+        $this->dailyReportQueryService->assertAccessible($dailyReport);
+
         $log = $this->importExtractionLogService->loadForReport($dailyReport);
 
         $importedByDoctor = [];
@@ -122,6 +126,8 @@ class LogController extends Controller
      */
     public function downloadExtraction(DailyReport $dailyReport): BinaryFileResponse
     {
+        $this->dailyReportQueryService->assertAccessible($dailyReport);
+
         $path = $this->importExtractionLogService->getLogPath($dailyReport);
 
         if ($path === null || ! is_file($path)) {

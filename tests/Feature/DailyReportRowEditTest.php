@@ -24,15 +24,14 @@ class DailyReportRowEditTest extends TestCase
         $doctor = Doctor::query()->where('code', 'JACK')->firstOrFail();
         $treatment = Treatment::query()->where('code', 'MC')->firstOrFail();
 
-        $report = DailyReport::query()->create([
+        $report = $this->createDailyReport([
             'report_date' => '2026-06-01',
             'source_type' => ReportSourceType::ExcelUpload,
             'source_file_name' => 'daily report June 2026.xlsm',
             'status' => ReportStatus::Calculated,
         ]);
 
-        $workRow = DailyWorkRow::query()->create([
-            'daily_report_id' => $report->id,
+        $workRow = $this->createDailyWorkRow($report, [
             'doctor_id' => $doctor->id,
             'work_date' => '2026-06-08',
             'treatment_text' => 'MC x 2',
@@ -78,15 +77,14 @@ class DailyReportRowEditTest extends TestCase
         $doctor = Doctor::query()->where('code', 'JACK')->firstOrFail();
         $treatment = Treatment::query()->where('code', 'ZIR')->firstOrFail();
 
-        $report = DailyReport::query()->create([
+        $report = $this->createDailyReport([
             'report_date' => '2026-06-01',
             'source_type' => ReportSourceType::ExcelUpload,
             'source_file_name' => 'daily report June 2026.xlsm',
             'status' => ReportStatus::Calculated,
         ]);
 
-        $workRow = DailyWorkRow::query()->create([
-            'daily_report_id' => $report->id,
+        $workRow = $this->createDailyWorkRow($report, [
             'doctor_id' => $doctor->id,
             'work_date' => '2026-06-09',
             'treatment_text' => 'ZIR x 3',
@@ -95,7 +93,7 @@ class DailyReportRowEditTest extends TestCase
             'raw_data_json' => ['sheet_day' => 9],
         ]);
 
-        $workRow->workItems()->create([
+        $this->createWorkItem($workRow, [
             'treatment_id' => $treatment->id,
             'quantity' => 3,
         ]);
@@ -119,7 +117,7 @@ class DailyReportRowEditTest extends TestCase
 
         $user = User::query()->where('email', 'accountant@clinic.test')->firstOrFail();
 
-        $report = DailyReport::query()->create([
+        $report = $this->createDailyReport([
             'report_date' => '2026-06-01',
             'source_type' => ReportSourceType::ExcelUpload,
             'source_file_name' => 'daily report June 2026.xlsm',

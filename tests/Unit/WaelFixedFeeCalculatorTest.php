@@ -20,6 +20,7 @@ class WaelFixedFeeCalculatorTest extends TestCase
         parent::setUp();
 
         $this->seedAccountingData();
+        $this->authenticateAdmin();
         $this->calculator = app(WaelFixedFeeCalculator::class);
     }
 
@@ -142,14 +143,13 @@ class WaelFixedFeeCalculatorTest extends TestCase
     public function test_sinuc_alias_parses_to_sinus_work_item(): void
     {
         $doctor = Doctor::query()->where('code', 'WA')->firstOrFail();
-        $dailyReport = DailyReport::query()->create([
+        $dailyReport = $this->createDailyReport([
             'report_date' => '2026-01-15',
             'source_type' => 'manual_entry',
             'status' => 'parsed',
         ]);
 
-        $row = DailyWorkRow::query()->create([
-            'daily_report_id' => $dailyReport->id,
+        $row = $this->createDailyWorkRow($dailyReport, [
             'doctor_id' => $doctor->id,
             'work_date' => '2026-01-15',
             'usd_amount' => '500.00',
@@ -174,14 +174,13 @@ class WaelFixedFeeCalculatorTest extends TestCase
     private function makeWorkRow(string $usd, string $dhs): DailyWorkRow
     {
         $doctor = Doctor::query()->where('code', 'WA')->firstOrFail();
-        $dailyReport = DailyReport::query()->create([
+        $dailyReport = $this->createDailyReport([
             'report_date' => '2026-01-15',
             'source_type' => 'manual_entry',
             'status' => 'parsed',
         ]);
 
-        return DailyWorkRow::query()->create([
-            'daily_report_id' => $dailyReport->id,
+        return $this->createDailyWorkRow($dailyReport, [
             'doctor_id' => $doctor->id,
             'work_date' => '2026-01-15',
             'usd_amount' => $usd,
@@ -193,8 +192,7 @@ class WaelFixedFeeCalculatorTest extends TestCase
     {
         $treatment = Treatment::query()->where('code', $code)->firstOrFail();
 
-        return WorkItem::query()->create([
-            'daily_work_row_id' => $row->id,
+        return $this->createWorkItem($row, [
             'treatment_id' => $treatment->id,
             'quantity' => $qty,
         ])->load('treatment');

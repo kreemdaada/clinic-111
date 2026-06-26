@@ -6,8 +6,10 @@ use App\Enums\CommissionType;
 use App\Models\DailyReport;
 use App\Models\DailyWorkRow;
 use App\Models\Doctor;
+use App\Services\Accounting\Concerns\ScopesAccountingQueries;
 use App\Services\Accounting\IncomeReconciliationService;
 use App\Services\Accounting\WaelFixedFeeCalculator;
+use App\Services\Configuration\CurrentClinicResolver;
 use App\Support\DoctorLabelNormalizer;
 use App\Support\MoneyCalculator;
 use App\Support\ReportMonthResolver;
@@ -29,6 +31,8 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
  */
 class DoctorsIncomeExcelExportService
 {
+    use ScopesAccountingQueries;
+
     private const TEMPLATE_PATH = 'templates/original_income_template.xlsx';
 
     /**
@@ -40,6 +44,7 @@ class DoctorsIncomeExcelExportService
         private readonly IncomeReconciliationService $incomeReconciliationService,
         private readonly DoctorIncomeExportProfileService $exportProfileService,
         private readonly WaelFixedFeeCalculator $waelFixedFeeCalculator,
+        private readonly CurrentClinicResolver $currentClinicResolver,
         private readonly string $defaultUsdExchangeRate = '3.65',
     ) {}
 
@@ -55,6 +60,8 @@ class DoctorsIncomeExcelExportService
      */
     public function exportForReport(DailyReport $dailyReport): string
     {
+        $this->assertSameClinic($dailyReport);
+
         $reconciliationIssues = $this->incomeReconciliationService->validateReport($dailyReport);
 
         if ($this->incomeReconciliationService->hasErrors($reconciliationIssues)) {
@@ -93,10 +100,11 @@ class DoctorsIncomeExcelExportService
 
         $spreadsheet = IOFactory::load($templatePath);
 
-        $workRowsQuery = DailyWorkRow::query()
+        $workRowsQuery = $this->forCurrentClinic(DailyWorkRow::class)
             ->with(['doctor', 'workItems.treatment', 'workItems.labJob']);
 
         if ($dailyReport !== null) {
+            $this->assertSameClinic($dailyReport);
             $workRowsQuery->where('daily_report_id', $dailyReport->id);
         } else {
             $workRowsQuery->whereBetween('work_date', [$monthStart->toDateString(), $monthEnd->toDateString()]);
@@ -106,7 +114,7 @@ class DoctorsIncomeExcelExportService
 
         $rowsByDoctor = $workRows->groupBy('doctor_id');
 
-        foreach (Doctor::query()->where('is_active', true)->get() as $doctor) {
+        foreach ($this->forCurrentClinic(Doctor::class)->where('is_active', true)->get() as $doctor) {
             $profile = $this->resolveExportProfile($doctor);
 
             if ($profile === null) {

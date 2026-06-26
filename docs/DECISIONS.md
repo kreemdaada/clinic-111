@@ -915,6 +915,35 @@ No step may overwrite the clinic context.
 
 ---
 
+## Immutable Ownership
+
+`clinic_id` is **immutable** after create.
+
+Once assigned at insert time, no runtime code may change it — not admin UI, not services, not migrations after the initial backfill.
+
+Only **new** records receive `clinic_id`.
+
+---
+
+## Parent Inheritance (No Resolver on Children)
+
+Child entities must **never** resolve their own clinic from `CurrentClinicResolver`.
+
+They inherit `clinic_id` from the parent entity:
+
+| Child | Inherits from |
+|---|---|
+| `daily_work_rows` | `daily_reports.clinic_id` |
+| `payments` | `daily_work_rows.clinic_id` |
+| `work_items` | `daily_work_rows.clinic_id` |
+| `lab_jobs` | `work_items.clinic_id` |
+
+Only **root** accounting creates (e.g. `DailyReport`) use `CurrentClinicResolver`.
+
+This prevents tenant mismatches when the resolver and parent disagree.
+
+---
+
 ## Query Rules
 
 Every accounting query must explicitly filter by:
@@ -922,6 +951,26 @@ Every accounting query must explicitly filter by:
 ```php
 ->where('clinic_id', $this->currentClinicResolver->resolveId())
 ```
+
+**Never traverse parent relations** for tenant-scoped reads or writes.
+
+Forbidden:
+
+```php
+$report->payments()
+$report->dailyWorkRows()
+$workRow->workItems()->delete()
+```
+
+Required:
+
+```php
+Payment::query()
+    ->where('clinic_id', $clinicId)
+    ->where('daily_work_row_id', $workRowId)
+```
+
+Use `App\Support\AccountingScopedQuery` helpers in services.
 
 Filtering belongs inside the Service Layer.
 
@@ -1100,6 +1149,23 @@ Milestone 10 is considered complete only when:
 Only after these conditions are satisfied may the Registration Wizard (ADR-030) begin.
 ---
 
+## Implementation (Milestone 10)
+
+Implemented 2026-06-27 on branch `feature/accounting-ownership`:
+
+* Migration `2026_06_27_000003_attach_clinic_id_to_accounting_tables` — NOT NULL `clinic_id` on all accounting tables, backfilled to `CLINIC_111`
+* `ScopesAccountingQueries` trait — `forCurrentClinic()`, `assertSameClinic()`, `currentClinicId()`
+* `DailyReportQueryService` for clinic-scoped report lists and route-bound access checks
+* Import pipeline assigns same `clinic_id` through report → work rows → payments → work items → lab jobs
+* All accounting services inject `CurrentClinicResolver` and filter reads explicitly
+* `AuditLogService` persists `clinic_id` on every log row
+* Cross-clinic accounting access returns HTTP 404
+* `CrossClinicAccountingIsolationTest` + `AccountingOwnershipTest` added (291 tests green)
+* `ImmutableClinicOwnership` trait enforces clinic_id immutability on accounting models
+* `AccountingScopedQuery` — explicit `clinic_id` + parent-key queries (no `$report->payments()`)
+
+---
+
 ## Implementation (Milestone 09)
 
 Implemented 2026-06-26 on branch `feature/query-isolation`:
@@ -1110,7 +1176,6 @@ Implemented 2026-06-26 on branch `feature/query-isolation`:
 * `ConfigurationDashboardService` uses resolver for counts, health, and filtered audit activity
 * Overlap validators accept `clinicId` as first parameter
 * Cross-clinic mutations return HTTP 404
-* Accounting engine untouched; `daily_reports`, `payments`, `lab_jobs`, `audit_logs` unscoped
 
 ---
 
@@ -1126,10 +1191,11 @@ Implemented 2026-06-26 on branch `feature/query-isolation`:
 
 ## Notes
 
-This ADR isolates only **configuration data**.
+This ADR isolates **accounting data** after configuration isolation (ADR-028).
 
-Accounting data (`daily_reports`, `payments`, `work_items`, `lab_jobs`, `audit_logs`) will be isolated in later milestones after configuration isolation is fully validated.
-----
+Registration Wizard (ADR-030) begins only after Milestone 10 is validated.
+
+---
 
 ### No Global Scope Decision
 
@@ -1247,6 +1313,311 @@ Future changes will affect:
 * Milestone 10 — Dynamic Business Rules
 * Milestone 11 — Multi-Clinic Testing
 
+---
+## ADR-029
+
+### Title
+
+Accounting Ownership and Isolation
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-27
+
+### Milestone
+
+Milestone 10
+
+---
+
+## Context
+
+Milestones 07–09 introduced clinic ownership for configuration data and explicit query isolation.
+
+Accounting data was still the final shared area of the system.
+
+To complete the multi-clinic architecture, every accounting entity must belong to exactly one clinic and remain isolated throughout its lifetime.
+
+Accounting ownership must be deterministic, immutable, and inherited through the accounting hierarchy.
+
+---
+
+## Decision
+
+Every accounting record belongs to exactly one clinic.
+
+The ownership is established only once when the root accounting object is created.
+
+After creation, ownership never changes.
+
+All accounting queries must explicitly filter by the current clinic.
+
+Global scopes are forbidden.
+
+---
+
+## Accounting Ownership Chain
+
+The accounting ownership hierarchy is fixed.
+
+```text
+Clinic
+    │
+    ▼
+DailyReport
+    │
+    ▼
+DailyWorkRow
+    │
+    ├──────────────┐
+    ▼              ▼
+Payment       WorkItem
+                    │
+                    ▼
+                 LabJob
+```
+
+Each child entity inherits the clinic_id from its parent.
+
+Child entities never resolve their own clinic.
+
+---
+
+## Ownership Rules
+
+### Root Objects
+
+Only root accounting objects may use CurrentClinicResolver.
+
+Example:
+
+* DailyReport
+
+When a DailyReport is created:
+
+* clinic_id is resolved from CurrentClinicResolver
+* clinic_id is stored permanently
+
+---
+
+### Child Objects
+
+Child entities never call CurrentClinicResolver.
+
+They inherit clinic ownership from their parent.
+
+Examples:
+
+DailyWorkRow → DailyReport
+
+Payment → DailyWorkRow
+
+WorkItem → DailyWorkRow
+
+LabJob → WorkItem
+
+This guarantees consistent ownership across the accounting graph.
+
+---
+
+## Immutable Ownership
+
+clinic_id is immutable.
+
+After a record has been created:
+
+* clinic_id must never change
+* no service may update clinic_id
+* no controller may update clinic_id
+* no administrator may change clinic ownership
+
+Ownership changes require creating new records, not modifying existing ones.
+
+---
+
+## Query Isolation
+
+Every accounting query must explicitly filter by clinic_id.
+
+Example:
+
+```php
+Payment::query()
+    ->where('clinic_id', $resolver->resolveId())
+```
+
+Global scopes are forbidden.
+
+Hidden tenant filtering is not allowed.
+
+---
+
+## Explicit Accounting Queries
+
+Accounting queries must always contain both:
+
+* clinic_id
+* parent identifier
+
+Preferred:
+
+```php
+Payment
+WHERE clinic_id = ?
+AND daily_work_row_id = ?
+```
+
+Avoid relying only on Eloquent parent relations for tenant filtering.
+
+Dedicated query helpers or scoped services should be used instead.
+
+---
+
+## Accounting Isolation
+
+The following tables are tenant-owned:
+
+* daily_reports
+* daily_work_rows
+* payments
+* work_items
+* lab_jobs
+* audit_logs
+
+Every read and write operation must remain inside the authenticated clinic.
+
+Cross-clinic access returns 404.
+
+---
+
+## Alternatives Considered
+
+### Global Scopes
+
+Rejected.
+
+Implicit filtering hides business rules and complicates debugging.
+
+---
+
+### Resolver on Every Entity
+
+Rejected.
+
+Child entities already have a trusted parent.
+
+Resolving the clinic multiple times introduces unnecessary complexity.
+
+---
+
+### Mutable Ownership
+
+Rejected.
+
+Financial ownership must remain permanent.
+
+Changing ownership after creation would compromise accounting integrity.
+
+---
+
+## Consequences
+
+### Advantages
+
+* Deterministic ownership
+* Fully isolated accounting
+* Predictable queries
+* Easier debugging
+* Stable audit trail
+* SaaS-ready architecture
+
+### Disadvantages
+
+* Every query requires explicit clinic filtering
+* Additional helper services are required
+
+---
+
+## Affected Components
+
+### Database
+
+Accounting tables with clinic_id.
+
+### Models
+
+DailyReport
+
+DailyWorkRow
+
+Payment
+
+WorkItem
+
+LabJob
+
+AuditLog
+
+### Services
+
+CurrentClinicResolver
+
+DailyReportQueryService
+
+AccountingScopedQuery
+
+PaymentCalculationService
+
+LabJobCalculationService
+
+MonthlyIncomeCalculationService
+
+TreatmentParserService
+
+### Controllers
+
+Daily Report
+
+Import
+
+Editor
+
+Income
+
+### Tests
+
+AccountingOwnershipTest
+
+CrossClinicAccountingIsolationTest
+
+---
+
+## Related Documentation
+
+* PROJECT_OVERVIEW.md
+* DATABASE_SCHEMA.md
+* SERVICES.md
+* WORKFLOWS.md
+* DEVELOPMENT_GUIDE.md
+* MULTI_CLINIC_ARCHITECTURE.md
+
+---
+
+## Success Criteria
+
+Milestone 10 is complete only when:
+
+* Every accounting table owns clinic_id.
+* clinic_id is immutable.
+* Child entities inherit ownership only from their parent.
+* Global scopes are not used.
+* Every accounting query explicitly filters by clinic_id.
+* Cross-clinic accounting access is impossible.
+* All accounting tests pass.
 ---
 
 ### Notes

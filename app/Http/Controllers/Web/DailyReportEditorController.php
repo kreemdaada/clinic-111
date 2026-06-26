@@ -9,8 +9,9 @@ use App\Http\Requests\Doctors\StoreDoctorRequest;
 use App\Models\DailyReport;
 use App\Models\DailyWorkRow;
 use App\Models\Doctor;
-use App\Models\Lab;
+use App\Services\Configuration\ReferenceDataService;
 use App\Services\DailyReport\DailyReportEditorService;
+use App\Services\DailyReport\DailyReportQueryService;
 use App\Services\DailyReport\DoctorManagementService;
 use App\Services\DailyReport\DoctorTreatmentCatalogService;
 use Carbon\Carbon;
@@ -30,21 +31,14 @@ class DailyReportEditorController extends Controller
         private readonly DailyReportEditorService $editorService,
         private readonly DoctorTreatmentCatalogService $treatmentCatalogService,
         private readonly DoctorManagementService $doctorManagementService,
+        private readonly DailyReportQueryService $dailyReportQueryService,
+        private readonly ReferenceDataService $referenceDataService,
     ) {}
 
     public function index(): View
     {
-        $reports = DailyReport::query()
-            ->where('source_type', 'manual_entry')
-            ->withCount('dailyWorkRows')
-            ->latest('id')
-            ->limit(12)
-            ->get();
-
-        $doctors = Doctor::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
+        $reports = $this->dailyReportQueryService->listManualReportsRecent(12);
+        $doctors = $this->referenceDataService->activeDoctors();
 
         return view('daily-reports.index', [
             'reports' => $reports,
@@ -96,6 +90,8 @@ class DailyReportEditorController extends Controller
 
     public function destroy(DailyReport $dailyReport): RedirectResponse
     {
+        $this->dailyReportQueryService->assertAccessible($dailyReport);
+
         if ($dailyReport->source_type !== ReportSourceType::ManualEntry) {
             abort(404);
         }
@@ -121,14 +117,12 @@ class DailyReportEditorController extends Controller
 
     public function edit(DailyReport $dailyReport): View
     {
-        $monthStart = Carbon::parse($dailyReport->report_date)->startOfMonth();
-        $doctors = Doctor::query()
-            ->with('defaultLab')
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
+        $this->dailyReportQueryService->assertAccessible($dailyReport);
 
-        $rows = $dailyReport->dailyWorkRows()
+        $monthStart = Carbon::parse($dailyReport->report_date)->startOfMonth();
+        $doctors = $this->referenceDataService->activeDoctors();
+
+        $rows = $this->dailyReportQueryService->workRowsQuery($dailyReport)
             ->with(['doctor', 'workItems.treatment', 'workItems.labJob'])
             ->orderBy('work_date')
             ->orderBy('id')
@@ -139,7 +133,7 @@ class DailyReportEditorController extends Controller
             'monthStart' => $monthStart,
             'daysInMonth' => (int) $monthStart->daysInMonth,
             'doctors' => $doctors,
-            'labs' => Lab::query()->where('is_active', true)->orderBy('name')->get(),
+            'labs' => $this->referenceDataService->activeLabs(),
             'rows' => $rows,
             'readOnly' => $dailyReport->isLocked(),
         ]);
@@ -147,6 +141,8 @@ class DailyReportEditorController extends Controller
 
     public function rows(Request $request, DailyReport $dailyReport): JsonResponse
     {
+        $this->dailyReportQueryService->assertAccessible($dailyReport);
+
         $validated = $request->validate([
             'doctor_id' => ['required', 'integer', 'exists:doctors,id'],
             'day' => ['required', 'integer', 'min:1', 'max:31'],
@@ -156,7 +152,7 @@ class DailyReportEditorController extends Controller
         $monthStart = Carbon::parse($dailyReport->report_date)->startOfMonth();
         $workDate = $monthStart->copy()->day(min($day, $monthStart->daysInMonth));
 
-        $rows = $dailyReport->dailyWorkRows()
+        $rows = $this->dailyReportQueryService->workRowsQuery($dailyReport)
             ->with(['workItems.treatment', 'workItems.labJob'])
             ->where('doctor_id', $validated['doctor_id'])
             ->whereDate('work_date', $workDate->toDateString())
@@ -194,6 +190,8 @@ class DailyReportEditorController extends Controller
 
     public function preview(Request $request, DailyReport $dailyReport): JsonResponse
     {
+        $this->dailyReportQueryService->assertAccessible($dailyReport);
+
         $validated = $request->validate([
             'doctor_id' => ['required', 'integer', 'exists:doctors,id'],
             'day' => ['required', 'integer', 'min:1', 'max:31'],
@@ -227,6 +225,8 @@ class DailyReportEditorController extends Controller
 
     public function saveRow(StoreDailyWorkRowRequest $request, DailyReport $dailyReport): JsonResponse
     {
+        $this->dailyReportQueryService->assertAccessible($dailyReport);
+
         try {
             $workRow = $this->editorService->saveWorkRow($dailyReport, $request->validated());
         } catch (RuntimeException $exception) {
@@ -246,6 +246,8 @@ class DailyReportEditorController extends Controller
 
     public function deleteRow(DailyReport $dailyReport, DailyWorkRow $dailyWorkRow): JsonResponse
     {
+        $this->dailyReportQueryService->assertAccessible($dailyReport);
+
         try {
             $doctorId = $dailyWorkRow->doctor_id;
             $this->editorService->deleteWorkRow($dailyReport, $dailyWorkRow);

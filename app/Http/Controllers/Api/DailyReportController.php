@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DailyReports\ImportDailyReportRequest;
 use App\Models\DailyReport;
+use App\Services\DailyReport\DailyReportQueryService;
 use App\Services\Import\DailyReportImportService;
 use App\Services\Import\DailyReportValidationSummaryService;
 use Illuminate\Http\JsonResponse;
@@ -16,6 +17,10 @@ use Illuminate\Http\JsonResponse;
  */
 class DailyReportController extends Controller
 {
+    public function __construct(
+        private readonly DailyReportQueryService $dailyReportQueryService,
+    ) {}
+
     /**
      * Upload Excel, run full import pipeline, return calculated report JSON.
      *
@@ -47,12 +52,7 @@ class DailyReportController extends Controller
      */
     public function show(DailyReport $dailyReport): JsonResponse
     {
-        $dailyReport->load([
-            'dailyWorkRows.doctor',
-            'dailyWorkRows.payments',
-            'dailyWorkRows.workItems.treatment',
-            'dailyWorkRows.workItems.labJob.lab',
-        ]);
+        $dailyReport = $this->dailyReportQueryService->loadReportGraph($dailyReport);
 
         return response()->json([
             'data' => $this->formatDailyReport($dailyReport),
@@ -66,6 +66,8 @@ class DailyReportController extends Controller
         DailyReport $dailyReport,
         DailyReportValidationSummaryService $validationSummaryService,
     ): JsonResponse {
+        $this->dailyReportQueryService->assertAccessible($dailyReport);
+
         return response()->json([
             'data' => $validationSummaryService->build($dailyReport),
         ]);

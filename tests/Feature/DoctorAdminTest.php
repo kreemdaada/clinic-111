@@ -53,15 +53,14 @@ class DoctorAdminTest extends TestCase
 
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
         $doctor = Doctor::query()->where('code', 'PURIYA')->firstOrFail();
-        $report = DailyReport::query()->create([
+        $report = $this->createDailyReport([
             'report_date' => '2026-06-01',
             'source_type' => ReportSourceType::ManualEntry,
             'source_file_name' => 'test',
             'status' => 'uploaded',
         ]);
 
-        DailyWorkRow::query()->create([
-            'daily_report_id' => $report->id,
+        $this->createDailyWorkRow($report, [
             'doctor_id' => $doctor->id,
             'work_date' => '2026-06-01',
             'paid_total_aed' => '100.00',
@@ -109,7 +108,7 @@ class DoctorAdminTest extends TestCase
         $doctor = Doctor::query()->where('code', 'PURIYA')->firstOrFail();
         $doctor->update(['is_active' => false]);
 
-        $report = DailyReport::query()->create([
+        $report = $this->createDailyReport([
             'report_date' => '2026-06-01',
             'source_type' => ReportSourceType::ManualEntry,
             'source_file_name' => 'test',

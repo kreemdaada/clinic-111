@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\PaymentMethod;
+use App\Models\Concerns\BelongsToClinic;
+use App\Models\Concerns\ImmutableClinicOwnership;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -13,7 +15,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Payment extends Model
 {
+    use BelongsToClinic, ImmutableClinicOwnership;
+
     protected $fillable = [
+        'clinic_id',
         'daily_work_row_id',
         'payment_method',
         'amount',

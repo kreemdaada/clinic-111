@@ -123,6 +123,63 @@ abstract class TestCase extends BaseTestCase
         return array_merge(['clinic_id' => $this->clinic111()->id], $attributes);
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    protected function createDailyReport(array $attributes = []): \App\Models\DailyReport
+    {
+        return \App\Models\DailyReport::query()->create($this->withClinicId($attributes));
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    protected function withClinic222Id(array $attributes = []): array
+    {
+        return array_merge(['clinic_id' => $this->clinic222()->id], $attributes);
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    protected function createClinic222DailyReport(array $attributes = []): \App\Models\DailyReport
+    {
+        return \App\Models\DailyReport::query()->create($this->withClinic222Id($attributes));
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    protected function createDailyWorkRow(\App\Models\DailyReport $dailyReport, array $attributes = []): \App\Models\DailyWorkRow
+    {
+        return \App\Models\DailyWorkRow::query()->create(array_merge([
+            'clinic_id' => $dailyReport->clinic_id,
+            'daily_report_id' => $dailyReport->id,
+        ], $attributes));
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    protected function createWorkItem(\App\Models\DailyWorkRow $dailyWorkRow, array $attributes = []): \App\Models\WorkItem
+    {
+        return \App\Models\WorkItem::query()->create(array_merge([
+            'clinic_id' => $dailyWorkRow->clinic_id,
+            'daily_work_row_id' => $dailyWorkRow->id,
+        ], $attributes));
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    protected function createLabJob(\App\Models\WorkItem $workItem, array $attributes = []): \App\Models\LabJob
+    {
+        return \App\Models\LabJob::query()->create(array_merge([
+            'clinic_id' => $workItem->clinic_id,
+            'work_item_id' => $workItem->id,
+        ], $attributes));
+    }
+
     protected function authenticateAdmin(): User
     {
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();

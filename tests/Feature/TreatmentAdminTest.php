@@ -185,21 +185,19 @@ class TreatmentAdminTest extends TestCase
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
         $doctor = Doctor::query()->where('code', 'JACK')->firstOrFail();
         $treatment = $this->createTreatment('HIST_TX', 'Historical Treatment');
-        $report = DailyReport::query()->create([
+        $report = $this->createDailyReport([
             'report_date' => '2026-06-01',
             'source_type' => 'manual_entry',
             'source_file_name' => 'hist',
             'status' => 'calculated',
         ]);
-        $workRow = DailyWorkRow::query()->create([
-            'daily_report_id' => $report->id,
+        $workRow = $this->createDailyWorkRow($report, [
             'doctor_id' => $doctor->id,
             'work_date' => '2026-06-01',
             'treatment_text' => 'HIST_TX x 1',
             'paid_total_aed' => '100.00',
         ]);
-        WorkItem::query()->create([
-            'daily_work_row_id' => $workRow->id,
+        $this->createWorkItem($workRow, [
             'treatment_id' => $treatment->id,
             'quantity' => 1,
             'confidence' => 100,
@@ -219,6 +217,7 @@ class TreatmentAdminTest extends TestCase
 
     public function test_parser_resolves_active_treatments_from_database(): void
     {
+        $this->authenticateAdmin();
         $this->createTreatment('PARSER_TX', 'Parser Treatment');
 
         $parser = app(TreatmentParserService::class);

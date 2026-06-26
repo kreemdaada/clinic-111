@@ -10,6 +10,8 @@ use App\Models\Treatment;
 use App\Models\WorkItem;
 use App\Services\Accounting\LabBillingResolver;
 use App\Services\Accounting\TreatmentParserService;
+use App\Services\Configuration\CurrentClinicResolver;
+use App\Support\AccountingScopedQuery;
 use Illuminate\Support\Collection;
 
 /**
@@ -20,6 +22,7 @@ class TreatmentImportValidationService
     public function __construct(
         private readonly TreatmentParserService $treatmentParserService,
         private readonly LabBillingResolver $labBillingResolver,
+        private readonly CurrentClinicResolver $currentClinicResolver,
     ) {}
 
     /**
@@ -28,7 +31,7 @@ class TreatmentImportValidationService
     public function validateAndPersist(DailyWorkRow $dailyWorkRow): TreatmentImportResultDto
     {
         $dailyWorkRow->loadMissing('doctor');
-        $dailyWorkRow->workItems()->delete();
+        AccountingScopedQuery::workItems((int) $dailyWorkRow->clinic_id, $dailyWorkRow->id)->delete();
 
         $treatmentText = trim((string) $dailyWorkRow->treatment_text);
 
@@ -96,6 +99,7 @@ class TreatmentImportValidationService
             }
 
             WorkItem::query()->create([
+                'clinic_id' => $dailyWorkRow->clinic_id,
                 'daily_work_row_id' => $dailyWorkRow->id,
                 'treatment_id' => $treatment->id,
                 'quantity' => $parsedItem->quantity,
@@ -318,13 +322,17 @@ class TreatmentImportValidationService
     /** @var Collection<string, Treatment>|null */
     private ?Collection $treatmentCodes = null;
 
+    private ?int $treatmentCodesClinicId = null;
+
     /**
      * @return Collection<string, Treatment>
      */
     private function getKnownTreatmentCodes(): Collection
     {
-        if ($this->treatmentCodes === null) {
+        if ($this->treatmentCodes === null || $this->treatmentCodesClinicId !== $this->currentClinicResolver->resolveId()) {
+            $this->treatmentCodesClinicId = $this->currentClinicResolver->resolveId();
             $this->treatmentCodes = Treatment::query()
+                ->where('clinic_id', $this->treatmentCodesClinicId)
                 ->where('is_active', true)
                 ->get()
                 ->keyBy('code');

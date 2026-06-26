@@ -177,6 +177,7 @@ class DoctorFixedFeeAdminTest extends TestCase
 
     public function test_resolver_uses_active_fee_and_monthly_income_unchanged(): void
     {
+        $this->actingAsRole('admin');
         $doctor = Doctor::query()->where('code', 'WA')->firstOrFail();
         $treatment = Treatment::query()->where('code', 'IMPL')->firstOrFail();
         $resolver = app(DoctorFixedFeeResolver::class);

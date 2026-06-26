@@ -962,9 +962,7 @@ Same capabilities as the API. Admin-only. Nav link visible when logged in as adm
 
 ## Clinic Administration (admin only)
 
-Introduces the tenant root model (ADR-026). Accounting, imports, and login are unchanged — no `clinic_id` on other tables yet.
-
-Admin management uses `/api/admin/clinics` and web `/clinics`.
+Clinic administration uses `/api/admin/clinics` and web `/clinics`. Configuration and accounting data are scoped to the authenticated user's clinic (Milestones 07–10). API response shapes are unchanged — clients see only their clinic's data.
 
 ### GET /api/admin/clinics
 

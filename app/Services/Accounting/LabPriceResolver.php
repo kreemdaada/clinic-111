@@ -36,13 +36,13 @@ class LabPriceResolver
             $effectiveDate = now();
         }
 
-        $doctorSpecificPrice = $this->findPrice($doctor->id, $treatment->id, $lab->id, $effectiveDate);
+        $doctorSpecificPrice = $this->findPrice($doctor->id, $treatment->id, $lab->id, $effectiveDate, $doctor->clinic_id);
 
         if ($doctorSpecificPrice !== null) {
             return $doctorSpecificPrice;
         }
 
-        return $this->findPrice(null, $treatment->id, $lab->id, $effectiveDate);
+        return $this->findPrice(null, $treatment->id, $lab->id, $effectiveDate, $doctor->clinic_id);
     }
 
     /**
@@ -59,8 +59,10 @@ class LabPriceResolver
         int $treatmentId,
         int $labId,
         CarbonInterface $effectiveDate,
+        int $clinicId,
     ): ?LabPrice {
         $query = LabPrice::query()
+            ->where('clinic_id', $clinicId)
             ->where('treatment_id', $treatmentId)
             ->where('lab_id', $labId)
             ->where('is_active', true)

@@ -144,6 +144,7 @@ class PaymentCalculationService
             );
 
             Payment::query()->create([
+                'clinic_id' => $dailyWorkRow->clinic_id,
                 'daily_work_row_id' => $dailyWorkRow->id,
                 'payment_method' => $definition['method'],
                 'amount' => $definition['amount'],

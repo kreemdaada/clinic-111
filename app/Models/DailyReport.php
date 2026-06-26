@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Enums\ReportSourceType;
 use App\Enums\ReportStatus;
+use App\Models\Concerns\BelongsToClinic;
+use App\Models\Concerns\ImmutableClinicOwnership;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -15,7 +17,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class DailyReport extends Model
 {
+    use BelongsToClinic, ImmutableClinicOwnership;
+
     protected $fillable = [
+        'clinic_id',
         'report_date',
         'source_type',
         'source_file_name',
