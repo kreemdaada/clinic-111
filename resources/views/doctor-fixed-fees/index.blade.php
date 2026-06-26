@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Doctor fixed fees')
+@section('title', 'Doctors without commission')
 
 @push('styles')
 <style>
@@ -30,8 +30,8 @@
 @endpush
 
 @section('content')
-<h1 class="page-title">Doctor fixed fees</h1>
-<p class="page-subtitle">Admin — configure per-procedure fees for fixed-commission doctors. Percentage doctors ignore these rules. Deactivate instead of delete.</p>
+<h1 class="page-title">Doctors without commission</h1>
+<p class="page-subtitle">Admin — per-treatment fees for doctors who are <strong>not</strong> paid by percentage (e.g. Dr Wa: IMPL, BG, SINUS). Percentage doctors ignore these rules. Delete soft-deactivates.</p>
 
 @if (session('success'))
 <div class="alert alert-success">{{ session('success') }}</div>
@@ -83,7 +83,7 @@
 </form>
 
 <div style="margin-bottom:1rem;">
-    <button type="button" class="btn btn-primary btn-sm" data-open-create>Create fixed fee</button>
+    <button type="button" class="btn btn-primary btn-sm" data-open-create>Add fee rule</button>
 </div>
 
 <div class="card dff-table-wrap">
@@ -92,7 +92,7 @@
             <tr>
                 <th>Doctor</th>
                 <th>Treatment</th>
-                <th>Fee</th>
+                <th>Amount</th>
                 <th>Validity</th>
                 <th>Status</th>
                 <th></th>
@@ -133,11 +133,27 @@
                             data-destroy-url="{{ route('doctor-fixed-fees.destroy', $fee) }}"
                             data-duplicate-url="{{ route('doctor-fixed-fees.duplicate', $fee) }}"
                         >Edit</button>
+                        @if ($fee->is_active)
+                        <form method="POST" action="{{ route('doctor-fixed-fees.destroy', $fee) }}" class="inline-form"
+                            data-confirm-title="Delete"
+                            data-confirm-ok="Delete"
+                            data-confirm-danger="1"
+                            data-confirm="Soft delete fee rule #{{ $fee->id }}? Historical accounting data is preserved.">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Delete</button>
+                        </form>
+                        @else
+                        <form method="POST" action="{{ route('doctor-fixed-fees.activate', $fee) }}" class="inline-form">
+                            @csrf
+                            <button type="submit" class="btn btn-secondary btn-sm">Activate</button>
+                        </form>
+                        @endif
                     </div>
                 </td>
             </tr>
             @empty
-            <tr><td colspan="6" style="color:var(--text-muted);">No fixed fees match your filters.</td></tr>
+            <tr><td colspan="6" style="color:var(--text-muted);">No fee rules match your filters.</td></tr>
             @endforelse
         </tbody>
     </table>
@@ -150,7 +166,7 @@
 <div class="dff-modal-backdrop" id="dff-create-modal" aria-hidden="true"
     data-open-on-load="{{ ($errors->any() && old('_form') !== 'edit' && old('doctor_id')) ? '1' : '0' }}">
     <div class="dff-modal" role="dialog">
-        <h2>Create fixed fee</h2>
+        <h2>Add fee rule</h2>
         <form method="POST" action="{{ route('doctor-fixed-fees.store') }}">
             @csrf
             <input type="hidden" name="_form" value="create">
@@ -171,7 +187,7 @@
 <div class="dff-modal-backdrop" id="dff-edit-modal" aria-hidden="true"
     data-open-on-load="{{ ($errors->any() && old('_form') === 'edit') ? '1' : '0' }}">
     <div class="dff-modal" role="dialog">
-        <h2>Edit fixed fee</h2>
+        <h2>Edit fee rule</h2>
         <form method="POST" id="dff-edit-form" action="{{ old('_update_url') }}">
             @csrf
             @method('PUT')
@@ -200,7 +216,11 @@
             </div>
         </form>
         <div style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
-            <form method="POST" id="dff-deactivate-form" onsubmit="return confirm('Deactivate this fixed fee?');">
+            <form method="POST" id="dff-deactivate-form"
+                data-confirm-title="Delete"
+                data-confirm-ok="Delete"
+                data-confirm-danger="1"
+                data-confirm="Soft delete this fee rule? Historical accounting data is preserved.">
                 @csrf
                 @method('DELETE')
             </form>
@@ -210,7 +230,7 @@
             <form method="POST" id="dff-duplicate-form">
                 @csrf
             </form>
-            <button type="submit" form="dff-deactivate-form" class="btn btn-ghost btn-sm" id="dff-deactivate-btn" style="color:var(--danger);">Deactivate</button>
+            <button type="submit" form="dff-deactivate-form" class="btn btn-ghost btn-sm" id="dff-deactivate-btn" style="color:var(--danger);">Delete</button>
             <button type="submit" form="dff-activate-form" class="btn btn-secondary btn-sm" id="dff-activate-btn">Activate</button>
             <button type="submit" form="dff-duplicate-form" class="btn btn-ghost btn-sm" id="dff-duplicate-btn">Duplicate</button>
         </div>

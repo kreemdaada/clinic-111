@@ -75,7 +75,7 @@
 
 @section('content')
 <h1 class="page-title">Doctors</h1>
-<p class="page-subtitle">Admin — commission rates are read from the database for income export and the daily report editor.</p>
+<p class="page-subtitle">Admin — commission rates are read from the database. Delete soft-deactivates doctors; historical report entries are preserved.</p>
 
 @if ($errors->has('delete'))
 <div class="alert alert-error">{{ $errors->first('delete') }}</div>
@@ -112,7 +112,7 @@
                 <label class="form-label">Commission type</label>
                 <select class="form-input" name="commission_type" data-commission-type>
                     <option value="percentage" @selected($doctor->commission_type->value === 'percentage')>Percentage</option>
-                    <option value="fixed" @selected($doctor->commission_type->value === 'fixed')>Fixed fee</option>
+                    <option value="fixed" @selected($doctor->commission_type->value === 'fixed')>Without commission (per treatment)</option>
                 </select>
             </div>
 
@@ -146,10 +146,13 @@
         </form>
 
         <form method="POST" action="{{ route('doctors.destroy', $doctor) }}" style="margin-top:0.75rem;"
-            onsubmit="return confirm('Delete or deactivate {{ $doctor->code }}? Doctors with report entries are deactivated only.');">
+            data-confirm-title="Delete"
+            data-confirm-ok="Delete"
+            data-confirm-danger="1"
+            data-confirm="Soft delete {{ $doctor->code }}? The doctor record is kept for historical reports.">
             @csrf
             @method('DELETE')
-            <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Delete doctor</button>
+            <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Delete</button>
         </form>
     </article>
     @endforeach

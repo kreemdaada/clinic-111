@@ -37,7 +37,7 @@
 
 @section('content')
 <h1 class="page-title">Users</h1>
-<p class="page-subtitle">Admin — manage roles and access. Accounts are deactivated, never deleted.</p>
+<p class="page-subtitle">Admin — manage roles and access. Delete soft-deactivates accounts; records are never physically removed.</p>
 
 @if (session('success'))
 <div class="alert alert-success">{{ session('success') }}</div>
@@ -158,10 +158,13 @@
 
             @if (auth()->id() !== $user->id && $user->is_active)
             <form method="POST" action="{{ route('admin.users.destroy', $user) }}"
-                onsubmit="return confirm('Deactivate {{ $user->email }}?');">
+                data-confirm-title="Delete"
+                data-confirm-ok="Delete"
+                data-confirm-danger="1"
+                data-confirm="Soft delete {{ $user->email }}? The account is kept but cannot log in.">
                 @csrf
                 @method('DELETE')
-                <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Deactivate</button>
+                <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Delete</button>
             </form>
             @endif
         </div>

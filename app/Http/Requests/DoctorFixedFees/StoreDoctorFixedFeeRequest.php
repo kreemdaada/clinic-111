@@ -51,7 +51,7 @@ class StoreDoctorFixedFeeRequest extends FormRequest
             )) {
                 $validator->errors()->add(
                     'doctor_id',
-                    'An active fixed fee already exists for this doctor, treatment, and validity period.',
+                    'An active fee rule already exists for this doctor, treatment, and validity period.',
                 );
             }
         });

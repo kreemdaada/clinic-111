@@ -247,6 +247,18 @@
             color: var(--text);
         }
 
+        .btn-danger {
+            background: var(--danger);
+            color: #fff;
+            border-color: var(--danger);
+        }
+
+        .btn-danger:hover {
+            background: #991b1b;
+            border-color: #991b1b;
+            color: #fff;
+        }
+
         .btn-primary:disabled {
             background: #93c5fd;
             cursor: not-allowed;
@@ -302,6 +314,13 @@
             display: inline-flex;
             gap: 0.35rem;
             flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .table-actions form,
+        .table-actions .inline-form {
+            display: inline;
+            margin: 0;
         }
 
         .badge {
@@ -370,6 +389,51 @@
             color: #64748b;
             font-style: italic;
         }
+
+        .confirm-modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 1rem;
+        }
+
+        .confirm-modal-backdrop.is-open {
+            display: flex;
+        }
+
+        .confirm-modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            width: min(420px, 100%);
+            padding: 1.25rem;
+            box-shadow: 0 10px 40px rgba(15, 23, 42, 0.12);
+        }
+
+        .confirm-modal-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0 0 0.5rem;
+            color: var(--text);
+        }
+
+        .confirm-modal-message {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin: 0 0 1.25rem;
+            line-height: 1.5;
+        }
+
+        .confirm-modal-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
     </style>
     @stack('styles')
 </head>
@@ -386,7 +450,7 @@
             <a href="{{ route('labs.index') }}" @class(['active'=> request()->routeIs('labs.*')])>Labs</a>
             <a href="{{ route('treatments.index') }}" @class(['active'=> request()->routeIs('treatments.*')])>Treatments</a>
             <a href="{{ route('lab-prices.index') }}" @class(['active'=> request()->routeIs('lab-prices.*')])>Lab prices</a>
-            <a href="{{ route('doctor-fixed-fees.index') }}" @class(['active'=> request()->routeIs('doctor-fixed-fees.*')])>Fixed fees</a>
+            <a href="{{ route('doctor-fixed-fees.index') }}" @class(['active'=> request()->routeIs('doctor-fixed-fees.*')])>No-commission fees</a>
             <a href="{{ route('admin.users.index') }}" @class(['active'=> request()->routeIs('admin.users.*')])>Users</a>
             @endif
             <span class="topbar-user">{{ auth()->user()->email }} ({{ auth()->user()->role->value }})</span>
@@ -405,6 +469,136 @@
 
         @yield('content')
     </main>
+
+    <div class="confirm-modal-backdrop" id="app-confirm-modal" aria-hidden="true">
+        <div class="confirm-modal" role="dialog" aria-labelledby="app-confirm-title" aria-modal="true">
+            <h2 id="app-confirm-title" class="confirm-modal-title">Confirm</h2>
+            <p id="app-confirm-message" class="confirm-modal-message"></p>
+            <div class="confirm-modal-actions">
+                <button type="button" class="btn btn-ghost btn-sm" id="app-confirm-cancel">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm" id="app-confirm-ok">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const modal = document.getElementById('app-confirm-modal');
+        if (!modal) {
+            return;
+        }
+
+        const titleEl = document.getElementById('app-confirm-title');
+        const messageEl = document.getElementById('app-confirm-message');
+        const cancelBtn = document.getElementById('app-confirm-cancel');
+        const okBtn = document.getElementById('app-confirm-ok');
+        let pendingAction = null;
+
+        function closeConfirm() {
+            modal.classList.remove('is-open');
+            modal.setAttribute('aria-hidden', 'true');
+            pendingAction = null;
+            okBtn.classList.remove('btn-danger');
+            okBtn.textContent = 'Confirm';
+        }
+
+        function showConfirm(options) {
+            const opts = typeof options === 'string' ? { message: options } : (options || {});
+            titleEl.textContent = opts.title || 'Confirm';
+            messageEl.textContent = opts.message || 'Are you sure?';
+            okBtn.textContent = opts.okText || 'Confirm';
+            if (opts.danger) {
+                okBtn.classList.add('btn-danger');
+            }
+            modal.classList.add('is-open');
+            modal.setAttribute('aria-hidden', 'false');
+            cancelBtn.focus();
+        }
+
+        window.clinicConfirm = function (options) {
+            return new Promise(function (resolve) {
+                pendingAction = { type: 'callback', resolve: resolve };
+                showConfirm(options);
+            });
+        };
+
+        document.addEventListener('submit', function (event) {
+            const form = event.target;
+            if (!(form instanceof HTMLFormElement)) {
+                return;
+            }
+
+            const message = form.getAttribute('data-confirm');
+            if (!message) {
+                return;
+            }
+
+            if (form.dataset.confirmBypass === '1') {
+                delete form.dataset.confirmBypass;
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            pendingAction = { type: 'form', form: form };
+            showConfirm({
+                title: form.getAttribute('data-confirm-title') || 'Confirm',
+                message: message,
+                okText: form.getAttribute('data-confirm-ok') || 'Confirm',
+                danger: form.getAttribute('data-confirm-danger') === '1',
+            });
+        }, true);
+
+        cancelBtn.addEventListener('click', function () {
+            if (pendingAction && pendingAction.type === 'callback') {
+                pendingAction.resolve(false);
+            }
+            closeConfirm();
+        });
+
+        okBtn.addEventListener('click', function () {
+            if (!pendingAction) {
+                return;
+            }
+
+            if (pendingAction.type === 'form') {
+                const form = pendingAction.form;
+                closeConfirm();
+                form.dataset.confirmBypass = '1';
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                } else {
+                    form.submit();
+                }
+                return;
+            }
+
+            if (pendingAction.type === 'callback') {
+                const resolve = pendingAction.resolve;
+                closeConfirm();
+                resolve(true);
+            }
+        });
+
+        modal.addEventListener('click', function (event) {
+            if (event.target === modal) {
+                if (pendingAction && pendingAction.type === 'callback') {
+                    pendingAction.resolve(false);
+                }
+                closeConfirm();
+            }
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && modal.classList.contains('is-open')) {
+                if (pendingAction && pendingAction.type === 'callback') {
+                    pendingAction.resolve(false);
+                }
+                closeConfirm();
+            }
+        });
+    });
+    </script>
 
     @stack('scripts')
 </body>

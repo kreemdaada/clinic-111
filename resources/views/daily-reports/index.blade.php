@@ -257,7 +257,10 @@
                     <a href="{{ route('daily-report.edit', $report) }}" class="btn btn-secondary btn-sm">Open</a>
                     @unless ($report->isLocked())
                     <form method="POST" action="{{ route('daily-report.destroy', $report) }}"
-                        onsubmit="return confirm('Delete report #{{ $report->id }} and all its entries?');">
+                        data-confirm-title="Delete report"
+                        data-confirm-ok="Delete"
+                        data-confirm-danger="1"
+                        data-confirm="Delete report #{{ $report->id }} and all its entries?">
                         @csrf
                         @method('DELETE')
                         <button type="submit" class="btn btn-ghost btn-sm">Delete</button>

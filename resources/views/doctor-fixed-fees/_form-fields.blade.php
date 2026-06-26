@@ -1,5 +1,5 @@
 <div class="form-group">
-    <label class="form-label">Doctor</label>
+    <label class="form-label">Doctor (no % commission)</label>
     <select class="form-input" name="doctor_id" id="dff-{{ $prefix }}-doctor-id" required>
         <option value="">Select doctor</option>
         @foreach ($doctors as $doctor)
@@ -18,7 +18,7 @@
 </div>
 <div class="dff-grid-2">
     <div class="form-group" style="margin:0;">
-        <label class="form-label">Fee amount</label>
+        <label class="form-label">Amount per treatment</label>
         <input class="form-input" type="number" step="0.01" min="0.01" name="fee_amount" id="dff-{{ $prefix }}-fee-amount" value="{{ old('fee_amount') }}" required>
     </div>
     <div class="form-group" style="margin:0;">

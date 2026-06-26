@@ -69,7 +69,7 @@ class TreatmentAdminController extends Controller
 
         return redirect()
             ->route('treatments.index')
-            ->with('success', "Treatment {$code} deactivated.");
+            ->with('success', "Treatment {$code} deleted.");
     }
 
     public function activate(Treatment $treatment): RedirectResponse

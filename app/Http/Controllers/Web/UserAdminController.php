@@ -71,7 +71,7 @@ class UserAdminController extends Controller
 
         return redirect()
             ->route('admin.users.index')
-            ->with('success', "User {$user->email} deactivated.");
+            ->with('success', "User {$user->email} deleted.");
     }
 
     public function resetPassword(ResetUserPasswordRequest $request, User $user): RedirectResponse

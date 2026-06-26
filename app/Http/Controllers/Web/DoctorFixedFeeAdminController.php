@@ -62,7 +62,7 @@ class DoctorFixedFeeAdminController extends Controller
 
         return redirect()
             ->route('doctor-fixed-fees.index', $this->filterRedirectParams($request))
-            ->with('success', "Fixed fee #{$fee->id} created.");
+            ->with('success', "Fee rule #{$fee->id} created.");
     }
 
     public function update(UpdateDoctorFixedFeeRequest $request, DoctorFixedFee $doctorFixedFee): RedirectResponse
@@ -71,7 +71,7 @@ class DoctorFixedFeeAdminController extends Controller
 
         return redirect()
             ->route('doctor-fixed-fees.index', $this->filterRedirectParams($request))
-            ->with('success', "Fixed fee #{$doctorFixedFee->id} updated.");
+            ->with('success', "Fee rule #{$doctorFixedFee->id} updated.");
     }
 
     public function destroy(DoctorFixedFee $doctorFixedFee): RedirectResponse
@@ -82,7 +82,7 @@ class DoctorFixedFeeAdminController extends Controller
 
         return redirect()
             ->route('doctor-fixed-fees.index')
-            ->with('success', "Fixed fee #{$id} deactivated.");
+            ->with('success', "Fee rule #{$id} deleted.");
     }
 
     public function activate(DoctorFixedFee $doctorFixedFee): RedirectResponse
@@ -91,7 +91,7 @@ class DoctorFixedFeeAdminController extends Controller
 
         return redirect()
             ->route('doctor-fixed-fees.index')
-            ->with('success', "Fixed fee #{$doctorFixedFee->id} activated.");
+            ->with('success', "Fee rule #{$doctorFixedFee->id} activated.");
     }
 
     public function duplicate(DoctorFixedFee $doctorFixedFee): RedirectResponse
@@ -100,7 +100,7 @@ class DoctorFixedFeeAdminController extends Controller
 
         return redirect()
             ->route('doctor-fixed-fees.index')
-            ->with('success', "Fixed fee duplicated as #{$copy->id} (inactive). Adjust dates and activate when ready.");
+            ->with('success', "Fee rule duplicated as #{$copy->id} (inactive). Adjust dates and activate when ready.");
     }
 
     private function filteredFeesQuery(

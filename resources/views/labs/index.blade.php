@@ -87,7 +87,7 @@
 
 @section('content')
 <h1 class="page-title">Laboratories</h1>
-<p class="page-subtitle">Admin — manage external labs. Deactivate instead of delete; historical reports keep their lab references.</p>
+<p class="page-subtitle">Admin — manage external labs. Delete soft-deactivates; historical reports keep their lab references.</p>
 
 @if (session('success'))
 <div class="alert alert-success">{{ session('success') }}</div>
@@ -180,10 +180,13 @@
         <div class="lab-admin-actions" style="margin-top:0.75rem;">
             @if ($lab->is_active)
             <form method="POST" action="{{ route('labs.destroy', $lab) }}"
-                onsubmit="return confirm('Deactivate {{ $lab->code }}? Historical reports are not changed.');">
+                data-confirm-title="Delete"
+                data-confirm-ok="Delete"
+                data-confirm-danger="1"
+                data-confirm="Soft delete {{ $lab->code }}? The lab record is kept for historical reports.">
                 @csrf
                 @method('DELETE')
-                <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Deactivate</button>
+                <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Delete</button>
             </form>
             @else
             <form method="POST" action="{{ route('labs.activate', $lab) }}">
