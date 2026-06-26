@@ -173,6 +173,11 @@ Never break backwards compatibility without documenting it.
 
 ---
 
+## Rule 11
+
+Every new milestone must leave the application in a deployable state. Partial tenant isolation is not acceptable. If a migration is introduced, all affected services, tests, and documentation must be completed within the same milestone
+---
+
 # Development Workflow
 
 Every feature follows exactly this workflow.
