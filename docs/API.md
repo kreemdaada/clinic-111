@@ -664,6 +664,106 @@ Accounting resolution (`LabPriceResolver`) is unchanged — reads active rows fr
 
 ---
 
+## Doctor Fixed Fee Administration (admin only)
+
+Admin management uses `/api/admin/doctor-fixed-fees` and web `/doctor-fixed-fees`.
+
+`DoctorFixedFeeResolver` reads active rows with date validity. Accounting calculation services (`WaelFixedFeeCalculator`, `MonthlyIncomeCalculationService`) are unchanged.
+
+### GET /api/admin/doctor-fixed-fees
+
+**Purpose:** List doctor fixed fees with search and filters.
+
+**Role:** admin
+
+**Query parameters (`ListDoctorFixedFeesRequest`):**
+
+| Param | Rules |
+|---|---|
+| `search` | optional — doctor or treatment code/name |
+| `doctor_id` | optional |
+| `treatment_id` | optional |
+| `status` | optional: `all`, `active`, `inactive` |
+| `currency` | optional, 3-letter code |
+
+**Response `200`:** `{ data: [...] }`
+
+---
+
+### POST /api/admin/doctor-fixed-fees
+
+**Purpose:** Create a fixed fee row.
+
+**Role:** admin
+
+**Request:**
+
+```json
+{
+  "doctor_id": 4,
+  "treatment_id": 12,
+  "fee_amount": "500.00",
+  "currency": "AED",
+  "valid_from": null,
+  "valid_to": null
+}
+```
+
+**Response `201`:** `{ message, data }`
+
+**Validation:** Doctor must have `commission_type = fixed`; `fee_amount` > 0; currency `AED` or `USD`; no overlapping active validity.
+
+---
+
+### PUT /api/admin/doctor-fixed-fees/{id}
+
+**Purpose:** Update fee amount, currency, validity, or active status.
+
+**Role:** admin
+
+**Response `200`:** `{ message, data }`
+
+---
+
+### DELETE /api/admin/doctor-fixed-fees/{id}
+
+**Purpose:** Soft deactivate (`is_active = false`).
+
+**Role:** admin
+
+---
+
+### POST /api/admin/doctor-fixed-fees/{id}/activate
+
+**Purpose:** Reactivate row after overlap check.
+
+**Role:** admin
+
+---
+
+### POST /api/admin/doctor-fixed-fees/{id}/duplicate
+
+**Purpose:** Copy row as inactive — adjust validity before activating.
+
+**Role:** admin
+
+**Response `201`:** New inactive fee row.
+
+---
+
+### Web UI: `/doctor-fixed-fees`
+
+| Route | Method | Action |
+|---|---|---|
+| `/doctor-fixed-fees` | GET | Paginated list + search/filters |
+| `/doctor-fixed-fees` | POST | Create (modal) |
+| `/doctor-fixed-fees/{id}` | PUT | Update (modal) |
+| `/doctor-fixed-fees/{id}` | DELETE | Deactivate |
+| `/doctor-fixed-fees/{id}/activate` | POST | Activate |
+| `/doctor-fixed-fees/{id}/duplicate` | POST | Duplicate (inactive copy) |
+
+---
+
 ## User Management (admin only)
 
 ### GET /api/users
@@ -865,6 +965,7 @@ Same capabilities as the API. Admin-only. Nav link visible when logged in as adm
 **Updated — 2026-06-26**
 
 - Lab price administration API (`/api/admin/lab-prices`) and web `/lab-prices` (Milestone 03)
+- Doctor fixed fee administration API (`/api/admin/doctor-fixed-fees`) and web `/doctor-fixed-fees` (Milestone 04)
 - Treatment administration API (`/api/admin/treatments`) and web `/treatments`
 
 **Updated — 2026-06-25**

@@ -386,6 +386,7 @@
             <a href="{{ route('labs.index') }}" @class(['active'=> request()->routeIs('labs.*')])>Labs</a>
             <a href="{{ route('treatments.index') }}" @class(['active'=> request()->routeIs('treatments.*')])>Treatments</a>
             <a href="{{ route('lab-prices.index') }}" @class(['active'=> request()->routeIs('lab-prices.*')])>Lab prices</a>
+            <a href="{{ route('doctor-fixed-fees.index') }}" @class(['active'=> request()->routeIs('doctor-fixed-fees.*')])>Fixed fees</a>
             <a href="{{ route('admin.users.index') }}" @class(['active'=> request()->routeIs('admin.users.*')])>Users</a>
             @endif
             <span class="topbar-user">{{ auth()->user()->email }} ({{ auth()->user()->role->value }})</span>

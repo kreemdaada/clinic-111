@@ -32,6 +32,7 @@ class DoctorFixedFee extends Model
             'fee_amount' => 'decimal:2',
             'valid_from' => 'date',
             'valid_to' => 'date',
+            'is_active' => 'boolean',
         ];
     }
 

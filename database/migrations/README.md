@@ -27,6 +27,7 @@ php artisan migrate --seed
 | `000013` | `doctor_income_export_profiles` | Server Income Excel layout per doctor |
 | `000014` | privacy + warnings | Removes plain-text PII; adds `patient_reference_hash`, `daily_report_import_warnings` |
 | `000015` | `doctor_lab_billings` | Per-doctor JOB rules (Puriya subset; Wa none) |
+| `2026_06_26_000001` | `doctor_fixed_fees.is_active` | Soft deactivate; drop unique `(doctor_id, treatment_id)` for validity periods |
 
 ## Privacy migration (`000014`)
 

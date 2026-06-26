@@ -245,6 +245,7 @@ Unchanged — Sanctum bearer tokens, rate-limited login.
 | Manage laboratories (`/labs`) | ✓ | ✗ | ✗ |
 | Manage treatments (`/treatments`) | ✓ | ✗ | ✗ |
 | Manage lab prices (`/lab-prices`) | ✓ | ✗ | ✗ |
+| Manage doctor fixed fees (`/doctor-fixed-fees`) | ✓ | ✗ | ✗ |
 | Approve / unlock reports | ✓ | ✗ | ✗ |
 | Manage doctors | ✓ | ✗ | ✗ |
 
@@ -347,7 +348,44 @@ sequenceDiagram
 
 ---
 
-## 11. User Administration (admin only)
+## 11. Doctor Fixed Fee Administration (admin only)
+
+```mermaid
+sequenceDiagram
+    actor Admin
+    participant UI as /doctor-fixed-fees
+    participant Svc as DoctorFixedFeeManagementService
+    participant DB as doctor_fixed_fees + audit_logs
+
+    Admin->>UI: Create fee (fixed doctor + treatment)
+    UI->>Svc: create()
+    Svc->>DB: overlap check
+    Svc->>DB: INSERT doctor_fixed_fees
+    Svc->>DB: audit doctor_fixed_fee_created
+
+    Admin->>UI: Duplicate fee
+    UI->>Svc: duplicate()
+    Svc->>DB: INSERT inactive copy
+
+    Admin->>UI: Deactivate fee
+    UI->>Svc: deactivate()
+    Svc->>DB: is_active = false
+    Svc->>DB: audit doctor_fixed_fee_deactivated
+
+    Note over DB: Accounting engine unchanged; resolver reads active rows
+```
+
+**Rules:**
+
+- Fixed fees never physically deleted
+- Only doctors with `commission_type = fixed` may have rows
+- Only one active fee per doctor + treatment + overlapping validity period
+- `DoctorFixedFeeResolver` used by editor catalog; `WaelFixedFeeCalculator` and monthly income logic unchanged
+- Seed data in `DoctorFixedFeeSeeder` is initial data only, not runtime logic
+
+---
+
+## 12. User Administration (admin only)
 
 ```mermaid
 sequenceDiagram

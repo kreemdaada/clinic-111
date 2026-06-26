@@ -177,10 +177,11 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | `id` | bigint PK | |
 | `doctor_id` | FK → doctors | |
 | `treatment_id` | FK → treatments | |
-| `fee_amount` | decimal(12,2) | |
+| `fee_amount` | decimal(12,2) | Must be > 0 |
 | `currency` | string(3) | Default `AED`; may be `USD` |
 | `valid_from` | date nullable | |
 | `valid_to` | date nullable | |
+| `is_active` | boolean | Default `true`; soft deactivate only |
 | `created_at`, `updated_at` | timestamps | |
 
 **Relationships:**
@@ -188,7 +189,14 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 - `belongsTo` doctor
 - `belongsTo` treatment
 
-**Unique constraint:** `(doctor_id, treatment_id)`
+**Business rules:**
+
+- Only doctors with `commission_type = fixed` use these rows
+- Only one **active** fee per doctor + treatment + overlapping validity period
+- Multiple inactive or non-overlapping rows allowed (duplicate workflow)
+- No physical delete — historical accounting references remain valid
+
+**Indexes:** `doctor_id`, `treatment_id` (FK indexes)
 
 **Example data (Dr Wa):**
 
