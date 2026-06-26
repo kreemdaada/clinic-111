@@ -4,6 +4,7 @@ namespace App\Services\Export;
 
 use App\Models\Doctor;
 use App\Models\DoctorIncomeExportProfile;
+use App\Services\Configuration\CurrentClinicResolver;
 use App\Support\DoctorLabelNormalizer;
 use Illuminate\Support\Collection;
 
@@ -18,6 +19,10 @@ class DoctorIncomeExportProfileService
 {
     /** @var Collection<string, DoctorIncomeExportProfile>|null */
     private ?Collection $profilesByDoctorCode = null;
+
+    public function __construct(
+        private readonly CurrentClinicResolver $currentClinicResolver,
+    ) {}
 
     /**
      * Resolve export profile array for a doctor (same shape the Excel export expects).
@@ -97,6 +102,7 @@ class DoctorIncomeExportProfileService
         }
 
         $this->profilesByDoctorCode = DoctorIncomeExportProfile::query()
+            ->whereHas('doctor', fn ($query) => $query->where('clinic_id', $this->currentClinicResolver->resolveId()))
             ->with('doctor')
             ->get()
             ->keyBy(fn (DoctorIncomeExportProfile $profile): string => DoctorLabelNormalizer::extractCodeGuess($profile->doctor->code));

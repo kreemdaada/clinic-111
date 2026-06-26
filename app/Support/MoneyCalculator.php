@@ -102,6 +102,43 @@ class MoneyCalculator
             return bcadd((string) $amount, '0', 2);
         }
 
-        return bcmul((string) $amount, $exchangeRate, 2);
+        if (strtoupper($currency) === 'USD') {
+            return bcmul((string) $amount, $exchangeRate, 2);
+        }
+
+        return bcadd((string) $amount, '0', 2);
+    }
+
+    /**
+     * Convert an amount between supported currencies (AED ↔ USD via exchange rate).
+     *
+     * @param  string  $amount  Original amount.
+     * @param  string  $fromCurrency  Source currency code.
+     * @param  string  $toCurrency  Target currency code.
+     * @param  string  $usdToAedRate  USD→AED rate used for cross conversion.
+     * @return string Amount in target currency with 2 decimal places.
+     */
+    public static function convertBetween(
+        string $amount,
+        string $fromCurrency,
+        string $toCurrency,
+        string $usdToAedRate = '3.65',
+    ): string {
+        $from = strtoupper($fromCurrency);
+        $to = strtoupper($toCurrency);
+
+        if ($from === $to) {
+            return bcadd((string) $amount, '0', 2);
+        }
+
+        if ($from === 'USD' && $to === 'AED') {
+            return bcmul((string) $amount, $usdToAedRate, 2);
+        }
+
+        if ($from === 'AED' && $to === 'USD') {
+            return bcdiv((string) $amount, $usdToAedRate, 2);
+        }
+
+        return bcadd((string) $amount, '0', 2);
     }
 }

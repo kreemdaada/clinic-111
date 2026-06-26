@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests\Treatments;
 
+use App\Http\Requests\Concerns\ValidatesClinicScopedCode;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreTreatmentRequest extends FormRequest
 {
+    use ValidatesClinicScopedCode;
+
     public function authorize(): bool
     {
         return $this->user()?->isAdmin() ?? false;
@@ -17,7 +20,7 @@ class StoreTreatmentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'code' => ['required', 'string', 'max:32', 'regex:/^[A-Za-z0-9_\-]+$/', 'unique:treatments,code'],
+            'code' => ['required', 'string', 'max:32', 'regex:/^[A-Za-z0-9_\-]+$/', $this->uniqueCodeWithinClinic('treatments')],
             'name' => ['required', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:2000'],
             'has_lab_cost' => ['sometimes', 'boolean'],

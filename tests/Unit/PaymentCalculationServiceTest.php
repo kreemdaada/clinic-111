@@ -41,4 +41,20 @@ class PaymentCalculationServiceTest extends TestCase
 
         $this->assertSame('1650.00', $result['paid_total_aed']);
     }
+
+    public function test_usd_clinic_collects_primary_payments_in_usd(): void
+    {
+        $result = $this->paymentCalculationService->calculateTotalCollected(
+            clinicCurrency: 'USD',
+            dhsAmount: '1000.00',
+            usdAmount: '0.00',
+            visaAmount: '200.00',
+            chequeAmount: '50.00',
+            tabbyAmount: '25.00',
+        );
+
+        $this->assertSame('1275.00', $result['paid_total']);
+        $this->assertSame('USD', $result['currency']);
+        $this->assertSame('4653.75', $result['paid_total_aed']);
+    }
 }

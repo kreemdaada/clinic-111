@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Onboarding;
 
+use App\Support\ClinicRegistrationOptions;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
 class RegisterClinicRequest extends FormRequest
@@ -21,8 +23,8 @@ class RegisterClinicRequest extends FormRequest
             'clinic_name' => ['required', 'string', 'max:120'],
             'clinic_code' => ['required', 'string', 'max:32', 'regex:/^[A-Za-z0-9_\-]+$/', 'unique:clinics,code'],
             'country' => ['required', 'string', 'max:120'],
-            'currency' => ['required', 'string', 'size:3', 'regex:/^[A-Za-z]{3}$/'],
-            'timezone' => ['required', 'string', 'max:64', 'timezone:all'],
+            'currency' => ['required', 'string', 'size:3', Rule::in(ClinicRegistrationOptions::currencyCodes())],
+            'timezone' => ['required', 'string', 'max:64', Rule::in(ClinicRegistrationOptions::timezoneIdentifiers())],
             'owner_name' => ['required', 'string', 'max:120'],
             'owner_email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'owner_password' => ['required', 'string', 'confirmed', Password::defaults()],

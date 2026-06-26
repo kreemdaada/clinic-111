@@ -70,6 +70,10 @@
         background: var(--success-soft);
         color: var(--success);
     }
+
+    .doctor-create-card {
+        margin-bottom: 1.25rem;
+    }
 </style>
 @endpush
 
@@ -77,12 +81,59 @@
 <h1 class="page-title">Doctors</h1>
 <p class="page-subtitle">Admin — commission rates are read from the database. Delete soft-deactivates doctors; historical report entries are preserved.</p>
 
+@if (session('success'))
+<div class="alert alert-success">{{ session('success') }}</div>
+@endif
+
+@if ($errors->any())
+<div class="alert alert-error">{{ $errors->first() }}</div>
+@endif
+
 @if ($errors->has('delete'))
 <div class="alert alert-error">{{ $errors->first('delete') }}</div>
 @endif
 
+<article class="card doctor-create-card">
+    <h2 style="font-size:1rem;margin:0 0 1rem;">Create doctor</h2>
+    <form method="POST" action="{{ route('doctors.store') }}" class="doctor-admin-form" id="doctor-create-form">
+        @csrf
+        <div class="form-group" style="margin:0;">
+            <label class="form-label">Code</label>
+            <input class="form-input" type="text" name="code" value="{{ old('code') }}" placeholder="ALI" required>
+        </div>
+        <div class="form-group" style="margin:0;">
+            <label class="form-label">Name</label>
+            <input class="form-input" type="text" name="name" value="{{ old('name') }}" required>
+        </div>
+        <div class="form-group" style="margin:0;">
+            <label class="form-label">Commission type</label>
+            <select class="form-input" name="commission_type" data-commission-type>
+                <option value="percentage" @selected(old('commission_type', 'percentage') === 'percentage')>Percentage</option>
+                <option value="fixed" @selected(old('commission_type') === 'fixed')>Without commission (per treatment)</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin:0;" data-commission-pct-wrap>
+            <label class="form-label">Commission %</label>
+            <input class="form-input" type="number" step="0.01" min="0" max="100" name="commission_percentage"
+                value="{{ old('commission_percentage', '35') }}">
+        </div>
+        <div class="form-group" style="margin:0;">
+            <label class="form-label">Default lab</label>
+            <select class="form-input" name="default_lab_id">
+                <option value="">—</option>
+                @foreach ($labs as $lab)
+                <option value="{{ $lab->id }}" @selected((string) old('default_lab_id') === (string) $lab->id)>{{ $lab->name }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="doctor-admin-actions">
+            <button type="submit" class="btn btn-primary btn-sm">Create</button>
+        </div>
+    </form>
+</article>
+
 <div class="doctors-grid">
-    @foreach ($doctors as $doctor)
+    @forelse ($doctors as $doctor)
     <article class="doctor-admin-card @unless($doctor->is_active) is-inactive @endunless">
         <div class="doctor-admin-header">
             <div>
@@ -155,7 +206,9 @@
             <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Delete</button>
         </form>
     </article>
-    @endforeach
+    @empty
+    <p style="color:var(--text-muted);font-size:0.9rem;">No doctors yet. Create your first doctor above.</p>
+    @endforelse
 </div>
 @endsection
 
@@ -172,6 +225,14 @@
         syncPctWrap(select);
         select.addEventListener('change', () => syncPctWrap(select));
     });
+
+    const createForm = document.getElementById('doctor-create-form');
+    if (createForm) {
+        const createSelect = createForm.querySelector('[data-commission-type]');
+        if (createSelect) {
+            syncPctWrap(createSelect);
+        }
+    }
 })();
 </script>
 @endpush

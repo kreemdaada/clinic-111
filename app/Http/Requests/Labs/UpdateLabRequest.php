@@ -28,7 +28,7 @@ class UpdateLabRequest extends FormRequest
                 'string',
                 'max:32',
                 'regex:/^[A-Za-z0-9_\-]+$/',
-                Rule::unique('labs', 'code')->ignore($lab->id),
+                Rule::unique('labs', 'code')->ignore($lab->id)->where('clinic_id', $lab->clinic_id),
             ],
             'is_active' => ['sometimes', 'boolean'],
         ];

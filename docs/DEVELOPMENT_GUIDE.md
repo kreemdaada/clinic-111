@@ -261,7 +261,7 @@ After implementation
 
 php artisan test
 
-All tests must pass.
+All tests must pass. Tests use **`database/testing.sqlite`** (see `.env.testing` / `phpunit.xml`), not your dev file `database/database.sqlite`. Never run `migrate:fresh` against dev data unless you intend to wipe local clinics and users.
 
 Commit
 

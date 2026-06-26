@@ -69,11 +69,19 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label" for="currency">Currency</label>
-                    <input class="form-input" type="text" id="currency" name="currency" value="{{ old('currency', 'AED') }}" required maxlength="3">
+                    <select class="form-input" id="currency" name="currency" required>
+                        @foreach ($currencies as $code => $label)
+                            <option value="{{ $code }}" @selected(old('currency', 'AED') === $code)>{{ $label }}</option>
+                        @endforeach
+                    </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label" for="timezone">Timezone</label>
-                    <input class="form-input" type="text" id="timezone" name="timezone" value="{{ old('timezone', 'Asia/Dubai') }}" required>
+                    <select class="form-input" id="timezone" name="timezone" required>
+                        @foreach ($timezones as $identifier => $label)
+                            <option value="{{ $identifier }}" @selected(old('timezone', 'Asia/Dubai') === $identifier)>{{ $label }}</option>
+                        @endforeach
+                    </select>
                 </div>
             </div>
 

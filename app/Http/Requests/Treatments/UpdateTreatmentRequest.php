@@ -2,12 +2,14 @@
 
 namespace App\Http\Requests\Treatments;
 
+use App\Http\Requests\Concerns\ValidatesClinicScopedCode;
 use App\Models\Treatment;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdateTreatmentRequest extends FormRequest
 {
+    use ValidatesClinicScopedCode;
     public function authorize(): bool
     {
         return $this->user()?->isAdmin() ?? false;
@@ -27,7 +29,7 @@ class UpdateTreatmentRequest extends FormRequest
                 'string',
                 'max:32',
                 'regex:/^[A-Za-z0-9_\-]+$/',
-                Rule::unique('treatments', 'code')->ignore($treatment->id),
+                Rule::unique('treatments', 'code')->ignore($treatment->id)->where('clinic_id', $treatment->clinic_id),
             ],
             'name' => ['required', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:2000'],

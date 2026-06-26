@@ -7,6 +7,7 @@ use App\Enums\UserRole;
 use App\Models\DailyReport;
 use App\Models\DailyWorkRow;
 use App\Models\Doctor;
+use App\Models\Lab;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -14,6 +15,32 @@ use Tests\TestCase;
 class DoctorAdminTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_admin_can_create_doctor_from_admin_page(): void
+    {
+        $this->seedAccountingData();
+
+        $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $mainLab = Lab::query()->where('code', 'MAIN_LAB')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->post(route('doctors.store'), [
+                'code' => 'NEW_DOC',
+                'name' => 'Dr New',
+                'commission_type' => 'percentage',
+                'commission_percentage' => '30',
+                'default_lab_id' => $mainLab->id,
+            ])
+            ->assertRedirect(route('doctors.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('doctors', [
+            'code' => 'NEW_DOC',
+            'name' => 'Dr New',
+            'clinic_id' => $admin->clinic_id,
+            'is_active' => true,
+        ]);
+    }
 
     public function test_admin_can_update_doctor_commission_percentage(): void
     {

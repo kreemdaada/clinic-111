@@ -120,23 +120,25 @@
 
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.75rem;margin-top:0.75rem;">
                 <div class="form-group" style="margin:0;">
-                    <label class="form-label">Cash (AED)</label>
+                    <label class="form-label">Cash ({{ $clinicCurrency }})</label>
                     <input class="form-input" type="number" step="0.01" id="dr-dhs" value="0" @if($readOnly) disabled @endif>
                 </div>
                 <div class="form-group" style="margin:0;">
-                    <label class="form-label">Cheque (AED)</label>
+                    <label class="form-label">Cheque ({{ $clinicCurrency }})</label>
                     <input class="form-input" type="number" step="0.01" min="0" id="dr-cheque" value="0" @if($readOnly) disabled @endif>
                 </div>
                 <div class="form-group" style="margin:0;">
-                    <label class="form-label">Tabby (AED)</label>
+                    <label class="form-label">Tabby ({{ $clinicCurrency }})</label>
                     <input class="form-input" type="number" step="0.01" min="0" id="dr-tabby" value="0" @if($readOnly) disabled @endif>
                 </div>
                 <div class="form-group" style="margin:0;">
-                    <label class="form-label">Cash (USD)</label>
+                    @if ($foreignCashCurrency)
+                    <label class="form-label">Cash ({{ $foreignCashCurrency }})</label>
                     <input class="form-input" type="number" step="0.01" min="0" id="dr-usd" value="0" @if($readOnly) disabled @endif>
+                    @endif
                 </div>
                 <div class="form-group" style="margin:0;">
-                    <label class="form-label">Card (Visa, AED)</label>
+                    <label class="form-label">Card (Visa, {{ $clinicCurrency }})</label>
                     <input class="form-input" type="number" step="0.01" min="0" id="dr-visa" value="0" @if($readOnly) disabled @endif>
                 </div>
             </div>
@@ -211,6 +213,7 @@
         'reportId' => $dailyReport->id,
         'month' => $monthStart->format('Y-m'),
         'readOnly' => $readOnly,
+        'clinicCurrency' => $clinicCurrency,
         'initialDoctorId' => request()->integer('doctor') ?: null,
         'initialDay' => request()->filled('from')
             ? (int) \Carbon\Carbon::parse((string) request('from'))->day
@@ -222,7 +225,7 @@
 <script type="application/json" id="dr-editor-config">@json($editorConfig)</script>
 <script>
 (function () {
-    const { reportId, month, readOnly, initialDoctorId, initialDay, dateFrom, dateTo } =
+    const { reportId, month, readOnly, clinicCurrency, initialDoctorId, initialDay, dateFrom, dateTo } =
         JSON.parse(document.getElementById('dr-editor-config').textContent);
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
 
@@ -292,7 +295,9 @@
     function formatTreatmentMeta(t) {
         if (t.bills_lab_job && t.lab_price) {
             const labHint = t.lab_price.lab_code ? ` · ${t.lab_price.lab_code}` : '';
-            return `Lab ${t.lab_price.unit_cost_aed} AED${labHint}`;
+            const currency = t.lab_price.currency || clinicCurrency;
+            const cost = t.lab_price.unit_cost || t.lab_price.unit_cost_aed;
+            return `Lab ${cost} ${currency}${labHint}`;
         }
         if (t.fixed_fee) {
             return `${t.fixed_fee.amount} ${t.fixed_fee.currency} per treatment`;
@@ -402,7 +407,7 @@
                     <span class="dr-row-badge">${r.source === 'import' ? 'Imported' : 'Manual'}</span>
                 </div>
                 <div class="extraction-muted" style="margin:0.35rem 0;">
-                    Paid ${r.paid_total_aed} AED · Lab ${r.lab_total_aed} AED
+                    Paid ${r.paid_total_aed} ${clinicCurrency} · Lab ${r.lab_total_aed} ${clinicCurrency}
                     · DHS ${r.dhs_amount} · Visa ${r.visa_amount}
                 </div>
                 <div class="dr-row-actions">
@@ -468,11 +473,11 @@
         });
         const p = body.data;
         previewBox.hidden = false;
-        document.getElementById('dr-preview-paid').textContent = p.paid_total_aed + ' AED';
-        document.getElementById('dr-preview-lab').textContent = p.lab_total_aed + ' AED';
-        document.getElementById('dr-preview-net').textContent = p.net_total_aed + ' AED';
+        document.getElementById('dr-preview-paid').textContent = p.paid_total_aed + ' ' + clinicCurrency;
+        document.getElementById('dr-preview-lab').textContent = p.lab_total_aed + ' ' + clinicCurrency;
+        document.getElementById('dr-preview-net').textContent = p.net_total_aed + ' ' + clinicCurrency;
         const pct = p.commission_percentage ? ` (${p.commission_percentage}%)` : '';
-        document.getElementById('dr-preview-income').textContent = p.doctor_income_aed + ' AED' + pct;
+        document.getElementById('dr-preview-income').textContent = p.doctor_income_aed + ' ' + clinicCurrency + pct;
     }
 
     function markDateRange(from, to) {
@@ -564,7 +569,7 @@
         const fd = new FormData(e.target);
         const payload = Object.fromEntries(fd.entries());
         payload.seed_full_lab_billing = true;
-        const body = await api('/doctors', { method: 'POST', body: JSON.stringify(payload) });
+        const body = await api('/daily-report/doctors', { method: 'POST', body: JSON.stringify(payload) });
         const d = body.data;
         const btn = document.createElement('button');
         btn.type = 'button';

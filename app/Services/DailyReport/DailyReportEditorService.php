@@ -103,7 +103,9 @@ class DailyReportEditorService
         $usd = $this->decimal($payload['usd_amount'] ?? '0');
         $visa = $this->decimal($payload['visa_amount'] ?? '0');
 
-        $paymentTotals = $this->paymentCalculationService->calculateTotalCollectedAed(
+        $clinicCurrency = $this->currentClinicResolver->resolve()->currency;
+        $paymentTotals = $this->paymentCalculationService->calculateTotalCollected(
+            $clinicCurrency,
             $dhs,
             $usd,
             $visa,
@@ -245,21 +247,31 @@ class DailyReportEditorService
         $usd = $this->decimal($usd);
         $visa = $this->decimal($visa);
 
-        $paymentTotals = $this->paymentCalculationService->calculateTotalCollectedAed(
+        $clinicCurrency = $this->currentClinicResolver->resolve()->currency;
+        $paymentTotals = $this->paymentCalculationService->calculateTotalCollected(
+            $clinicCurrency,
             $dhs,
             $usd,
             $visa,
             chequeAmount: $cheque,
             tabbyAmount: $tabby,
         );
-        $paidTotal = $paymentTotals['paid_total_aed'];
+        $paidTotal = $paymentTotals['paid_total'];
         $treatmentText = TreatmentTextBuilder::fromLines($treatmentLines);
-        $labTotal = $this->estimateLabTotal($doctor, $treatmentText, $workDate);
+        $labTotal = $this->estimateLabTotal($doctor, $treatmentText, $workDate, $clinicCurrency);
         $netTotal = MoneyCalculator::subtract($paidTotal, $labTotal);
-        $doctorIncome = $this->estimateDoctorIncome($doctor, $treatmentLines, $paidTotal, $labTotal, $usd);
+        $doctorIncome = $this->estimateDoctorIncome(
+            $doctor,
+            $treatmentLines,
+            $paidTotal,
+            $labTotal,
+            $usd,
+            $clinicCurrency,
+        );
 
         return [
             'treatment_text' => $treatmentText,
+            'currency' => $clinicCurrency,
             'paid_total_aed' => $paidTotal,
             'lab_total_aed' => $labTotal,
             'net_total_aed' => $netTotal,
@@ -301,8 +313,12 @@ class DailyReportEditorService
         return $counts;
     }
 
-    private function estimateLabTotal(Doctor $doctor, string $treatmentText, Carbon $workDate): string
-    {
+    private function estimateLabTotal(
+        Doctor $doctor,
+        string $treatmentText,
+        Carbon $workDate,
+        string $clinicCurrency,
+    ): string {
         $parsed = $this->treatmentParserService->parse($treatmentText);
         $activeLabs = $this->forCurrentClinic(Lab::class)->where('is_active', true)->get();
         $total = '0.00';
@@ -325,11 +341,12 @@ class DailyReportEditorService
                 continue;
             }
 
-            $unitAed = MoneyCalculator::convertToAed(
+            $unitInClinicCurrency = MoneyCalculator::convertBetween(
                 (string) $resolved['price']->unit_cost,
                 $resolved['price']->currency,
+                $clinicCurrency,
             );
-            $lineTotal = MoneyCalculator::multiply($unitAed, (string) $item->quantity);
+            $lineTotal = MoneyCalculator::multiply($unitInClinicCurrency, (string) $item->quantity);
             $total = MoneyCalculator::add($total, $lineTotal);
         }
 
@@ -345,6 +362,7 @@ class DailyReportEditorService
         string $paidTotal,
         string $labTotal,
         string $usdPaid,
+        string $clinicCurrency,
     ): string {
         if ($doctor->commission_type === CommissionType::Fixed) {
             $doctor->loadMissing('doctorFixedFees.treatment');
@@ -369,7 +387,7 @@ class DailyReportEditorService
 
                 $total = MoneyCalculator::add(
                     $total,
-                    MoneyCalculator::convertToAed($lineFee, $fee->currency),
+                    MoneyCalculator::convertBetween($lineFee, $fee->currency, $clinicCurrency),
                 );
             }
 

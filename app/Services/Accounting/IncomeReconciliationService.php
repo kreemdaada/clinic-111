@@ -5,6 +5,7 @@ namespace App\Services\Accounting;
 use App\Models\DailyReport;
 use App\Models\DailyWorkRow;
 use App\Support\AccountingScopedQuery;
+use App\Support\ClinicCurrencySupport;
 use App\Support\MoneyCalculator;
 use Illuminate\Support\Collection;
 
@@ -13,6 +14,10 @@ use Illuminate\Support\Collection;
  */
 class IncomeReconciliationService
 {
+    public function __construct(
+        private readonly PaymentCalculationService $paymentCalculationService,
+    ) {}
+
     /**
      * Validate all work rows and doctor aggregates for a daily report.
      *
@@ -60,19 +65,17 @@ class IncomeReconciliationService
     private function validateWorkRow(DailyWorkRow $dailyWorkRow): array
     {
         $issues = [];
-        $expectedTotal = MoneyCalculator::add(
-            MoneyCalculator::add(
-                MoneyCalculator::add(
-                    (string) $dailyWorkRow->dhs_amount,
-                    (string) $dailyWorkRow->cheque_amount,
-                ),
-                (string) $dailyWorkRow->tabby_amount,
-            ),
-            MoneyCalculator::add(
-                (string) $dailyWorkRow->usd_to_aed_amount,
-                (string) $dailyWorkRow->visa_amount,
-            ),
+        $dailyWorkRow->loadMissing('clinic');
+        $clinicCurrency = ClinicCurrencySupport::normalize($dailyWorkRow->clinic?->currency ?? 'AED');
+        $expectedTotals = $this->paymentCalculationService->calculateTotalCollected(
+            $clinicCurrency,
+            (string) $dailyWorkRow->dhs_amount,
+            (string) $dailyWorkRow->usd_amount,
+            (string) $dailyWorkRow->visa_amount,
+            chequeAmount: (string) $dailyWorkRow->cheque_amount,
+            tabbyAmount: (string) $dailyWorkRow->tabby_amount,
         );
+        $expectedTotal = $expectedTotals['paid_total_aed'];
 
         if (bccomp($expectedTotal, (string) $dailyWorkRow->paid_total_aed, 2) !== 0) {
             $issues[] = [

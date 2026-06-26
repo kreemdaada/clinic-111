@@ -123,4 +123,107 @@ class LabPriceResolverTest extends TestCase
         $this->assertSame('RIYADH_LAB', $resolved['lab']->code);
         $this->assertSame('55.00', number_format((float) $resolved['price']->unit_cost, 2, '.', ''));
     }
+
+    public function test_resolves_price_on_onboarding_lab_code_not_main_lab(): void
+    {
+        $clinic = \App\Models\Clinic::query()->create([
+            'name' => 'Harbor Dental',
+            'code' => 'HARBOR',
+            'currency' => 'USD',
+            'timezone' => 'UTC',
+            'country' => 'Test',
+        ]);
+        $clinic->is_active = true;
+        $clinic->save();
+
+        $lab = Lab::query()->create([
+            'clinic_id' => $clinic->id,
+            'name' => 'Main Laboratory',
+            'code' => 'HARBOR_MAIN_LAB',
+        ]);
+        $lab->is_active = true;
+        $lab->save();
+
+        $treatment = Treatment::query()->create([
+            'clinic_id' => $clinic->id,
+            'code' => 'ZIR',
+            'name' => 'Zircon Crown',
+        ]);
+        $treatment->has_lab_cost = true;
+        $treatment->is_active = true;
+        $treatment->save();
+
+        $price = \App\Models\LabPrice::query()->create([
+            'clinic_id' => $clinic->id,
+            'lab_id' => $lab->id,
+            'treatment_id' => $treatment->id,
+            'unit_cost' => '120.00',
+            'currency' => 'USD',
+        ]);
+        $price->is_active = true;
+        $price->save();
+
+        $doctor = Doctor::query()->create([
+            'clinic_id' => $clinic->id,
+            'name' => 'Dr Harbor',
+            'code' => 'HARBOR_DOC',
+            'commission_type' => 'percentage',
+            'commission_percentage' => 35,
+            'default_lab_id' => $lab->id,
+            'is_active' => true,
+        ]);
+
+        $resolved = $this->labPriceResolver->resolveWithLabFallback(
+            $doctor,
+            $treatment,
+            Lab::query()->where('clinic_id', $clinic->id)->where('is_active', true)->get(),
+        );
+
+        $this->assertNotNull($resolved);
+        $this->assertSame('HARBOR_MAIN_LAB', $resolved['lab']->code);
+        $this->assertSame('120.00', number_format((float) $resolved['price']->unit_cost, 2, '.', ''));
+    }
+
+    public function test_resolves_price_when_valid_from_stored_with_time_on_same_day(): void
+    {
+        $doctorJack = Doctor::query()->where('code', 'JACK')->firstOrFail();
+        $treatment = $this->createLabCostTreatment('LP_BOUNDARY', 'Boundary LP Test');
+        $mainLab = Lab::query()->where('code', 'MAIN_LAB')->firstOrFail();
+
+        $price = \App\Models\LabPrice::query()->create([
+            'clinic_id' => $doctorJack->clinic_id,
+            'lab_id' => $mainLab->id,
+            'treatment_id' => $treatment->id,
+            'unit_cost' => '199.00',
+            'currency' => 'AED',
+            'valid_from' => '2026-06-01 00:00:00',
+            'valid_to' => '2026-06-29 00:00:00',
+        ]);
+        $price->is_active = true;
+        $price->save();
+
+        $resolved = $this->labPriceResolver->resolve(
+            $doctorJack,
+            $treatment,
+            $mainLab,
+            \Carbon\Carbon::parse('2026-06-01'),
+        );
+
+        $this->assertNotNull($resolved);
+        $this->assertSame('199.00', number_format((float) $resolved->unit_cost, 2, '.', ''));
+    }
+
+    private function createLabCostTreatment(string $code, string $name): Treatment
+    {
+        $treatment = Treatment::query()->create([
+            'clinic_id' => $this->clinic111()->id,
+            'code' => $code,
+            'name' => $name,
+        ]);
+        $treatment->has_lab_cost = true;
+        $treatment->is_active = true;
+        $treatment->save();
+
+        return $treatment;
+    }
 }

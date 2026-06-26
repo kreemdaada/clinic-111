@@ -29,14 +29,16 @@ class DoctorFixedFeeResolver
             ->where('treatment_id', $treatment->id)
             ->where('is_active', true)
             ->where(function ($builder) use ($effectiveDate) {
+                $date = $effectiveDate->toDateString();
                 $builder
                     ->whereNull('valid_from')
-                    ->orWhere('valid_from', '<=', $effectiveDate->toDateString());
+                    ->orWhereDate('valid_from', '<=', $date);
             })
             ->where(function ($builder) use ($effectiveDate) {
+                $date = $effectiveDate->toDateString();
                 $builder
                     ->whereNull('valid_to')
-                    ->orWhere('valid_to', '>=', $effectiveDate->toDateString());
+                    ->orWhereDate('valid_to', '>=', $date);
             })
             ->first();
     }

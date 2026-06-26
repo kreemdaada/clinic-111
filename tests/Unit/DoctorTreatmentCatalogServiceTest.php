@@ -37,10 +37,10 @@ class DoctorTreatmentCatalogServiceTest extends TestCase
 
         $this->assertContains('ZIR', $codes);
         $this->assertContains('CF', $codes);
-        $this->assertNotContains('IMPL-ZIR', $codes);
+        $this->assertContains('IMPL-ZIR', $codes);
     }
 
-    public function test_new_percentage_doctor_without_lab_rules_gets_non_lab_only(): void
+    public function test_new_percentage_doctor_sees_all_clinic_treatments_including_lab_cost(): void
     {
         $this->seed();
 
@@ -52,16 +52,31 @@ class DoctorTreatmentCatalogServiceTest extends TestCase
             'is_active' => true,
         ]));
 
-        Treatment::query()->firstOrCreate(
-            ['code' => 'CF'],
-            ['name' => 'Composite Filling', 'has_lab_cost' => false, 'is_active' => true],
-        );
+        Treatment::query()->create($this->withClinicId([
+            'code' => 'NEW_ZIR',
+            'name' => 'New Zirconia',
+            'has_lab_cost' => true,
+            'is_active' => true,
+        ]));
 
         $service = app(DoctorTreatmentCatalogService::class);
         $codes = $service->forDoctor($doctor)->pluck('code')->all();
 
+        $this->assertContains('NEW_ZIR', $codes);
         $this->assertContains('CF', $codes);
-        $this->assertNotContains('ZIR', $codes);
+    }
+
+    public function test_clinic_catalog_does_not_include_other_clinic_treatments(): void
+    {
+        $this->seedAccountingData();
+        $tenant = $this->seedClinic222Tenant();
+
+        $service = app(DoctorTreatmentCatalogService::class);
+        $codes = $service->forDoctor($tenant['doctor'])->pluck('code')->all();
+
+        $this->assertContains('C222_TX', $codes);
+        $this->assertNotContains('BG', $codes);
+        $this->assertNotContains('CF', $codes);
     }
 
     public function test_riyad_post_shows_riyadh_lab_price_in_catalog(): void
