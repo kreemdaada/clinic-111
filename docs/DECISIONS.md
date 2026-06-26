@@ -827,6 +827,279 @@ Cross-clinic leakage tests become mandatory.
 
 ---
 
+## ADR-029
+
+### Title
+
+Accounting Ownership and Isolation
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-27
+
+### Milestone
+
+Milestone 10
+
+---
+
+## Context
+
+Milestones 06–09 established the multi-clinic foundation:
+
+* Clinic entity introduced.
+* Configuration data owns `clinic_id`.
+* CurrentClinicResolver provides the active clinic.
+* Configuration queries are isolated through explicit service-layer filtering.
+
+However, the accounting engine still stores and processes accounting data without explicit tenant ownership.
+
+To safely support multiple clinics, every accounting record must belong to exactly one clinic.
+
+Accounting isolation must be completed before introducing the Registration Wizard.
+
+---
+
+## Decision
+
+Every accounting entity shall explicitly own a `clinic_id`.
+
+Accounting services must only create, read, update, and calculate records that belong to the current clinic.
+
+The authenticated clinic resolved by `CurrentClinicResolver` is the only runtime source of tenant context.
+
+No accounting service may infer, guess, or hardcode clinic ownership.
+
+---
+
+## Accounting Ownership
+
+The following tables must own `clinic_id`:
+
+* daily_reports
+* daily_work_rows
+* payments
+* work_items
+* lab_jobs
+* audit_logs (financial events only)
+
+Future accounting tables must also contain `clinic_id`.
+
+---
+
+## Import Pipeline
+
+Every import must follow this ownership flow:
+
+```text
+Resolve Current Clinic
+        ↓
+Create Daily Report
+        ↓
+Create Daily Work Rows
+        ↓
+Create Payments
+        ↓
+Create Work Items
+        ↓
+Create Lab Jobs
+```
+
+Every created record inherits the same `clinic_id`.
+
+No step may overwrite the clinic context.
+
+---
+
+## Query Rules
+
+Every accounting query must explicitly filter by:
+
+```php
+->where('clinic_id', $this->currentClinicResolver->resolveId())
+```
+
+Filtering belongs inside the Service Layer.
+
+Controllers must never build tenant-aware accounting queries.
+
+---
+
+## Calculation Rules
+
+Accounting calculations must never mix data from different clinics.
+
+Examples:
+
+* Daily Income
+* Monthly Income
+* Doctor Income
+* Clinic Income
+* Lab Cost
+* Payment Totals
+
+Every calculation must operate only on records belonging to one clinic.
+
+---
+
+## No Global Scopes
+
+Laravel Global Scopes remain forbidden.
+
+Accounting isolation must always be explicit and visible inside the Service Layer.
+
+Hidden tenant filtering is not allowed.
+
+---
+
+## Security Rules
+
+The following must never be accepted from HTTP requests:
+
+* clinic_id
+* clinic_code
+
+These values are assigned exclusively by `CurrentClinicResolver`.
+
+Any request attempting to submit a clinic identifier must be ignored or rejected.
+
+---
+
+## Registration Dependency
+
+The Registration Wizard depends on this ADR.
+
+Public clinic registration must remain disabled until accounting ownership and isolation are fully implemented and verified.
+
+No new clinic may enter the system before tenant isolation is complete.
+
+---
+
+## Alternatives Considered
+
+### Global Scopes
+
+Rejected.
+
+Reason:
+
+* Hidden behaviour
+* Difficult debugging
+* Harder testing
+* Administrative queries become unpredictable
+
+---
+
+### Explicit Service Layer Isolation
+
+Accepted.
+
+Reason:
+
+* Predictable
+* Readable
+* Easy to debug
+* Easy to test
+* Consistent with ADR-028
+
+---
+
+## Consequences
+
+Advantages
+
+* Complete tenant ownership
+* No accounting data leakage
+* Safe multi-clinic accounting
+* Predictable service behaviour
+* Simpler future SaaS deployment
+
+Disadvantages
+
+* Every accounting service must explicitly use `CurrentClinicResolver`
+* More explicit queries throughout the accounting layer
+
+---
+
+## Affected Components
+
+### Database
+
+* daily_reports
+* daily_work_rows
+* payments
+* work_items
+* lab_jobs
+* audit_logs (financial)
+
+### Services
+
+* DailyReportImportService
+* PaymentCalculationService
+* LabJobCalculationService
+* MonthlyIncomeCalculationService
+* DoctorIncomeCalculationService
+* DailyReportEditorService
+* Import Services
+* Export Services
+
+### Controllers
+
+No architectural changes.
+
+Controllers remain thin.
+
+### API
+
+No endpoint changes.
+
+Only ownership and filtering behaviour changes.
+
+### UI
+
+No functional changes.
+
+Existing screens automatically display only accounting data belonging to the authenticated clinic.
+
+### Tests
+
+Mandatory cross-clinic accounting isolation tests.
+
+Mandatory regression tests.
+
+Mandatory import ownership tests.
+
+---
+
+## Related Documentation
+
+* PROJECT_OVERVIEW.md
+* DATABASE_SCHEMA.md
+* SERVICES.md
+* WORKFLOWS.md
+* DEVELOPMENT_GUIDE.md
+* MULTI_CLINIC_ARCHITECTURE.md
+
+---
+
+## Success Criteria
+
+Milestone 10 is considered complete only when:
+
+* Every accounting table owns `clinic_id`.
+* Every accounting service is clinic-aware.
+* Every accounting query is explicitly filtered.
+* Every import assigns the current clinic automatically.
+* Cross-clinic accounting access is impossible.
+* Registration Wizard remains disabled.
+
+Only after these conditions are satisfied may the Registration Wizard (ADR-030) begin.
+---
+
 ## Implementation (Milestone 09)
 
 Implemented 2026-06-26 on branch `feature/query-isolation`:
