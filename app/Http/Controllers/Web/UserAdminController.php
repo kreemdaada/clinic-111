@@ -24,7 +24,7 @@ class UserAdminController extends Controller
     public function index(): View
     {
         return view('admin.users.index', [
-            'users' => User::query()->orderBy('name')->get(),
+            'users' => $this->userManagementService->listForAdministration(),
             'roles' => ['admin', 'accountant', 'viewer'],
         ]);
     }

@@ -114,10 +114,26 @@ class ClinicAdminTest extends TestCase
         $this->assertSame('Clinic 111 Updated', $clinic->fresh()->name);
     }
 
-    public function test_admin_can_deactivate_clinic_without_deleting_row(): void
+    public function test_admin_can_deactivate_own_clinic_without_deleting_row(): void
     {
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
-        $clinic = Clinic::query()->create([
+        $clinic = Clinic::query()->where('code', 'CLINIC_111')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->delete(route('clinics.destroy', $clinic))
+            ->assertRedirect(route('clinics.index'));
+
+        $this->assertDatabaseHas('clinics', [
+            'id' => $clinic->id,
+            'code' => 'CLINIC_111',
+            'is_active' => false,
+        ]);
+    }
+
+    public function test_admin_cannot_deactivate_other_clinic(): void
+    {
+        $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $otherClinic = Clinic::query()->create([
             'name' => 'Temp Clinic',
             'code' => 'TEMP_CLINIC',
             'currency' => 'AED',
@@ -126,26 +142,14 @@ class ClinicAdminTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->delete(route('clinics.destroy', $clinic))
-            ->assertRedirect(route('clinics.index'));
-
-        $this->assertDatabaseHas('clinics', [
-            'id' => $clinic->id,
-            'code' => 'TEMP_CLINIC',
-            'is_active' => false,
-        ]);
+            ->delete(route('clinics.destroy', $otherClinic))
+            ->assertNotFound();
     }
 
-    public function test_admin_can_activate_clinic(): void
+    public function test_admin_can_activate_own_clinic(): void
     {
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
-        $clinic = Clinic::query()->create([
-            'name' => 'Inactive Clinic',
-            'code' => 'INACTIVE_CLINIC',
-            'currency' => 'AED',
-            'timezone' => 'Asia/Dubai',
-            'country' => 'United Arab Emirates',
-        ]);
+        $clinic = Clinic::query()->where('code', 'CLINIC_111')->firstOrFail();
         $clinic->is_active = false;
         $clinic->save();
 
@@ -166,25 +170,28 @@ class ClinicAdminTest extends TestCase
             ->assertSee('CLINIC_111');
     }
 
-    public function test_status_filter_shows_only_inactive_clinics(): void
+    public function test_status_filter_shows_only_inactive_current_clinic(): void
     {
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
-        $hiddenClinic = Clinic::query()->create([
+        $clinic = Clinic::query()->where('code', 'CLINIC_111')->firstOrFail();
+        $clinic->is_active = false;
+        $clinic->save();
+
+        Clinic::query()->create([
             'name' => 'Hidden Clinic',
             'code' => 'HIDDEN_CLINIC',
             'currency' => 'AED',
             'timezone' => 'Asia/Dubai',
             'country' => 'Test Country',
+            'is_active' => false,
         ]);
-        $hiddenClinic->is_active = false;
-        $hiddenClinic->save();
 
         $response = $this->actingAs($admin)
             ->get(route('clinics.index', ['status' => 'inactive']))
             ->assertOk();
 
-        $response->assertSee('HIDDEN_CLINIC');
-        $response->assertDontSee('class="clinic-admin-code">CLINIC_111</h2>');
+        $response->assertSee('CLINIC_111');
+        $response->assertDontSee('HIDDEN_CLINIC');
     }
 
     public function test_store_validation_rejects_duplicate_code(): void
@@ -237,16 +244,10 @@ class ClinicAdminTest extends TestCase
         $this->assertSame('CLINIC_111', $response->json('data.0.code'));
     }
 
-    public function test_deactivation_audit_log_is_created(): void
+    public function test_deactivation_audit_log_is_created_for_own_clinic(): void
     {
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
-        $clinic = Clinic::query()->create([
-            'name' => 'Audit Clinic',
-            'code' => 'AUDIT_CLINIC',
-            'currency' => 'AED',
-            'timezone' => 'Asia/Dubai',
-            'country' => 'United Arab Emirates',
-        ]);
+        $clinic = Clinic::query()->where('code', 'CLINIC_111')->firstOrFail();
 
         $this->actingAs($admin)
             ->delete(route('clinics.destroy', $clinic))

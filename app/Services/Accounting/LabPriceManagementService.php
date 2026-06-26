@@ -4,8 +4,10 @@ namespace App\Services\Accounting;
 
 use App\Models\LabPrice;
 use App\Services\Audit\AuditLogService;
+use App\Services\Configuration\Concerns\ScopesConfigurationQueries;
 use App\Services\Configuration\CurrentClinicResolver;
 use App\Support\LabPriceOverlapValidator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -14,11 +16,62 @@ use Illuminate\Validation\ValidationException;
  */
 class LabPriceManagementService
 {
+    use ScopesConfigurationQueries;
+
     public function __construct(
         private readonly AuditLogService $auditLogService,
         private readonly LabPriceOverlapValidator $overlapValidator,
         private readonly CurrentClinicResolver $currentClinicResolver,
     ) {}
+
+    public function listQuery(
+        ?string $search = null,
+        ?int $labId = null,
+        ?int $treatmentId = null,
+        string $doctorFilter = 'all',
+        string $status = 'all',
+        ?string $currency = null,
+    ): Builder {
+        $query = $this->forCurrentClinic(LabPrice::class);
+
+        if ($search !== null && trim($search) !== '') {
+            $term = '%'.trim($search).'%';
+            $query->where(function (Builder $builder) use ($term) {
+                $builder
+                    ->whereHas('lab', fn (Builder $q) => $q->where('code', 'like', $term)->orWhere('name', 'like', $term))
+                    ->orWhereHas('treatment', fn (Builder $q) => $q->where('code', 'like', $term)->orWhere('name', 'like', $term))
+                    ->orWhereHas('doctor', fn (Builder $q) => $q->where('code', 'like', $term)->orWhere('name', 'like', $term));
+            });
+        }
+
+        if ($labId !== null) {
+            $query->where('lab_id', $labId);
+        }
+
+        if ($treatmentId !== null) {
+            $query->where('treatment_id', $treatmentId);
+        }
+
+        if ($doctorFilter === 'general') {
+            $query->whereNull('doctor_id');
+        } elseif ($doctorFilter !== 'all' && $doctorFilter !== '') {
+            $query->where('doctor_id', (int) $doctorFilter);
+        }
+
+        if ($status === 'active') {
+            $query->where('is_active', true);
+        }
+
+        if ($status === 'inactive') {
+            $query->where('is_active', false);
+        }
+
+        if ($currency !== null && $currency !== '') {
+            $query->where('currency', $currency);
+        }
+
+        return $query;
+    }
 
     /**
      * @param  array{
@@ -51,7 +104,7 @@ class LabPriceManagementService
             }
 
             $price = LabPrice::query()->create([
-                'clinic_id' => $this->currentClinicResolver->resolveId(),
+                'clinic_id' => $this->currentClinicId(),
                 'lab_id' => $data['lab_id'],
                 'treatment_id' => $data['treatment_id'],
                 'doctor_id' => $doctorId,
@@ -83,6 +136,8 @@ class LabPriceManagementService
      */
     public function update(LabPrice $labPrice, array $data): LabPrice
     {
+        $this->assertSameClinic($labPrice);
+
         return DB::transaction(function () use ($labPrice, $data) {
             $oldValues = $this->snapshot($labPrice);
 
@@ -128,16 +183,22 @@ class LabPriceManagementService
 
     public function deactivate(LabPrice $labPrice): LabPrice
     {
+        $this->assertSameClinic($labPrice);
+
         return $this->update($labPrice, ['is_active' => false]);
     }
 
     public function activate(LabPrice $labPrice): LabPrice
     {
+        $this->assertSameClinic($labPrice);
+
         return $this->update($labPrice, ['is_active' => true]);
     }
 
     public function duplicate(LabPrice $labPrice): LabPrice
     {
+        $this->assertSameClinic($labPrice);
+
         return $this->create([
             'lab_id' => $labPrice->lab_id,
             'treatment_id' => $labPrice->treatment_id,
@@ -159,6 +220,7 @@ class LabPriceManagementService
         ?int $excludeLabPriceId = null,
     ): void {
         if ($this->overlapValidator->hasActiveOverlap(
+            $this->currentClinicId(),
             $labId,
             $treatmentId,
             $doctorId,

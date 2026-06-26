@@ -510,8 +510,7 @@ sequenceDiagram
 - Every seeded configuration record belongs to `CLINIC_111`
 - Seeders resolve clinic by code — never hardcode clinic IDs
 - New configuration rows receive `clinic_id` from `CurrentClinicResolver` (Milestone 08, ADR-027)
-- Admin CRUD, APIs, imports, and accounting behaviour unchanged
-- Dashboard counts remain global
+- Admin CRUD, APIs, imports, and accounting behaviour unchanged until Milestone 09
 
 ---
 
@@ -530,19 +529,48 @@ sequenceDiagram
     Resolver->>Auth: user.clinic_id
     Resolver-->>Svc: clinic id
     Svc->>DB: INSERT with clinic_id
-    Note over DB: No query filtering yet
+    Note over DB: Reads also filter by clinic_id (Milestone 09)
 ```
 
 **Rules:**
 
 - Single source of truth per request (ADR-027)
 - No `CLINIC_111` fallback
-- Controllers remain thin — services own clinic assignment
+- Controllers remain thin — services own clinic assignment and query scoping
 - Accounting engine unchanged
 
 ---
 
-## 17. Environment Variables (import / privacy)
+## 17. Explicit Query Isolation (Milestone 09, ADR-028)
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Ctrl as AdminController
+    participant Svc as ConfigurationService
+    participant Resolver as CurrentClinicResolver
+    participant DB as configuration tables
+
+    User->>Ctrl: Authenticated list/show request
+    Ctrl->>Svc: listQuery() / listForAdministration()
+    Svc->>Resolver: resolveId()
+    Resolver->>Resolver: auth user clinic_id
+    Svc->>DB: SELECT ... WHERE clinic_id = ?
+    DB-->>Ctrl: current clinic rows only
+```
+
+**Rules:**
+
+- Every configuration read uses explicit `where('clinic_id', …)` in services — no global scopes
+- Controllers never call `auth()->user()->clinic_id` or build tenant queries
+- Cross-clinic route-model binding returns **404** on update/deactivate/activate
+- Reference APIs (`/api/doctors`, `/api/treatments`, `/api/labs`) scoped via `ReferenceDataService`
+- Configuration dashboard counts, health warnings, and recent activity are clinic-specific
+- Accounting tables (`daily_reports`, `payments`, `lab_jobs`, …) remain unscoped
+
+---
+
+## 18. Environment Variables (import / privacy)
 
 | Variable | Purpose |
 |---|---|
@@ -562,6 +590,7 @@ Same pipeline after row creation: `TreatmentImportValidationService` → `LabJob
 
 **Updated — 2026-06-26**
 
+- Explicit query isolation workflow (Milestone 09, ADR-028)
 - Configuration clinic ownership workflow (Milestone 07, ADR-026)
 - Current clinic resolver workflow (Milestone 08, ADR-027)
 

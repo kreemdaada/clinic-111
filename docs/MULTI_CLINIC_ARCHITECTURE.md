@@ -308,6 +308,8 @@ CurrentClinicResolver
 
 **Status (Milestone 08):** Implemented. Resolves `auth()->user()->clinic_id` to a `Clinic` model. No fallback clinic. Configuration services assign `clinic_id` on create.
 
+**Status (Milestone 09, ADR-028):** Implemented for configuration reads. Every configuration service list/show/query method filters by `CurrentClinicResolver::resolveId()`.
+
 Expected behavior:
 
 ```text
@@ -520,9 +522,9 @@ Future export services must scope by clinic explicitly.
 
 # 22. Configuration Dashboard
 
-The Configuration Dashboard will become clinic-aware.
+**Status (Milestone 09, ADR-028):** Implemented. `ConfigurationDashboardService` scopes module counts, health warnings, and recent audit activity to the authenticated user's clinic.
 
-Future behavior:
+Behavior:
 
 ```text
 Current clinic

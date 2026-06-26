@@ -24,6 +24,7 @@ class ConfigurationDashboardServiceTest extends TestCase
         parent::setUp();
 
         $this->seedAccountingData();
+        $this->authenticateAdmin();
         $this->service = app(ConfigurationDashboardService::class);
     }
 

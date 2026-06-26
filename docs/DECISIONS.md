@@ -827,6 +827,20 @@ Cross-clinic leakage tests become mandatory.
 
 ---
 
+## Implementation (Milestone 09)
+
+Implemented 2026-06-26 on branch `feature/query-isolation`:
+
+* `ScopesConfigurationQueries` trait — `forCurrentClinic()`, `assertSameClinic()`
+* All configuration management services expose clinic-scoped `listQuery()` / list helpers
+* `ReferenceDataService` for clinic-scoped reference API reads
+* `ConfigurationDashboardService` uses resolver for counts, health, and filtered audit activity
+* Overlap validators accept `clinicId` as first parameter
+* Cross-clinic mutations return HTTP 404
+* Accounting engine untouched; `daily_reports`, `payments`, `lab_jobs`, `audit_logs` unscoped
+
+---
+
 ## Related Documentation
 
 * PROJECT_OVERVIEW.md

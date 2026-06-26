@@ -8,7 +8,6 @@ use App\Http\Requests\Labs\StoreLabRequest;
 use App\Http\Requests\Labs\UpdateLabRequest;
 use App\Models\Lab;
 use App\Services\Accounting\LabManagementService;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -26,7 +25,7 @@ class LabAdminController extends Controller
         $search = $validated['search'] ?? null;
         $status = $validated['status'] ?? 'all';
 
-        $labs = $this->filteredLabsQuery($search, $status)
+        $labs = $this->labManagementService->listQuery($search, $status)
             ->withCount(['labJobs', 'labPrices'])
             ->orderBy('name')
             ->get()
@@ -88,29 +87,5 @@ class LabAdminController extends Controller
             'lab_jobs_count' => $lab->lab_jobs_count ?? null,
             'lab_prices_count' => $lab->lab_prices_count ?? null,
         ];
-    }
-
-    private function filteredLabsQuery(?string $search, string $status): Builder
-    {
-        $query = Lab::query();
-
-        if ($search !== null && trim($search) !== '') {
-            $term = '%'.trim($search).'%';
-            $query->where(function (Builder $builder) use ($term) {
-                $builder
-                    ->where('name', 'like', $term)
-                    ->orWhere('code', 'like', $term);
-            });
-        }
-
-        if ($status === 'active') {
-            $query->where('is_active', true);
-        }
-
-        if ($status === 'inactive') {
-            $query->where('is_active', false);
-        }
-
-        return $query;
     }
 }

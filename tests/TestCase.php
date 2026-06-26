@@ -36,6 +36,84 @@ abstract class TestCase extends BaseTestCase
         return \App\Models\Clinic::query()->where('code', 'CLINIC_111')->firstOrFail();
     }
 
+    protected function clinic222(): \App\Models\Clinic
+    {
+        return \App\Models\Clinic::query()->where('code', 'CLINIC_222')->firstOrFail();
+    }
+
+    /**
+     * @return array{clinic: \App\Models\Clinic, admin: User}
+     */
+    protected function seedClinic222Tenant(): array
+    {
+        $clinic = \App\Models\Clinic::query()->create([
+            'name' => 'Clinic 222',
+            'code' => 'CLINIC_222',
+            'currency' => 'AED',
+            'timezone' => 'Asia/Dubai',
+            'country' => 'United Arab Emirates',
+        ]);
+
+        $admin = new User;
+        $admin->fill([
+            'name' => 'Clinic 222 Admin',
+            'email' => 'admin@clinic222.test',
+            'role' => 'admin',
+            'clinic_id' => $clinic->id,
+        ]);
+        $admin->password = 'password';
+        $admin->is_active = true;
+        $admin->save();
+
+        $lab = \App\Models\Lab::query()->create([
+            'clinic_id' => $clinic->id,
+            'name' => 'Clinic 222 Lab',
+            'code' => 'C222_LAB',
+        ]);
+
+        $treatment = \App\Models\Treatment::query()->create([
+            'clinic_id' => $clinic->id,
+            'code' => 'C222_TX',
+            'name' => 'Clinic 222 Treatment',
+        ]);
+        $treatment->has_lab_cost = true;
+        $treatment->is_active = true;
+        $treatment->save();
+
+        $doctor = \App\Models\Doctor::query()->create([
+            'clinic_id' => $clinic->id,
+            'name' => 'Dr Clinic 222',
+            'code' => 'C222_DOC',
+            'commission_type' => 'percentage',
+            'commission_percentage' => 25,
+            'default_lab_id' => $lab->id,
+            'is_active' => true,
+        ]);
+
+        $price = \App\Models\LabPrice::query()->create([
+            'clinic_id' => $clinic->id,
+            'lab_id' => $lab->id,
+            'treatment_id' => $treatment->id,
+            'unit_cost' => '100.00',
+            'currency' => 'AED',
+        ]);
+        $price->is_active = true;
+        $price->save();
+
+        $viewer = new User;
+        $viewer->fill([
+            'name' => 'Clinic 222 Viewer',
+            'email' => 'viewer@clinic222.test',
+            'role' => 'viewer',
+            'clinic_id' => $clinic->id,
+        ]);
+        $viewer->password = 'password';
+        $viewer->is_active = true;
+        $viewer->save();
+
+        return compact('clinic', 'admin', 'lab', 'treatment', 'doctor', 'price', 'viewer');
+    }
+
     /**
      * @param  array<string, mixed>  $attributes
      * @return array<string, mixed>

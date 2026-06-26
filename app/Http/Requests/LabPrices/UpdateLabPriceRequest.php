@@ -4,6 +4,7 @@ namespace App\Http\Requests\LabPrices;
 
 use App\Models\LabPrice;
 use App\Support\LabPriceOverlapValidator;
+use App\Services\Configuration\CurrentClinicResolver;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -67,6 +68,7 @@ class UpdateLabPriceRequest extends FormRequest
             }
 
             if (app(LabPriceOverlapValidator::class)->hasActiveOverlap(
+                app(CurrentClinicResolver::class)->resolveId(),
                 $labId,
                 $treatmentId,
                 $doctorId,

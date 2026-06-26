@@ -12,6 +12,7 @@ use Illuminate\Support\Carbon;
 class DoctorFixedFeeOverlapValidator
 {
     public function hasActiveOverlap(
+        int $clinicId,
         int $doctorId,
         int $treatmentId,
         ?string $validFrom,
@@ -19,6 +20,7 @@ class DoctorFixedFeeOverlapValidator
         ?int $excludeDoctorFixedFeeId = null,
     ): bool {
         $query = DoctorFixedFee::query()
+            ->where('clinic_id', $clinicId)
             ->where('is_active', true)
             ->where('doctor_id', $doctorId)
             ->where('treatment_id', $treatmentId);

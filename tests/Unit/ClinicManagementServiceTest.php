@@ -48,13 +48,7 @@ class ClinicManagementServiceTest extends TestCase
     public function test_deactivate_sets_is_active_false_without_deleting_row(): void
     {
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
-        $clinic = Clinic::query()->create([
-            'name' => 'Deactivate Service Clinic',
-            'code' => 'DEACT_SVC',
-            'currency' => 'AED',
-            'timezone' => 'Asia/Dubai',
-            'country' => 'United Arab Emirates',
-        ]);
+        $clinic = Clinic::query()->where('code', 'CLINIC_111')->firstOrFail();
         $this->actingAs($admin);
 
         $deactivated = $this->clinicManagementService->deactivate($clinic);
@@ -67,16 +61,27 @@ class ClinicManagementServiceTest extends TestCase
         ]);
     }
 
-    public function test_activate_sets_is_active_true_and_logs_audit(): void
+    public function test_deactivate_other_clinic_returns_not_found(): void
     {
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
         $clinic = Clinic::query()->create([
-            'name' => 'Reactivate Service Clinic',
-            'code' => 'REACT_SVC',
+            'name' => 'Deactivate Service Clinic',
+            'code' => 'DEACT_SVC',
             'currency' => 'AED',
             'timezone' => 'Asia/Dubai',
             'country' => 'United Arab Emirates',
         ]);
+        $this->actingAs($admin);
+
+        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+
+        $this->clinicManagementService->deactivate($clinic);
+    }
+
+    public function test_activate_sets_is_active_true_and_logs_audit(): void
+    {
+        $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $clinic = Clinic::query()->where('code', 'CLINIC_111')->firstOrFail();
         $clinic->is_active = false;
         $clinic->save();
         $this->actingAs($admin);

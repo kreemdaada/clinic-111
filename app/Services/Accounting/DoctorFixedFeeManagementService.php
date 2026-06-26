@@ -4,8 +4,10 @@ namespace App\Services\Accounting;
 
 use App\Models\DoctorFixedFee;
 use App\Services\Audit\AuditLogService;
+use App\Services\Configuration\Concerns\ScopesConfigurationQueries;
 use App\Services\Configuration\CurrentClinicResolver;
 use App\Support\DoctorFixedFeeOverlapValidator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -14,11 +16,54 @@ use Illuminate\Validation\ValidationException;
  */
 class DoctorFixedFeeManagementService
 {
+    use ScopesConfigurationQueries;
+
     public function __construct(
         private readonly AuditLogService $auditLogService,
         private readonly DoctorFixedFeeOverlapValidator $overlapValidator,
         private readonly CurrentClinicResolver $currentClinicResolver,
     ) {}
+
+    public function listQuery(
+        ?string $search = null,
+        ?int $doctorId = null,
+        ?int $treatmentId = null,
+        string $status = 'all',
+        ?string $currency = null,
+    ): Builder {
+        $query = $this->forCurrentClinic(DoctorFixedFee::class);
+
+        if ($search !== null && trim($search) !== '') {
+            $term = '%'.trim($search).'%';
+            $query->where(function (Builder $builder) use ($term) {
+                $builder
+                    ->whereHas('doctor', fn (Builder $q) => $q->where('code', 'like', $term)->orWhere('name', 'like', $term))
+                    ->orWhereHas('treatment', fn (Builder $q) => $q->where('code', 'like', $term)->orWhere('name', 'like', $term));
+            });
+        }
+
+        if ($doctorId !== null) {
+            $query->where('doctor_id', $doctorId);
+        }
+
+        if ($treatmentId !== null) {
+            $query->where('treatment_id', $treatmentId);
+        }
+
+        if ($status === 'active') {
+            $query->where('is_active', true);
+        }
+
+        if ($status === 'inactive') {
+            $query->where('is_active', false);
+        }
+
+        if ($currency !== null && $currency !== '') {
+            $query->where('currency', $currency);
+        }
+
+        return $query;
+    }
 
     /**
      * @param  array{
@@ -48,7 +93,7 @@ class DoctorFixedFeeManagementService
             }
 
             $fee = DoctorFixedFee::query()->create([
-                'clinic_id' => $this->currentClinicResolver->resolveId(),
+                'clinic_id' => $this->currentClinicId(),
                 'doctor_id' => $data['doctor_id'],
                 'treatment_id' => $data['treatment_id'],
                 'fee_amount' => $data['fee_amount'],
@@ -78,6 +123,8 @@ class DoctorFixedFeeManagementService
      */
     public function update(DoctorFixedFee $doctorFixedFee, array $data): DoctorFixedFee
     {
+        $this->assertSameClinic($doctorFixedFee);
+
         return DB::transaction(function () use ($doctorFixedFee, $data) {
             $oldValues = $this->snapshot($doctorFixedFee);
 
@@ -121,16 +168,22 @@ class DoctorFixedFeeManagementService
 
     public function deactivate(DoctorFixedFee $doctorFixedFee): DoctorFixedFee
     {
+        $this->assertSameClinic($doctorFixedFee);
+
         return $this->update($doctorFixedFee, ['is_active' => false]);
     }
 
     public function activate(DoctorFixedFee $doctorFixedFee): DoctorFixedFee
     {
+        $this->assertSameClinic($doctorFixedFee);
+
         return $this->update($doctorFixedFee, ['is_active' => true]);
     }
 
     public function duplicate(DoctorFixedFee $doctorFixedFee): DoctorFixedFee
     {
+        $this->assertSameClinic($doctorFixedFee);
+
         return $this->create([
             'doctor_id' => $doctorFixedFee->doctor_id,
             'treatment_id' => $doctorFixedFee->treatment_id,
@@ -150,6 +203,7 @@ class DoctorFixedFeeManagementService
         ?int $excludeDoctorFixedFeeId = null,
     ): void {
         if ($this->overlapValidator->hasActiveOverlap(
+            $this->currentClinicId(),
             $doctorId,
             $treatmentId,
             $validFrom,

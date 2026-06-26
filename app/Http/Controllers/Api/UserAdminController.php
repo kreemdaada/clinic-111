@@ -22,9 +22,7 @@ class UserAdminController extends Controller
 
     public function index(): JsonResponse
     {
-        $users = User::query()
-            ->orderBy('name')
-            ->get()
+        $users = $this->userManagementService->listForAdministration()
             ->map(fn (User $user) => $this->formatUser($user));
 
         return response()->json(['data' => $users]);

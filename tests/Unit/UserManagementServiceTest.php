@@ -136,6 +136,7 @@ class UserManagementServiceTest extends TestCase
     public function test_admin_cannot_deactivate_self(): void
     {
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $this->actingAs($admin);
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('You cannot deactivate your own account.');
@@ -146,6 +147,7 @@ class UserManagementServiceTest extends TestCase
     public function test_admin_cannot_change_own_role(): void
     {
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $this->actingAs($admin);
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('You cannot change your own role.');

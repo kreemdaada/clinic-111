@@ -5,21 +5,25 @@ namespace App\Services\Configuration;
 use App\Enums\AuditAction;
 use App\Enums\CommissionType;
 use App\Models\AuditLog;
+use App\Models\Clinic;
 use App\Models\Doctor;
 use App\Models\DoctorFixedFee;
 use App\Models\Lab;
 use App\Models\LabPrice;
 use App\Models\Treatment;
 use App\Models\User;
+use App\Services\Configuration\Concerns\ScopesConfigurationQueries;
 use Illuminate\Database\Eloquent\Model;
 
 /**
  * Aggregates configuration module statistics, recent audit activity, and health warnings.
  *
- * Designed for future `clinic_id` scoping — pass `$clinicId` when multi-clinic is introduced.
+ * All reads are scoped to the authenticated user's clinic (ADR-028).
  */
 class ConfigurationDashboardService
 {
+    use ScopesConfigurationQueries;
+
     private const RECENT_ACTIVITY_LIMIT = 15;
 
     /** @var list<AuditAction> */
@@ -49,6 +53,10 @@ class ConfigurationDashboardService
         AuditAction::PasswordReset,
     ];
 
+    public function __construct(
+        private readonly CurrentClinicResolver $currentClinicResolver,
+    ) {}
+
     /**
      * @return array{
      *     modules: list<array<string, mixed>>,
@@ -56,22 +64,20 @@ class ConfigurationDashboardService
      *     health_warnings: list<array<string, string>>,
      * }
      */
-    public function buildDashboard(?int $clinicId = null): array
+    public function buildDashboard(): array
     {
         return [
-            'modules' => $this->moduleStatistics($clinicId),
-            'recent_activity' => $this->recentActivity($clinicId),
-            'health_warnings' => $this->healthWarnings($clinicId),
+            'modules' => $this->moduleStatistics(),
+            'recent_activity' => $this->recentActivity(),
+            'health_warnings' => $this->healthWarnings(),
         ];
     }
 
     /**
      * @return list<array<string, mixed>>
      */
-    public function moduleStatistics(?int $clinicId = null): array
+    public function moduleStatistics(): array
     {
-        unset($clinicId);
-
         return [
             $this->moduleCard(
                 key: 'doctors',
@@ -121,18 +127,29 @@ class ConfigurationDashboardService
     /**
      * @return list<array<string, mixed>>
      */
-    public function recentActivity(?int $clinicId = null, int $limit = self::RECENT_ACTIVITY_LIMIT): array
+    public function recentActivity(int $limit = self::RECENT_ACTIVITY_LIMIT): array
     {
-        unset($clinicId);
-
         $actionValues = array_map(
             fn (AuditAction $action) => $action->value,
             self::CONFIGURATION_AUDIT_ACTIONS,
         );
 
+        $currentClinicId = $this->currentClinicId();
+        $clinicMorph = (new Clinic)->getMorphClass();
+
         return AuditLog::query()
             ->with(['user', 'auditable'])
             ->whereIn('action', $actionValues)
+            ->where(function ($query) use ($currentClinicId, $clinicMorph) {
+                $query->whereHasMorph(
+                    'auditable',
+                    [Doctor::class, Lab::class, Treatment::class, LabPrice::class, DoctorFixedFee::class, User::class],
+                    fn ($q) => $q->where('clinic_id', $currentClinicId),
+                )->orWhere(function ($q) use ($currentClinicId, $clinicMorph) {
+                    $q->where('auditable_type', $clinicMorph)
+                        ->where('auditable_id', $currentClinicId);
+                });
+            })
             ->orderByDesc('created_at')
             ->limit($limit)
             ->get()
@@ -148,34 +165,32 @@ class ConfigurationDashboardService
     /**
      * @return list<array<string, string>>
      */
-    public function healthWarnings(?int $clinicId = null): array
+    public function healthWarnings(): array
     {
-        unset($clinicId);
-
         $warnings = [];
 
-        if (Lab::query()->where('is_active', true)->count() === 0) {
+        if ($this->forCurrentClinic(Lab::class)->where('is_active', true)->count() === 0) {
             $warnings[] = $this->warning('no_active_labs', 'No active laboratories are configured.');
         }
 
-        if (Treatment::query()->where('is_active', true)->count() === 0) {
+        if ($this->forCurrentClinic(Treatment::class)->where('is_active', true)->count() === 0) {
             $warnings[] = $this->warning('no_active_treatments', 'No active treatments are configured.');
         }
 
-        if (LabPrice::query()->where('is_active', true)->count() === 0) {
+        if ($this->forCurrentClinic(LabPrice::class)->where('is_active', true)->count() === 0) {
             $warnings[] = $this->warning('no_active_lab_prices', 'No active lab prices are configured.');
         }
 
-        $activeFixedDoctors = Doctor::query()
+        $activeFixedDoctors = $this->forCurrentClinic(Doctor::class)
             ->where('is_active', true)
             ->where('commission_type', CommissionType::Fixed)
             ->count();
 
-        if ($activeFixedDoctors > 0 && DoctorFixedFee::query()->where('is_active', true)->count() === 0) {
+        if ($activeFixedDoctors > 0 && $this->forCurrentClinic(DoctorFixedFee::class)->where('is_active', true)->count() === 0) {
             $warnings[] = $this->warning('no_active_fixed_fees', 'No active no-commission fee rules are configured.');
         }
 
-        $inactiveDoctors = Doctor::query()->where('is_active', false)->count();
+        $inactiveDoctors = $this->forCurrentClinic(Doctor::class)->where('is_active', false)->count();
         if ($inactiveDoctors > 0) {
             $warnings[] = $this->warning(
                 'inactive_doctors',
@@ -183,7 +198,7 @@ class ConfigurationDashboardService
             );
         }
 
-        $fixedDoctorsMissingFees = Doctor::query()
+        $fixedDoctorsMissingFees = $this->forCurrentClinic(Doctor::class)
             ->where('is_active', true)
             ->where('commission_type', CommissionType::Fixed)
             ->whereDoesntHave('doctorFixedFees', fn ($query) => $query->where('is_active', true))
@@ -196,7 +211,7 @@ class ConfigurationDashboardService
             );
         }
 
-        $labCostTreatmentsWithoutPrice = Treatment::query()
+        $labCostTreatmentsWithoutPrice = $this->forCurrentClinic(Treatment::class)
             ->where('is_active', true)
             ->where('has_lab_cost', true)
             ->whereDoesntHave('labPrices', fn ($query) => $query->where('is_active', true))
@@ -209,7 +224,7 @@ class ConfigurationDashboardService
             );
         }
 
-        $percentageDoctorsMissingRate = Doctor::query()
+        $percentageDoctorsMissingRate = $this->forCurrentClinic(Doctor::class)
             ->where('is_active', true)
             ->where('commission_type', CommissionType::Percentage)
             ->where(function ($query) {
@@ -240,8 +255,8 @@ class ConfigurationDashboardService
         string $indexRoute,
         string $quickActionLabel,
     ): array {
-        $total = $model::query()->count();
-        $active = $model::query()->where('is_active', true)->count();
+        $total = $this->forCurrentClinic($model)->count();
+        $active = $this->forCurrentClinic($model)->where('is_active', true)->count();
 
         return [
             'key' => $key,

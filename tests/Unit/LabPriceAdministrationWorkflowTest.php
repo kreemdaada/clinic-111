@@ -115,6 +115,7 @@ class LabPriceAdministrationWorkflowTest extends TestCase
         }
 
         $this->assertTrue($this->overlapValidator->hasActiveOverlap(
+            $duplicate->clinic_id,
             $duplicate->lab_id,
             $duplicate->treatment_id,
             $duplicate->doctor_id,
@@ -132,6 +133,7 @@ class LabPriceAdministrationWorkflowTest extends TestCase
         $this->assertTrue($general->is_active);
 
         $this->assertFalse($this->overlapValidator->hasActiveOverlap(
+            $duplicate->clinic_id,
             $duplicate->lab_id,
             $duplicate->treatment_id,
             $duplicate->doctor_id,

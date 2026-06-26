@@ -4,6 +4,7 @@ namespace App\Http\Requests\DoctorFixedFees;
 
 use App\Enums\CommissionType;
 use App\Support\DoctorFixedFeeOverlapValidator;
+use App\Services\Configuration\CurrentClinicResolver;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -44,6 +45,7 @@ class StoreDoctorFixedFeeRequest extends FormRequest
             $data = $validator->getData();
 
             if (app(DoctorFixedFeeOverlapValidator::class)->hasActiveOverlap(
+                app(CurrentClinicResolver::class)->resolveId(),
                 (int) $data['doctor_id'],
                 (int) $data['treatment_id'],
                 $data['valid_from'] ?? null,

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Doctor;
 use App\Models\Lab;
 use App\Models\Treatment;
+use App\Services\Configuration\ReferenceDataService;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -15,6 +16,10 @@ use Illuminate\Http\JsonResponse;
  */
 class ReferenceDataController extends Controller
 {
+    public function __construct(
+        private readonly ReferenceDataService $referenceDataService,
+    ) {}
+
     /**
      * List active doctors with commission type and default lab.
      *
@@ -22,11 +27,7 @@ class ReferenceDataController extends Controller
      */
     public function doctors(): JsonResponse
     {
-        $doctors = Doctor::query()
-            ->with('defaultLab')
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get()
+        $doctors = $this->referenceDataService->activeDoctors()
             ->map(fn (Doctor $doctor) => [
                 'id' => $doctor->id,
                 'name' => $doctor->name,
@@ -50,10 +51,7 @@ class ReferenceDataController extends Controller
      */
     public function treatments(): JsonResponse
     {
-        $treatments = Treatment::query()
-            ->where('is_active', true)
-            ->orderBy('code')
-            ->get()
+        $treatments = $this->referenceDataService->activeTreatments()
             ->map(fn (Treatment $treatment) => [
                 'id' => $treatment->id,
                 'code' => $treatment->code,
@@ -71,10 +69,7 @@ class ReferenceDataController extends Controller
      */
     public function labs(): JsonResponse
     {
-        $labs = Lab::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get()
+        $labs = $this->referenceDataService->activeLabs()
             ->map(fn (Lab $lab) => [
                 'id' => $lab->id,
                 'code' => $lab->code,
