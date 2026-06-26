@@ -1861,7 +1861,7 @@ Clinic Onboarding Workflow
 
 ### Status
 
-Proposed
+Accepted
 
 ### Date
 
@@ -1869,45 +1869,287 @@ Proposed
 
 ### Milestone
 
-Milestone 11 — Clinic Onboarding Workflow
+Milestone 11 — Clinic Registration / Onboarding Wizard
 
-### Context
+---
 
-Milestones 06–10 established tenant ownership and isolation for configuration and accounting data.
+## Context
 
-The system still has a single seeded clinic (`CLINIC_111`) and no public self-service registration.
+Milestones 06–10 completed the Multi-Clinic foundation.
 
-Before the platform can operate as a SaaS product, new clinics must be onboarded safely with default configuration and an initial admin user.
+The system now has:
 
-### Decision
+* Clinic entity as tenant root
+* clinic_id ownership on configuration data
+* CurrentClinicResolver
+* Explicit configuration query isolation
+* clinic_id ownership on accounting data
+* Explicit accounting isolation
+* Immutable accounting ownership
+* Cross-clinic isolation tests
 
-Introduce a Registration Wizard that:
+The platform is now ready to allow new clinics to join without developer intervention.
 
-1. Accepts a public registration form.
-2. Creates a new clinic inside a database transaction.
-3. Creates the first admin/owner user assigned to that clinic.
-4. Seeds or initializes default configuration for the clinic.
-5. Redirects the user to the Configuration Dashboard.
+Before this milestone, clinics could only be created manually by an admin or through seeders.
 
-The clinic and first user must be created atomically.
+That is not acceptable for a SaaS-style platform.
 
-A user must not remain permanently without a clinic.
+---
 
-Public registration remains disabled until ADR-029 is fully validated in production.
+## Decision
 
-### Alternatives Considered
+Introduce a transactional Clinic Onboarding Workflow.
 
-**Manual admin-only clinic creation**
+The onboarding workflow is the only supported way to create production clinics.
 
-Rejected for SaaS scale.
+The workflow creates:
 
-Requires platform staff for every new tenant.
+* Clinic
+* Owner/Admin user
+* Minimal default clinic configuration
 
-**Registration without default configuration seed**
+The workflow must run inside one database transaction.
+
+If any step fails, all changes must roll back.
+
+Partial clinics are forbidden.
+
+---
+
+## Onboarding Flow
+
+```text
+Submit Onboarding Form
+        ↓
+Validate Clinic Data
+        ↓
+Validate Owner Data
+        ↓
+Start Database Transaction
+        ↓
+Create Clinic
+        ↓
+Create Owner/Admin User
+        ↓
+Assign owner.clinic_id
+        ↓
+Create Minimal Default Configuration
+        ↓
+Activate Clinic
+        ↓
+Commit Transaction
+        ↓
+Login Owner
+        ↓
+Redirect to Configuration Dashboard
+```
+
+---
+
+## Required Form Data
+
+### Clinic Data
+
+* Clinic name
+* Clinic code
+* Country
+* Base currency
+* Timezone
+
+### Owner Data
+
+* Owner name
+* Owner email
+* Owner password
+* Password confirmation
+
+---
+
+## Default Configuration Rules
+
+A new clinic must start with minimal configuration only.
+
+Allowed during onboarding:
+
+* Clinic record
+* Owner/Admin user
+* Optional default laboratory
+* Optional default settings
+
+Not allowed during onboarding:
+
+* Accounting records
+* Daily reports
+* Payments
+* Work items
+* Lab jobs
+* Imported Excel files
+* Doctor income data
+
+Business configuration such as doctors, treatments, lab prices, and fixed fees should be created after onboarding through the Configuration Dashboard.
+
+Clinic 111 must not be copied as a template.
+
+---
+
+## Ownership Rules
+
+All created records must belong to the newly created clinic.
+
+The client must never submit:
+
+* clinic_id
+* clinic_code for ownership override
+
+Ownership is assigned internally.
+
+---
+
+## Security Rules
+
+Onboarding must not expose existing clinic data.
+
+A new clinic owner must only see their own clinic after login.
+
+No accounting data may be created during onboarding.
+
+No existing clinic may be modified during onboarding.
+
+---
+
+## Transaction Rules
+
+The onboarding workflow must be atomic.
+
+Allowed states:
+
+```text
+Everything succeeds
+```
+
+or
+
+```text
+Everything rolls back
+```
+
+Forbidden states:
+
+```text
+Clinic exists without owner
+Owner exists without clinic
+Clinic partially configured
+```
+
+---
+
+## Alternatives Considered
+
+### Manual Admin Setup
 
 Rejected.
 
-Empty clinics cannot operate the accounting engine.
+Requires developer or platform-admin intervention.
+
+Not scalable.
+
+---
+
+### Seeder-Based Clinic Creation
+
+Rejected.
+
+Seeders are for development and default bootstrap data, not production tenant creation.
+
+---
+
+### Transactional Onboarding Service
+
+Accepted.
+
+Provides consistency, testability, and SaaS readiness.
+
+---
+
+## Consequences
+
+### Advantages
+
+* Clinics can onboard without developer intervention.
+* Tenant creation becomes repeatable.
+* No partial tenants.
+* SaaS onboarding becomes possible.
+* Future billing/subscription integration becomes easier.
+
+### Disadvantages
+
+* More validation required.
+* Onboarding service must be carefully tested.
+* Future templates require additional design.
+
+---
+
+## Affected Components
+
+### Services
+
+* ClinicOnboardingService
+* ClinicManagementService
+* UserManagementService
+
+### Controllers
+
+* ClinicRegistrationController
+* OnboardingController or RegistrationController
+
+### Requests
+
+* StoreClinicRegistrationRequest
+
+### UI
+
+* Public or protected onboarding form
+* Registration wizard
+* Redirect to Configuration Dashboard
+
+### Tests
+
+* Onboarding success test
+* Rollback test
+* Duplicate clinic code test
+* Duplicate owner email test
+* Owner login test
+* Tenant isolation after onboarding
+
+---
+
+## Related Documentation
+
+* PROJECT_OVERVIEW.md
+* DATABASE_SCHEMA.md
+* SERVICES.md
+* WORKFLOWS.md
+* API.md
+* DEVELOPMENT_GUIDE.md
+* MULTI_CLINIC_ARCHITECTURE.md
+
+---
+
+## Success Criteria
+
+Milestone 11 is complete only when:
+
+* A new clinic can be created through the onboarding workflow.
+* The first owner/admin user is created automatically.
+* The owner belongs to the new clinic.
+* The owner can log in immediately.
+* The owner sees only their clinic data.
+* No accounting records are created during onboarding.
+* The workflow is fully transactional.
+* Rollback is tested.
+* Cross-clinic isolation remains intact.
+* All tests pass.
+---
 
 ### Consequences
 
