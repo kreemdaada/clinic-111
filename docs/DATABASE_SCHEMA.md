@@ -6,6 +6,42 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 
 ## Reference Tables
 
+### `clinics`
+
+**Purpose:** Root tenant entity for independent clinic accounting (ADR-026). Not yet referenced by accounting data in Milestone 06.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | bigint PK | |
+| `name` | string | Display name |
+| `code` | string unique | e.g. `CLINIC_111` |
+| `currency` | string(3) | ISO currency code, default `AED` |
+| `timezone` | string(64) | IANA timezone, default `Asia/Dubai` |
+| `country` | string | Country name |
+| `is_active` | boolean | Inactive clinics reserved for future tenant scoping |
+| `created_at`, `updated_at` | timestamps | |
+
+**Relationships (future — `clinic_id` not yet on child tables):**
+
+- `hasMany` users
+- `hasMany` doctors
+- `hasMany` labs
+
+**Example data (seeded):**
+
+| id | name | code | currency | timezone | country | is_active |
+|---|---|---|---|---|---|---|
+| 1 | Clinic 111 | CLINIC_111 | AED | Asia/Dubai | United Arab Emirates | true |
+
+**Admin rules (Milestone 06):**
+
+- Managed at web `/clinics` and API `/api/admin/clinics` (admin only)
+- Never physically deleted — use `is_active = false`
+- `is_active` is not mass-assignable on the model; set via `ClinicManagementService`
+- Accounting, imports, and login are unchanged — no `clinic_id` on other tables yet
+
+---
+
 ### `labs`
 
 **Purpose:** Dental laboratories that produce crowns, implants, and other lab work.

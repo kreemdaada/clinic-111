@@ -12,6 +12,7 @@ Order is defined in `DatabaseSeeder` — labs and doctors must exist before pric
 
 | Seeder | Purpose |
 |---|---|
+| `ClinicSeeder` | `CLINIC_111` — default tenant (ADR-026) |
 | `LabSeeder` | `MAIN_LAB`, `RIYADH_LAB` |
 | `DoctorSeeder` | JACK, RIYAD, PURIYA, WA with commission settings |
 | `TreatmentSeeder` | Treatment catalog; `has_lab_cost` flag drives lab_jobs |

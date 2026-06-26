@@ -960,6 +960,116 @@ Same capabilities as the API. Admin-only. Nav link visible when logged in as adm
 
 ---
 
+## Clinic Administration (admin only)
+
+Introduces the tenant root model (ADR-026). Accounting, imports, and login are unchanged — no `clinic_id` on other tables yet.
+
+Admin management uses `/api/admin/clinics` and web `/clinics`.
+
+### GET /api/admin/clinics
+
+**Purpose:** Paginated list with search and status filter.
+
+**Role:** admin
+
+**Query parameters (`ListClinicsRequest`):**
+
+| Param | Rules |
+|---|---|
+| `search` | optional — matches name, code, or country |
+| `status` | optional: `all`, `active`, `inactive` |
+| `page` | optional pagination |
+
+**Response `200`:**
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "Clinic 111",
+      "code": "CLINIC_111",
+      "currency": "AED",
+      "timezone": "Asia/Dubai",
+      "country": "United Arab Emirates",
+      "is_active": true
+    }
+  ],
+  "meta": {
+    "current_page": 1,
+    "last_page": 1,
+    "per_page": 20,
+    "total": 1
+  }
+}
+```
+
+---
+
+### POST /api/admin/clinics
+
+**Purpose:** Create a clinic tenant.
+
+**Role:** admin
+
+**Request:**
+
+```json
+{
+  "name": "Clinic 111",
+  "code": "CLINIC_111",
+  "currency": "AED",
+  "timezone": "Asia/Dubai",
+  "country": "United Arab Emirates"
+}
+```
+
+**Validation (`StoreClinicRequest`):** `name` required; `code` required, unique, alphanumeric/underscore/dash; `currency` 3-letter; `timezone` valid IANA; `country` required.
+
+**Response `201`:** Created clinic + audit `clinic_created`.
+
+---
+
+### PUT /api/admin/clinics/{id}
+
+**Purpose:** Update name, code, currency, timezone, country, or active status.
+
+**Role:** admin
+
+**Validation (`UpdateClinicRequest`):** same as create; code unique except current clinic.
+
+**Audit:** `clinic_updated`, `clinic_deactivated`, or `clinic_activated` depending on changes.
+
+---
+
+### DELETE /api/admin/clinics/{id}
+
+**Purpose:** Soft-deactivate (`is_active = false`). Never deletes the row.
+
+**Role:** admin
+
+---
+
+### POST /api/admin/clinics/{id}/activate
+
+**Purpose:** Reactivate a deactivated clinic.
+
+**Role:** admin
+
+---
+
+### Web UI: `/clinics`
+
+| Route | Method | Action |
+|---|---|---|
+| `/clinics` | GET | Paginated list + search + status filter |
+| `/clinics` | POST | Create |
+| `/clinics/{id}` | PUT | Update |
+| `/clinics/{id}` | DELETE | Deactivate |
+| `/clinics/{id}/activate` | POST | Activate |
+
+---
+
 ## Configuration Dashboard (admin only)
 
 Web-only — no API endpoint in Milestone 05. Entry point for the Configuration Layer (ADR-025).
@@ -984,6 +1094,7 @@ Web-only — no API endpoint in Milestone 05. Entry point for the Configuration 
 
 **Updated — 2026-06-26**
 
+- Clinic administration API (`/api/admin/clinics`) and web `/clinics` (Milestone 06, ADR-026)
 - Configuration dashboard web UI `/configuration` (Milestone 05)
 - Lab price administration API (`/api/admin/lab-prices`) and web `/lab-prices` (Milestone 03)
 - Doctor fixed fee administration API (`/api/admin/doctor-fixed-fees`) and web `/doctor-fixed-fees` (Milestone 04)

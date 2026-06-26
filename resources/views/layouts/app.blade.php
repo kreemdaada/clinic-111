@@ -446,7 +446,7 @@
             <a href="{{ route('imports.index') }}" @class(['active'=> request()->routeIs('imports.*') || request()->routeIs('logs.*')])>Import</a>
             <a href="{{ route('daily-report.index') }}" @class(['active'=> request()->routeIs('daily-report.*')])>Daily Report</a>
             @if (auth()->user()->isAdmin())
-            <a href="{{ route('configuration.dashboard') }}" @class(['active'=> request()->routeIs('configuration.*') || request()->routeIs('doctors.*') || request()->routeIs('labs.*') || request()->routeIs('treatments.*') || request()->routeIs('lab-prices.*') || request()->routeIs('doctor-fixed-fees.*') || request()->routeIs('admin.users.*')])>Configuration</a>
+            <a href="{{ route('configuration.dashboard') }}" @class(['active'=> request()->routeIs('configuration.*') || request()->routeIs('clinics.*') || request()->routeIs('doctors.*') || request()->routeIs('labs.*') || request()->routeIs('treatments.*') || request()->routeIs('lab-prices.*') || request()->routeIs('doctor-fixed-fees.*') || request()->routeIs('admin.users.*')])>Configuration</a>
             @endif
             <span class="topbar-user">{{ auth()->user()->email }} ({{ auth()->user()->role->value }})</span>
             <form method="POST" action="{{ route('logout') }}" style="display:inline;">

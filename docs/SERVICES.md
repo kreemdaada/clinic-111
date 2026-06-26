@@ -476,6 +476,40 @@ healthWarnings(?int $clinicId = null)
 
 ---
 
+### `ClinicManagementService`
+
+**Path:** `app/Services/Configuration/ClinicManagementService.php`
+
+**Purpose:** Admin CRUD for clinic tenant records (`clinics` table, ADR-026).
+
+**Input:**
+
+```php
+create([
+    'name' => 'Clinic 111',
+    'code' => 'CLINIC_111',
+    'currency' => 'AED',
+    'timezone' => 'Asia/Dubai',
+    'country' => 'United Arab Emirates',
+])
+update($clinic, [...fields..., 'is_active' => true|false])
+deactivate($clinic)
+activate($clinic)
+```
+
+**Output:** `Clinic` model
+
+**Business rules:**
+
+- Codes and currency are stored uppercase
+- Never physically deletes rows — `deactivate()` sets `is_active = false`
+- No accounting, import, or login integration in Milestone 06
+- Every create/update/activate/deactivate writes an audit log (`clinic_created`, `clinic_updated`, `clinic_deactivated`, `clinic_activated`)
+
+**Dependencies:** `AuditLogService`, `Clinic` model
+
+---
+
 ## Audit Services
 
 ### `AuditLogService`
@@ -529,6 +563,7 @@ Import validation warning and per-row persist result.
 
 **Updated — 2026-06-26**
 
+- Documented `ClinicManagementService` (Milestone 06, ADR-026)
 - Documented `ConfigurationDashboardService` (Milestone 05)
 - Documented `DoctorFixedFeeManagementService`, `DoctorFixedFeeResolver`, and `DoctorFixedFeeOverlapValidator` (Milestone 04)
 - Documented `LabPriceManagementService` and `LabPriceOverlapValidator` (Milestone 03)
