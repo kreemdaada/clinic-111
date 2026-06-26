@@ -4,6 +4,7 @@ namespace App\Services\Accounting;
 
 use App\Models\DailyReport;
 use App\Models\DailyWorkRow;
+use App\Support\AccountingScopedQuery;
 use App\Support\MoneyCalculator;
 use Illuminate\Support\Collection;
 
@@ -20,19 +21,32 @@ class IncomeReconciliationService
      */
     public function validateReport(DailyReport $dailyReport): array
     {
-        $dailyReport->load([
-            'dailyWorkRows.doctor',
-            'dailyWorkRows.workItems.treatment',
-            'dailyWorkRows.workItems.labJob',
-        ]);
+        $clinicId = (int) $dailyReport->clinic_id;
+        $workRows = AccountingScopedQuery::workRows($clinicId, $dailyReport->id)
+            ->with('doctor')
+            ->get();
+
+        $workRowIds = $workRows->pluck('id');
+        $workItemsByRow = AccountingScopedQuery::workItems($clinicId)
+            ->whereIn('daily_work_row_id', $workRowIds)
+            ->with(['treatment', 'labJob'])
+            ->get()
+            ->groupBy('daily_work_row_id');
+
+        foreach ($workRows as $dailyWorkRow) {
+            $dailyWorkRow->setRelation(
+                'workItems',
+                $workItemsByRow->get($dailyWorkRow->id, collect()),
+            );
+        }
 
         $issues = [];
 
-        foreach ($dailyReport->dailyWorkRows as $dailyWorkRow) {
+        foreach ($workRows as $dailyWorkRow) {
             $issues = array_merge($issues, $this->validateWorkRow($dailyWorkRow));
         }
 
-        $issues = array_merge($issues, $this->validateDoctorAggregates($dailyReport->dailyWorkRows));
+        $issues = array_merge($issues, $this->validateDoctorAggregates($workRows));
 
         return $issues;
     }

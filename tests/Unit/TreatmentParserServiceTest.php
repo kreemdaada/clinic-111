@@ -14,6 +14,7 @@ class TreatmentParserServiceTest extends TestCase
         parent::setUp();
 
         $this->seedAccountingData();
+        $this->authenticateAdmin();
         $this->treatmentParserService = app(TreatmentParserService::class);
     }
 

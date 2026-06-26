@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\AuditAction;
+use App\Models\Concerns\BelongsToClinic;
+use App\Models\Concerns\ImmutableClinicOwnership;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -14,7 +16,10 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  */
 class AuditLog extends Model
 {
+    use BelongsToClinic, ImmutableClinicOwnership;
+
     protected $fillable = [
+        'clinic_id',
         'user_id',
         'action',
         'auditable_type',

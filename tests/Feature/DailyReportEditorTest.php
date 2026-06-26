@@ -69,7 +69,7 @@ class DailyReportEditorTest extends TestCase
         $this->seed();
 
         $user = User::query()->where('email', 'accountant@clinic.test')->firstOrFail();
-        $report = DailyReport::query()->create([
+        $report = $this->createDailyReport([
             'report_date' => '2026-06-01',
             'source_type' => ReportSourceType::ManualEntry,
             'source_file_name' => 'JACK · 1 Jun – 15 Jun 2026',
@@ -89,7 +89,7 @@ class DailyReportEditorTest extends TestCase
         $this->seed();
 
         $user = User::query()->where('email', 'accountant@clinic.test')->firstOrFail();
-        $report = DailyReport::query()->create([
+        $report = $this->createDailyReport([
             'report_date' => '2026-06-01',
             'source_type' => ReportSourceType::ManualEntry,
             'source_file_name' => 'Manual report',

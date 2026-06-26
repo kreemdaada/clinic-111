@@ -12,6 +12,7 @@ use App\Models\Lab;
 use App\Models\LabPrice;
 use App\Models\Treatment;
 use App\Models\User;
+use App\Services\Configuration\CurrentClinicResolver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 
@@ -20,6 +21,10 @@ use Illuminate\Support\Facades\Auth;
  */
 class AuditLogService
 {
+    public function __construct(
+        private readonly CurrentClinicResolver $currentClinicResolver,
+    ) {}
+
     public function log(
         AuditAction $action,
         ?Model $auditable = null,
@@ -44,6 +49,7 @@ class AuditLogService
         }
 
         return AuditLog::query()->create([
+            'clinic_id' => $this->resolveClinicIdForAuditable($auditable),
             'user_id' => Auth::id(),
             'action' => $action,
             'auditable_type' => $auditableType,
@@ -471,5 +477,18 @@ class AuditLogService
             'role' => $user->role->value,
             'is_active' => $user->is_active,
         ];
+    }
+
+    private function resolveClinicIdForAuditable(?Model $auditable): int
+    {
+        if ($auditable instanceof Clinic) {
+            return (int) $auditable->id;
+        }
+
+        if ($auditable !== null && isset($auditable->clinic_id)) {
+            return (int) $auditable->clinic_id;
+        }
+
+        return $this->currentClinicResolver->resolveId();
     }
 }

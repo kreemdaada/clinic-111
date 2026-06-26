@@ -23,7 +23,7 @@ class ImportDeleteTest extends TestCase
         Storage::fake('local');
 
         $user = User::query()->where('email', 'accountant@clinic.test')->firstOrFail();
-        $report = DailyReport::query()->create([
+        $report = $this->createDailyReport([
             'report_date' => '2026-06-01',
             'source_type' => ReportSourceType::ExcelUpload,
             'source_file_name' => 'daily report June 2026.xlsm',
@@ -32,8 +32,7 @@ class ImportDeleteTest extends TestCase
 
         Storage::disk('local')->put('import-extractions/report-' . $report->id . '.json', '{}');
 
-        DailyWorkRow::query()->create([
-            'daily_report_id' => $report->id,
+        $this->createDailyWorkRow($report, [
             'doctor_id' => Doctor::query()->firstOrFail()->id,
             'work_date' => '2026-06-01',
             'paid_total_aed' => '100.00',
@@ -55,7 +54,7 @@ class ImportDeleteTest extends TestCase
         $this->seed();
 
         $user = User::query()->where('email', 'accountant@clinic.test')->firstOrFail();
-        $report = DailyReport::query()->create([
+        $report = $this->createDailyReport([
             'report_date' => '2026-06-01',
             'source_type' => ReportSourceType::ExcelUpload,
             'source_file_name' => 'daily report June 2026.xlsm',

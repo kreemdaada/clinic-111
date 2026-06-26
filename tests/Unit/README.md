@@ -26,6 +26,8 @@ php artisan test --testsuite=Unit
 | `DoctorFixedFeeAdministrationWorkflowTest` | End-to-end fixed fee create, duplicate, validity, overlap, resolver |
 | `DoctorFixedFeeManagementServiceTest` | Fixed fee CRUD, overlap guard, duplicate/activate |
 | `DoctorFixedFeeResolverTest` | Active fee resolution by doctor/treatment/date |
+| `AccountingOwnershipTest` | Clinic assignment on reports, payments, lab jobs, import pipeline, monthly income isolation |
+| `CrossClinicAccountingIsolationTest` | Clinic 111 vs 222 cannot read each other's reports, payments, work items, lab jobs |
 | `ConfigurationDashboardServiceTest` | Dashboard stats, audit activity, health warnings |
 | `ClinicManagementServiceTest` | Clinic CRUD, audit logging, soft deactivate/activate |
 | `ClinicRelationshipsTest` | Clinic hasMany / belongsTo configuration relations |
@@ -52,5 +54,7 @@ PatientReferenceHasher          → PatientPrivacyTest
 ## Conventions
 
 - Call `$this->seedAccountingData()` in `setUp()` when tests need doctors, treatments, or lab prices.
+- Call `$this->authenticateAdmin()` when unit tests resolve `CurrentClinicResolver` (accounting services after M10).
+- Use `$this->createDailyReport()`, `createDailyWorkRow()`, `createWorkItem()`, `createLabJob()` helpers for clinic-owned accounting fixtures.
 - Use `bcmath`-safe string amounts (`'1600.00'`) in assertions.
 - Financial accuracy tests must stay green when changing import or parser behaviour.

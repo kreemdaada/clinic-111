@@ -36,7 +36,8 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 - Managed at web `/clinics` and API `/api/admin/clinics` (admin only)
 - Never physically deleted — use `is_active = false`
 - `is_active` is not mass-assignable on the model; set via `ClinicManagementService`
-- Configuration models belong to a clinic via `clinic_id` (Milestone 07); accounting and transactional tables are unchanged until later milestones
+- Configuration models belong to a clinic via `clinic_id` (Milestone 07)
+- Accounting and transactional tables (`daily_reports`, `daily_work_rows`, `payments`, `work_items`, `lab_jobs`, `audit_logs`) own `clinic_id` (Milestone 10, ADR-029)
 
 ---
 
@@ -285,6 +286,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | Field | Type | Notes |
 |---|---|---|
 | `id` | bigint PK | |
+| `clinic_id` | FK → clinics | Required; scoped to owning clinic (Milestone 10) |
 | `report_date` | date | Business date of the report |
 | `source_type` | string | `excel_upload` or `manual_entry` |
 | `source_file_name` | string nullable | Original Excel filename |
@@ -313,6 +315,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | Field | Type | Notes |
 |---|---|---|
 | `id` | bigint PK | |
+| `clinic_id` | FK → clinics | Required; inherits from parent report (Milestone 10) |
 | `daily_report_id` | FK → daily_reports | |
 | `doctor_id` | FK → doctors | |
 | `work_date` | date | Date work was performed |
@@ -348,6 +351,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | Field | Type | Notes |
 |---|---|---|
 | `id` | bigint PK | |
+| `clinic_id` | FK → clinics | Required; inherits from parent work row (Milestone 10) |
 | `daily_work_row_id` | FK → daily_work_rows | |
 | `treatment_id` | FK → treatments | |
 | `quantity` | integer | Default 1 |
@@ -400,6 +404,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | Field | Type | Notes |
 |---|---|---|
 | `id` | bigint PK | |
+| `clinic_id` | FK → clinics | Required; inherits from parent work item (Milestone 10) |
 | `work_item_id` | FK → work_items | |
 | `lab_id` | FK → labs | Lab used for pricing |
 | `lab_price_id` | FK → lab_prices nullable | Price record used |
@@ -424,6 +429,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | Field | Type | Notes |
 |---|---|---|
 | `id` | bigint PK | |
+| `clinic_id` | FK → clinics | Required; inherits from parent work row (Milestone 10) |
 | `daily_work_row_id` | FK → daily_work_rows | |
 | `payment_method` | string | `dhs`, `usd`, `visa` |
 | `amount` | decimal(12,2) | Original amount |
@@ -485,6 +491,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | Field | Type | Notes |
 |---|---|---|
 | `id` | bigint PK | |
+| `clinic_id` | FK → clinics | Required; from auditable model or current clinic (Milestone 10) |
 | `user_id` | FK → users nullable | |
 | `action` | string | e.g. `report_import`, `price_change` |
 | `auditable_type` | string nullable | Polymorphic model class |
@@ -525,6 +532,10 @@ doctor_fixed_fees ── doctors + treatments
 ---
 
 ## What Changed
+
+**Updated — 2026-06-27**
+
+- `clinic_id` on accounting tables: `daily_reports`, `daily_work_rows`, `payments`, `work_items`, `lab_jobs`, `audit_logs` (Milestone 10, ADR-029)
 
 **Updated — 2026-06-26**
 

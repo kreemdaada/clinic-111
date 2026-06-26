@@ -148,8 +148,9 @@ Patient name, MRN, and file number are **never stored or exposed** in API respon
 
 ## What Changed
 
-**Updated — 2026-06-26**
+**Updated — 2026-06-27**
 
+- Accounting tables are clinic-owned; all accounting services filter by `clinic_id` (Milestone 10, ADR-029)
 - Explicit query isolation for all configuration reads (Milestone 09, ADR-028)
 - `CurrentClinicResolver` assigns clinic on configuration create (Milestone 08, ADR-027)
 - Configuration models now belong to `CLINIC_111` via `clinic_id` (Milestone 07, ADR-026)

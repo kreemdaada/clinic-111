@@ -5,7 +5,9 @@ namespace App\Services\DailyReport;
 use App\Enums\ReportStatus;
 use App\Models\DailyReport;
 use App\Models\User;
+use App\Services\Accounting\Concerns\ScopesAccountingQueries;
 use App\Services\Audit\AuditLogService;
+use App\Services\Configuration\CurrentClinicResolver;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -14,12 +16,17 @@ use RuntimeException;
  */
 class DailyReportLockService
 {
+    use ScopesAccountingQueries;
+
     public function __construct(
         private readonly AuditLogService $auditLogService,
+        private readonly CurrentClinicResolver $currentClinicResolver,
     ) {}
 
     public function approve(DailyReport $dailyReport, User $user): DailyReport
     {
+        $this->assertSameClinic($dailyReport);
+
         if ($dailyReport->isLocked()) {
             throw new RuntimeException('Report is already approved or locked.');
         }
@@ -50,6 +57,8 @@ class DailyReportLockService
 
     public function unlock(DailyReport $dailyReport, User $user, string $reason): DailyReport
     {
+        $this->assertSameClinic($dailyReport);
+
         if (! $dailyReport->isLocked()) {
             throw new RuntimeException('Report is not locked.');
         }

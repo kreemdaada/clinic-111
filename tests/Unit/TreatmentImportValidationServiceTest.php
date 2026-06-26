@@ -17,6 +17,7 @@ class TreatmentImportValidationServiceTest extends TestCase
         parent::setUp();
 
         $this->seedAccountingData();
+        $this->authenticateAdmin();
         $this->validationService = app(TreatmentImportValidationService::class);
     }
 
@@ -95,14 +96,13 @@ class TreatmentImportValidationServiceTest extends TestCase
     {
         $doctor = Doctor::query()->where('code', 'RIYAD')->firstOrFail();
 
-        $dailyReport = DailyReport::query()->create([
+        $dailyReport = $this->createDailyReport([
             'report_date' => '2026-01-15',
             'source_type' => 'manual_entry',
             'status' => 'parsed',
         ]);
 
-        return DailyWorkRow::query()->create([
-            'daily_report_id' => $dailyReport->id,
+        return $this->createDailyWorkRow($dailyReport, [
             'doctor_id' => $doctor->id,
             'work_date' => '2026-01-15',
             'excel_row_number' => 25,

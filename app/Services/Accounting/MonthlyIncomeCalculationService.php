@@ -9,6 +9,9 @@ use App\Models\Doctor;
 use App\Models\LabJob;
 use App\Models\Payment;
 use App\Models\WorkItem;
+use App\Services\Accounting\Concerns\ScopesAccountingQueries;
+use App\Services\Accounting\WaelFixedFeeCalculator;
+use App\Services\Configuration\CurrentClinicResolver;
 use App\Support\MoneyCalculator;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -25,11 +28,14 @@ use Illuminate\Support\Collection;
  */
 class MonthlyIncomeCalculationService
 {
+    use ScopesAccountingQueries;
+
     /**
      * @param  string  $defaultUsdExchangeRate  USD→AED rate for fixed-fee currency conversion.
      */
     public function __construct(
         private readonly WaelFixedFeeCalculator $waelFixedFeeCalculator,
+        private readonly CurrentClinicResolver $currentClinicResolver,
         private readonly string $defaultUsdExchangeRate = '3.65',
     ) {}
 
@@ -44,7 +50,7 @@ class MonthlyIncomeCalculationService
         $monthStart = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
         $monthEnd = $monthStart->copy()->endOfMonth();
 
-        return Doctor::query()
+        return $this->forCurrentClinic(Doctor::class)
             ->where('is_active', true)
             ->orderBy('name')
             ->get()
@@ -70,7 +76,7 @@ class MonthlyIncomeCalculationService
             $monthLabel = $monthStart->format('Y-m');
         }
 
-        $payments = Payment::query()
+        $payments = $this->forCurrentClinic(Payment::class)
             ->whereHas('dailyWorkRow', fn($query) => $query->where('doctor_id', $doctor->id))
             ->whereBetween('paid_at', [$monthStart->toDateString(), $monthEnd->toDateString()])
             ->get();
@@ -172,7 +178,7 @@ class MonthlyIncomeCalculationService
     {
         $doctor->loadMissing('doctorFixedFees.treatment');
 
-        $workItems = WorkItem::query()
+        $workItems = $this->forCurrentClinic(WorkItem::class)
             ->whereHas('dailyWorkRow', function ($query) use ($doctor, $monthStart, $monthEnd) {
                 $query
                     ->where('doctor_id', $doctor->id)
@@ -200,7 +206,7 @@ class MonthlyIncomeCalculationService
      */
     private function calculateLabCostForDoctor(Doctor $doctor, Carbon $monthStart, Carbon $monthEnd): string
     {
-        $labJobs = LabJob::query()
+        $labJobs = $this->forCurrentClinic(LabJob::class)
             ->whereHas('workItem.dailyWorkRow', function ($query) use ($doctor, $monthStart, $monthEnd) {
                 $query
                     ->where('doctor_id', $doctor->id)
@@ -221,7 +227,7 @@ class MonthlyIncomeCalculationService
      */
     private function calculateTreatmentCounts(Doctor $doctor, Carbon $monthStart, Carbon $monthEnd): array
     {
-        $workItems = WorkItem::query()
+        $workItems = $this->forCurrentClinic(WorkItem::class)
             ->whereHas('dailyWorkRow', function ($query) use ($doctor, $monthStart, $monthEnd) {
                 $query
                     ->where('doctor_id', $doctor->id)

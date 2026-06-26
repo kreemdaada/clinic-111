@@ -15,8 +15,11 @@ use App\Services\Accounting\PaymentCalculationService;
 use App\Services\Import\ImportActivityLogger;
 use App\Support\DoctorLabelNormalizer;
 use App\Support\ImportRowPrivacySanitizer;
+use App\Support\AccountingScopedQuery;
 use App\Support\MoneyCalculator;
 use App\Support\PatientReferenceHasher;
+use App\Services\Accounting\Concerns\ScopesAccountingQueries;
+use App\Services\Configuration\CurrentClinicResolver;
 use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +32,8 @@ use RuntimeException;
  */
 class DailyReportImportService
 {
+    use ScopesAccountingQueries;
+
     /**
      * @param  ExcelDailyReportParser  $excelParser  Parses uploaded Excel workbooks.
      * @param  PaymentCalculationService  $paymentCalculationService  Computes AED totals and payment rows.
@@ -50,6 +55,7 @@ class DailyReportImportService
         private readonly TreatmentImportValidationService $treatmentImportValidationService,
         private readonly PatientReferenceHasher $patientReferenceHasher,
         private readonly ImportRowPrivacySanitizer $importRowPrivacySanitizer,
+        private readonly CurrentClinicResolver $currentClinicResolver,
     ) {}
 
     /**
@@ -65,7 +71,7 @@ class DailyReportImportService
         $monthAnchor = ReportMonthResolver::requireFromFilename($uploadedFile->getClientOriginalName());
         $resolvedReportDate = $monthAnchor->toDateString();
 
-        if (DailyReport::query()
+        if ($this->forCurrentClinic(DailyReport::class)
             ->where('report_date', $resolvedReportDate)
             ->whereIn('status', [ReportStatus::Approved, ReportStatus::Locked])
             ->exists()) {
@@ -77,6 +83,7 @@ class DailyReportImportService
         $dailyReport = DB::transaction(function () use ($uploadedFile, $storedPath, $monthAnchor, $resolvedReportDate) {
 
             $dailyReport = DailyReport::query()->create([
+                'clinic_id' => $this->currentClinicId(),
                 'report_date' => $resolvedReportDate,
                 'source_type' => ReportSourceType::ExcelUpload,
                 'source_file_name' => $uploadedFile->getClientOriginalName(),
@@ -110,7 +117,7 @@ class DailyReportImportService
 
                 $extractionLogPath = $this->importExtractionLogService->finalize($dailyReport);
 
-                $rowCount = $dailyReport->dailyWorkRows()->count();
+                $rowCount = AccountingScopedQuery::workRows((int) $dailyReport->clinic_id, $dailyReport->id)->count();
 
                 $this->importActivityLogger->logSuccess($dailyReport, $rowCount, $extractionLogPath);
 
@@ -147,15 +154,20 @@ class DailyReportImportService
      */
     public function processParsedReport(DailyReport $dailyReport): void
     {
+        $this->assertSameClinic($dailyReport);
+
         if ($dailyReport->isLocked()) {
             throw new RuntimeException('Approved or locked reports are read-only.');
         }
 
-        $dailyReport->load('dailyWorkRows.doctor');
+        $clinicId = (int) $dailyReport->clinic_id;
+        $workRows = AccountingScopedQuery::workRows($clinicId, $dailyReport->id)
+            ->with('doctor')
+            ->get();
 
         $allWarnings = [];
 
-        foreach ($dailyReport->dailyWorkRows as $dailyWorkRow) {
+        foreach ($workRows as $dailyWorkRow) {
             $result = $this->treatmentImportValidationService->validateAndPersist($dailyWorkRow);
             $allWarnings = array_merge($allWarnings, $result->warnings);
         }
@@ -164,10 +176,13 @@ class DailyReportImportService
 
         $this->labJobCalculationService->calculateForReport($dailyReport);
 
-        $dailyReport->load('dailyWorkRows.doctor');
+        foreach ($workRows as $dailyWorkRow) {
+            $workItems = AccountingScopedQuery::workItems($clinicId, $dailyWorkRow->id)
+                ->with(['treatment', 'labJob'])
+                ->get();
+            $dailyWorkRow->setRelation('workItems', $workItems);
+            $dailyWorkRow->loadMissing('doctor');
 
-        foreach ($dailyReport->dailyWorkRows as $dailyWorkRow) {
-            $dailyWorkRow->load(['workItems.treatment', 'workItems.labJob']);
             $allWarnings = array_merge(
                 $allWarnings,
                 $this->treatmentImportValidationService->collectLabPriceWarnings($dailyWorkRow),
@@ -227,6 +242,7 @@ class DailyReportImportService
         $excelRowNumber = (int) ($parsedRow['raw_row_number'] ?? $parsedRow['excel_row'] ?? 0);
 
         $dailyWorkRow = DailyWorkRow::query()->create([
+            'clinic_id' => $dailyReport->clinic_id,
             'daily_report_id' => $dailyReport->id,
             'doctor_id' => $doctor->id,
             'work_date' => $this->parseWorkDate(
@@ -274,7 +290,7 @@ class DailyReportImportService
 
         $doctorCodeGuess = DoctorLabelNormalizer::extractCodeGuess($doctorValue);
 
-        $doctor = Doctor::query()
+        $doctor = $this->forCurrentClinic(Doctor::class)
             ->where('is_active', true)
             ->where(function ($query) use ($doctorValue, $doctorCodeGuess) {
                 $query
@@ -411,11 +427,11 @@ class DailyReportImportService
             return;
         }
 
-        $dailyReport->load('dailyWorkRows');
-
-        $rowsByExcelRow = $dailyReport->dailyWorkRows->keyBy(
-            fn (DailyWorkRow $row) => (int) ($row->excel_row_number ?? 0),
-        );
+        $rowsByExcelRow = AccountingScopedQuery::workRows((int) $dailyReport->clinic_id, $dailyReport->id)
+            ->get()
+            ->keyBy(
+                fn (DailyWorkRow $row) => (int) ($row->excel_row_number ?? 0),
+            );
 
         foreach ($warnings as $warning) {
             $workRow = $rowsByExcelRow->get($warning->excelRow);

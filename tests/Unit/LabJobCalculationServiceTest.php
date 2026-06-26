@@ -27,21 +27,19 @@ class LabJobCalculationServiceTest extends TestCase
         $doctorRiyad = Doctor::query()->where('code', 'RIYAD')->firstOrFail();
         $treatmentZir = Treatment::query()->where('code', 'ZIR')->firstOrFail();
 
-        $dailyReport = DailyReport::query()->create([
+        $dailyReport = $this->createDailyReport([
             'report_date' => '2026-01-15',
             'source_type' => 'manual_entry',
             'status' => 'parsed',
         ]);
 
-        $dailyWorkRow = DailyWorkRow::query()->create([
-            'daily_report_id' => $dailyReport->id,
+        $dailyWorkRow = $this->createDailyWorkRow($dailyReport, [
             'doctor_id' => $doctorRiyad->id,
             'work_date' => '2026-01-15',
             'treatment_text' => 'ZIR x 4',
         ]);
 
-        $workItem = WorkItem::query()->create([
-            'daily_work_row_id' => $dailyWorkRow->id,
+        $workItem = $this->createWorkItem($dailyWorkRow, [
             'treatment_id' => $treatmentZir->id,
             'quantity' => 4,
         ]);

@@ -68,21 +68,19 @@ class DoctorLabBillingTest extends TestCase
         $doctor = Doctor::query()->where('code', $doctorCode)->firstOrFail();
         $treatment = Treatment::query()->where('code', $treatmentCode)->firstOrFail();
 
-        $dailyReport = DailyReport::query()->create([
+        $dailyReport = $this->createDailyReport([
             'report_date' => '2026-01-15',
             'source_type' => 'manual_entry',
             'status' => 'parsed',
         ]);
 
-        $dailyWorkRow = DailyWorkRow::query()->create([
-            'daily_report_id' => $dailyReport->id,
+        $dailyWorkRow = $this->createDailyWorkRow($dailyReport, [
             'doctor_id' => $doctor->id,
             'work_date' => '2026-01-15',
             'treatment_text' => "{$treatmentCode} x {$quantity}",
         ]);
 
-        $workItem = WorkItem::query()->create([
-            'daily_work_row_id' => $dailyWorkRow->id,
+        $workItem = $this->createWorkItem($dailyWorkRow, [
             'treatment_id' => $treatment->id,
             'quantity' => $quantity,
         ]);

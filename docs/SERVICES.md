@@ -196,15 +196,9 @@ Output: lab_job.total_cost_aed = 1600.00 (4 × 400)
 - Fixed doctors: DOCTOR INCOME = SUM(fixed_fee_aed × quantity)
 - CLINIC INCOME = NET TOTAL - DOCTOR INCOME
 - Treatment counts grouped by treatment code
+- All queries filter by `clinic_id` via `ScopesAccountingQueries` (Milestone 10)
 
-**Public helper methods (used in tests):**
-
-| Method | Formula |
-|---|---|
-| `calculateNetTotal($total, $labCost)` | TOTAL - LAB COST |
-| `calculatePercentageDoctorIncome($net, $pct)` | NET × pct / 100 |
-
-**Dependencies:** `MoneyCalculator`, `MonthlyIncomeSummaryDto`, Payment/LabJob/WorkItem models
+**Dependencies:** `MoneyCalculator`, `MonthlyIncomeSummaryDto`, `CurrentClinicResolver`, Payment/LabJob/WorkItem models
 
 ---
 
@@ -226,23 +220,53 @@ import(UploadedFile $file, ?string $reportDate = null): DailyReport
 
 **Pipeline:**
 
-1. Store file privately
-2. Begin transaction
-3. Create daily_report
-4. Parse Excel → hash patient ref → sanitize raw JSON → create daily_work_rows + payments
-5. Validate treatments → work_items + import_warnings
-6. Calculate lab jobs (has_lab_cost only)
-7. Set status `calculated` or `needs_review`
-8. Extraction log + audit
-9. Commit; delete uploaded file (default)
+1. Resolve current clinic via `CurrentClinicResolver`
+2. Store file privately
+3. Begin transaction
+4. Create `daily_report` with `clinic_id`
+5. Parse Excel → hash patient ref → sanitize raw JSON → create `daily_work_rows` + payments (same `clinic_id`)
+6. Validate treatments → work_items + import_warnings
+7. Calculate lab jobs (has_lab_cost only)
+8. Set status `calculated` or `needs_review`
+9. Extraction log + audit
+10. Commit; delete uploaded file (default)
 
 **Business rules:**
 
-- Approved reports for same month cannot be overwritten
+- Approved reports for same month cannot be overwritten (scoped per clinic)
 - Patient name/MRN/file never persisted or returned in API
 - Invalid treatments produce warnings, not silent drops
+- Child records inherit parent `clinic_id` — never from HTTP input
 
-**Dependencies:** `ExcelDailyReportParser`, `PaymentCalculationService`, `TreatmentImportValidationService`, `LabJobCalculationService`, `PatientReferenceHasher`, `ImportRowPrivacySanitizer`, `ImportExtractionLogService`
+**Dependencies:** `ExcelDailyReportParser`, `PaymentCalculationService`, `TreatmentImportValidationService`, `LabJobCalculationService`, `CurrentClinicResolver`, `PatientReferenceHasher`, `ImportRowPrivacySanitizer`, `ImportExtractionLogService`
+
+---
+
+### `DailyReportQueryService`
+
+**Path:** `app/Services/DailyReport/DailyReportQueryService.php`
+
+**Purpose:** Clinic-scoped daily report reads and cross-clinic guards (ADR-029).
+
+**Methods:** `listQuery()`, `listRecent()`, `listManualReportsRecent()`, `assertAccessible()`
+
+**Dependencies:** `CurrentClinicResolver`, `ScopesAccountingQueries`
+
+---
+
+### `ScopesAccountingQueries`
+
+**Path:** `app/Services/Accounting/Concerns/ScopesAccountingQueries.php`
+
+**Purpose:** Shared `forCurrentClinic()`, `assertSameClinic()`, and `AccountingScopedQuery` helpers for accounting services (ADR-029).
+
+---
+
+### `AccountingScopedQuery`
+
+**Path:** `app/Support/AccountingScopedQuery.php`
+
+**Purpose:** Explicit `clinic_id` + parent-key builders. Never use `$report->payments()` — always `AccountingScopedQuery::payments($clinicId, $workRowId)`.
 
 ---
 

@@ -17,19 +17,19 @@ class NonLabTreatmentJobTest extends TestCase
         parent::setUp();
 
         $this->seedAccountingData();
+        $this->authenticateAdmin();
     }
 
     public function test_cf_and_sxp_are_persisted_as_work_items_without_lab_jobs(): void
     {
         $doctor = Doctor::query()->where('code', 'JACK')->firstOrFail();
-        $dailyReport = DailyReport::query()->create([
+        $dailyReport = $this->createDailyReport([
             'report_date' => '2026-01-15',
             'source_type' => 'manual_entry',
             'status' => 'parsed',
         ]);
 
-        $dailyWorkRow = DailyWorkRow::query()->create([
-            'daily_report_id' => $dailyReport->id,
+        $dailyWorkRow = $this->createDailyWorkRow($dailyReport, [
             'doctor_id' => $doctor->id,
             'work_date' => '2026-01-15',
             'treatment_text' => 'SxP x1 + CF x3',
@@ -44,7 +44,7 @@ class NonLabTreatmentJobTest extends TestCase
     public function test_cf_and_sxp_do_not_create_lab_jobs(): void
     {
         $doctor = Doctor::query()->where('code', 'JACK')->firstOrFail();
-        $dailyReport = DailyReport::query()->create([
+        $dailyReport = $this->createDailyReport([
             'report_date' => '2026-01-15',
             'source_type' => 'manual_entry',
             'status' => 'parsed',
@@ -53,15 +53,13 @@ class NonLabTreatmentJobTest extends TestCase
         foreach (['CF', 'SXP', 'RCT'] as $code) {
             $treatment = Treatment::query()->where('code', $code)->firstOrFail();
 
-            $dailyWorkRow = DailyWorkRow::query()->create([
-                'daily_report_id' => $dailyReport->id,
+            $dailyWorkRow = $this->createDailyWorkRow($dailyReport, [
                 'doctor_id' => $doctor->id,
                 'work_date' => '2026-01-15',
                 'treatment_text' => "{$code} x 3",
             ]);
 
-            $workItem = WorkItem::query()->create([
-                'daily_work_row_id' => $dailyWorkRow->id,
+            $workItem = $this->createWorkItem($dailyWorkRow, [
                 'treatment_id' => $treatment->id,
                 'quantity' => 3,
             ]);

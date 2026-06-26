@@ -4,12 +4,21 @@ namespace App\Services\Import;
 
 use App\Models\DailyReport;
 use App\Models\DailyReportImportWarning;
+use App\Services\Accounting\Concerns\ScopesAccountingQueries;
+use App\Services\Configuration\CurrentClinicResolver;
+use App\Support\AccountingScopedQuery;
 
 /**
  * Builds the validation summary payload for a daily report import.
  */
 class DailyReportValidationSummaryService
 {
+    use ScopesAccountingQueries;
+
+    public function __construct(
+        private readonly CurrentClinicResolver $currentClinicResolver,
+    ) {}
+
     /**
      * @return array{
      *     total_rows: int,
@@ -20,21 +29,21 @@ class DailyReportValidationSummaryService
      */
     public function build(DailyReport $dailyReport): array
     {
-        $dailyReport->load([
-            'dailyWorkRows.workItems',
-            'importWarnings',
-        ]);
+        $this->assertSameClinic($dailyReport);
 
-        $parsedItems = $dailyReport->dailyWorkRows->sum(
-            fn ($row) => $row->workItems->count(),
-        );
+        $clinicId = (int) $dailyReport->clinic_id;
+        $workRows = AccountingScopedQuery::workRows($clinicId, $dailyReport->id)->get();
+        $workRowIds = $workRows->pluck('id');
 
-        $warnings = $dailyReport->importWarnings
-            ->sortBy([
-                ['excel_row_number', 'asc'],
-                ['id', 'asc'],
-            ])
-            ->values()
+        $parsedItems = AccountingScopedQuery::workItems($clinicId)
+            ->whereIn('daily_work_row_id', $workRowIds)
+            ->count();
+
+        $warnings = DailyReportImportWarning::query()
+            ->where('daily_report_id', $dailyReport->id)
+            ->orderBy('excel_row_number')
+            ->orderBy('id')
+            ->get()
             ->map(fn (DailyReportImportWarning $warning) => [
                 'excel_row' => (int) ($warning->excel_row_number ?? 0),
                 'doctor' => (string) ($warning->doctor_code ?? ''),
@@ -44,7 +53,7 @@ class DailyReportValidationSummaryService
             ->all();
 
         return [
-            'total_rows' => $dailyReport->dailyWorkRows->count(),
+            'total_rows' => $workRows->count(),
             'parsed_items' => $parsedItems,
             'warnings_count' => count($warnings),
             'warnings' => $warnings,

@@ -178,6 +178,35 @@ Never break backwards compatibility without documenting it.
 Every new milestone must leave the application in a deployable state. Partial tenant isolation is not acceptable. If a migration is introduced, all affected services, tests, and documentation must be completed within the same milestone
 ---
 
+## Rule 12 
+
+Every completed milestone must update:
+
+- DECISIONS.md
+- PROJECT_OVERVIEW.md
+- SERVICES.md
+- WORKFLOWS.md
+- DATABASE_SCHEMA.md (if affected)
+- API.md (if affected)
+
+Implementation reports must NOT be stored inside DECISIONS.md.
+
+DECISIONS.md contains architecture only.
+
+Milestone completion reports belong in:
+
+docs/history/
+
+Example:
+
+docs/history/
+    milestone-01.md
+    milestone-02.md
+    ...
+    milestone-10.md
+
+---
+
 # Development Workflow
 
 Every feature follows exactly this workflow.
@@ -478,8 +507,29 @@ Rules:
 * Use the shared `ScopesConfigurationQueries` trait in configuration services
 * Controllers call service `listQuery()` / `listForAdministration()` methods — never build tenant queries
 * Cross-clinic route-model binding returns **404** via `assertSameClinic()` on mutations
-* Accounting engine, imports, and resolvers remain unscoped until a later milestone
 * Reference APIs (`/api/doctors`, `/api/treatments`, `/api/labs`) return only the authenticated clinic's records
+
+---
+
+# Accounting Ownership (Milestone 10, ADR-029)
+
+Every accounting table owns `clinic_id`. Every accounting **read** and **calculation** in the service layer must filter explicitly:
+
+```php
+->where('clinic_id', $this->currentClinicResolver->resolveId())
+```
+
+Rules:
+
+* Use the shared `ScopesAccountingQueries` trait in accounting services
+* `DailyReportQueryService` scopes report lists and asserts accessibility for route-bound reports
+* Import pipeline assigns the same `clinic_id` to report → work rows → payments → work items → lab jobs
+* Child records inherit `clinic_id` from their parent row — never from `CurrentClinicResolver`
+* `clinic_id` is **immutable** after create (`ImmutableClinicOwnership` on accounting models)
+* Never query through parent relations — use `AccountingScopedQuery` with `clinic_id` + parent key
+* `AuditLogService` sets `clinic_id` from the auditable model or current clinic
+* Cross-clinic accounting access returns **404**
+* Registration Wizard remains disabled until M10 is validated
 
 ---
 

@@ -28,6 +28,14 @@ php artisan migrate --seed
 | `000014` | privacy + warnings | Removes plain-text PII; adds `patient_reference_hash`, `daily_report_import_warnings` |
 | `000015` | `doctor_lab_billings` | Per-doctor JOB rules (Puriya subset; Wa none) |
 | `2026_06_26_000001` | `doctor_fixed_fees.is_active` | Soft deactivate; drop unique `(doctor_id, treatment_id)` for validity periods |
+| `2026_06_27_000002` | configuration `clinic_id` | Attach `clinic_id` to configuration tables; backfill `CLINIC_111` (M07) |
+| `2026_06_27_000003` | accounting `clinic_id` | Attach `clinic_id` to accounting tables; backfill `CLINIC_111` (M10, ADR-029) |
+
+## Accounting clinic ownership (`2026_06_27_000003`)
+
+- **Adds:** `clinic_id` FK → `clinics.id`, indexed, NOT NULL on `daily_reports`, `daily_work_rows`, `payments`, `work_items`, `lab_jobs`, `audit_logs`
+- **Backfill:** reports → `CLINIC_111`; children inherit via parent joins; orphan rows fall back to `CLINIC_111`
+- **No data loss:** existing Clinic 111 historical accounting preserved
 
 ## Privacy migration (`000014`)
 

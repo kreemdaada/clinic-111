@@ -383,7 +383,13 @@ Shared services include:
 * MoneyCalculator
 * Import pipeline
 
-These services may receive clinic context through resolved models or services, but the core formulas remain shared.
+These services receive clinic context through `CurrentClinicResolver` and explicit `where('clinic_id', …)` filtering (Milestone 10). Core formulas remain shared.
+
+Hard rules (ADR-029):
+
+1. **`clinic_id` is immutable** after create — enforced by `ImmutableClinicOwnership` on accounting models.
+2. **Children inherit from parent** — only root creates use `CurrentClinicResolver`; payments/work items/lab jobs copy parent `clinic_id`.
+3. **No relation traversal for tenant queries** — use `AccountingScopedQuery` (`WHERE clinic_id AND parent_id`), never `$report->payments()`.
 
 ---
 
@@ -576,11 +582,11 @@ Query Isolation.
 
 ## Milestone 10
 
-Dynamic Business Rules.
+Accounting Ownership and Isolation (ADR-029) — **Done**
 
 ## Milestone 11
 
-Multi-Clinic Testing.
+Dynamic Business Rules.
 
 ## Future
 
@@ -610,7 +616,17 @@ doctor_fixed_fees
 Deferred to later milestones:
 
 ```text
+audit_logs (financial events only — now done in M10)
+```
+
+Implemented in Milestone 10 (ADR-029):
+
+```text
 daily_reports
+daily_work_rows
+payments
+work_items
+lab_jobs
 audit_logs
 ```
 

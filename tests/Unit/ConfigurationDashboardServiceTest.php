@@ -50,6 +50,7 @@ class ConfigurationDashboardServiceTest extends TestCase
         $doctor = Doctor::query()->where('code', 'JACK')->firstOrFail();
 
         AuditLog::query()->create([
+            'clinic_id' => $doctor->clinic_id,
             'user_id' => $admin->id,
             'action' => AuditAction::DoctorUpdated,
             'auditable_type' => $doctor->getMorphClass(),

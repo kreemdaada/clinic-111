@@ -8,6 +8,7 @@ use App\Models\DailyWorkRow;
 use App\Models\Lab;
 use App\Models\LabJob;
 use App\Models\WorkItem;
+use App\Support\AccountingScopedQuery;
 use App\Support\MoneyCalculator;
 use Illuminate\Support\Collection;
 
@@ -30,14 +31,17 @@ class LabJobCalculationService
      */
     public function calculateForReport(DailyReport $dailyReport): void
     {
-        $activeLabs = Lab::query()->where('is_active', true)->get();
+        $clinicId = (int) $dailyReport->clinic_id;
+        $activeLabs = Lab::query()
+            ->where('clinic_id', $clinicId)
+            ->where('is_active', true)
+            ->get();
 
-        $dailyReport->load([
-            'dailyWorkRows.doctor',
-            'dailyWorkRows.workItems.treatment',
-        ]);
+        $workRows = AccountingScopedQuery::workRows($clinicId, $dailyReport->id)
+            ->with(['doctor'])
+            ->get();
 
-        foreach ($dailyReport->dailyWorkRows as $dailyWorkRow) {
+        foreach ($workRows as $dailyWorkRow) {
             $this->calculateForWorkRow($dailyWorkRow, $activeLabs);
         }
     }
@@ -51,11 +55,17 @@ class LabJobCalculationService
     public function calculateForWorkRow(DailyWorkRow $dailyWorkRow, ?Collection $activeLabs = null): void
     {
         if ($activeLabs === null) {
-            $activeLabs = Lab::query()->where('is_active', true)->get();
+            $activeLabs = Lab::query()
+                ->where('clinic_id', $dailyWorkRow->clinic_id)
+                ->where('is_active', true)
+                ->get();
         }
-        $dailyWorkRow->loadMissing(['doctor', 'workItems.treatment']);
 
-        foreach ($dailyWorkRow->workItems as $workItem) {
+        $workItems = AccountingScopedQuery::workItems((int) $dailyWorkRow->clinic_id, $dailyWorkRow->id)
+            ->with('treatment')
+            ->get();
+
+        foreach ($workItems as $workItem) {
             $this->calculateForWorkItem($workItem, $dailyWorkRow, $activeLabs);
         }
     }
@@ -74,10 +84,10 @@ class LabJobCalculationService
         DailyWorkRow $dailyWorkRow,
         Collection $activeLabs,
     ): void {
-        if ($workItem->labJob !== null) {
-            $workItem->labJob->delete();
-        }
+        AccountingScopedQuery::labJobs((int) $workItem->clinic_id, $workItem->id)->delete();
 
+        $dailyWorkRow->loadMissing('doctor');
+        $workItem->loadMissing('treatment');
         $treatment = $workItem->treatment;
         $doctor = $dailyWorkRow->doctor;
 
@@ -107,6 +117,7 @@ class LabJobCalculationService
         $totalCostAed = MoneyCalculator::multiply($unitCostAed, $workItem->quantity);
 
         LabJob::query()->create([
+            'clinic_id' => $workItem->clinic_id,
             'work_item_id' => $workItem->id,
             'lab_id' => $lab->id,
             'lab_price_id' => $labPrice->id,

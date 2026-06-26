@@ -24,6 +24,7 @@ class DoctorFixedFeeResolver
         }
 
         return DoctorFixedFee::query()
+            ->where('clinic_id', $doctor->clinic_id)
             ->where('doctor_id', $doctor->id)
             ->where('treatment_id', $treatment->id)
             ->where('is_active', true)
