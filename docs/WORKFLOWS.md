@@ -509,13 +509,40 @@ sequenceDiagram
 
 - Every seeded configuration record belongs to `CLINIC_111`
 - Seeders resolve clinic by code — never hardcode clinic IDs
-- New configuration rows default to `CLINIC_111` until CurrentClinicResolver (Milestone 08)
+- New configuration rows receive `clinic_id` from `CurrentClinicResolver` (Milestone 08, ADR-027)
 - Admin CRUD, APIs, imports, and accounting behaviour unchanged
 - Dashboard counts remain global
 
 ---
 
-## 16. Environment Variables (import / privacy)
+## 16. Current Clinic Resolver (Milestone 08)
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Auth
+    participant Svc as ConfigurationManagementService
+    participant Resolver as CurrentClinicResolver
+    participant DB as configuration tables
+
+    User->>Auth: Authenticated request
+    Svc->>Resolver: resolveId()
+    Resolver->>Auth: user.clinic_id
+    Resolver-->>Svc: clinic id
+    Svc->>DB: INSERT with clinic_id
+    Note over DB: No query filtering yet
+```
+
+**Rules:**
+
+- Single source of truth per request (ADR-027)
+- No `CLINIC_111` fallback
+- Controllers remain thin — services own clinic assignment
+- Accounting engine unchanged
+
+---
+
+## 17. Environment Variables (import / privacy)
 
 | Variable | Purpose |
 |---|---|
@@ -536,6 +563,7 @@ Same pipeline after row creation: `TreatmentImportValidationService` → `LabJob
 **Updated — 2026-06-26**
 
 - Configuration clinic ownership workflow (Milestone 07, ADR-026)
+- Current clinic resolver workflow (Milestone 08, ADR-027)
 
 **Updated — 2026-06-26**
 

@@ -4,6 +4,7 @@ namespace App\Services\User;
 
 use App\Models\User;
 use App\Services\Audit\AuditLogService;
+use App\Services\Configuration\CurrentClinicResolver;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -15,6 +16,7 @@ class UserManagementService
 {
     public function __construct(
         private readonly AuditLogService $auditLogService,
+        private readonly CurrentClinicResolver $currentClinicResolver,
     ) {}
 
     /**
@@ -39,6 +41,7 @@ class UserManagementService
                 'email' => $data['email'],
                 'role' => $data['role'],
             ]);
+            $user->clinic_id = $this->currentClinicResolver->resolveId();
             $user->password = $password;
             $user->is_active = $data['is_active'] ?? true;
             $user->save();

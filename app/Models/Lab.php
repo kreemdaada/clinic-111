@@ -16,6 +16,7 @@ class Lab extends Model
     use BelongsToClinic;
 
     protected $fillable = [
+        'clinic_id',
         'name',
         'code',
     ];

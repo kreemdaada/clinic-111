@@ -61,14 +61,14 @@ class DoctorFixedFeeResolverTest extends TestCase
             ->where('treatment_id', $treatment->id)
             ->update(['is_active' => false]);
 
-        $fee = DoctorFixedFee::query()->create([
+        $fee = DoctorFixedFee::query()->create($this->withClinicId([
             'doctor_id' => $doctor->id,
             'treatment_id' => $treatment->id,
             'fee_amount' => '250.00',
             'currency' => 'USD',
             'valid_from' => '2025-01-01',
             'valid_to' => '2025-12-31',
-        ]);
+        ]));
         $fee->is_active = true;
         $fee->save();
 

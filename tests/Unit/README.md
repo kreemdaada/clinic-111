@@ -30,6 +30,7 @@ php artisan test --testsuite=Unit
 | `ClinicManagementServiceTest` | Clinic CRUD, audit logging, soft deactivate/activate |
 | `ClinicRelationshipsTest` | Clinic hasMany / belongsTo configuration relations |
 | `ConfigurationClinicOwnershipTest` | Seeder ownership, backfill, NOT NULL constraint |
+| `CurrentClinicResolverTest` | Resolver returns clinic, throws without auth/clinic, service assignment |
 | `LabCostTreatmentCatalogTest` | Which codes generate JOB vs clinical-only |
 | `NonLabTreatmentJobTest` | CF/SXP/RCT persist as work_items but never create lab_jobs |
 | `PatientPrivacyTest` | HMAC hash + PII stripped from `raw_data_json` |

@@ -22,6 +22,7 @@ class LabPriceManagementServiceTest extends TestCase
         parent::setUp();
 
         $this->seedAccountingData();
+        $this->authenticateAdmin();
         $this->service = app(LabPriceManagementService::class);
     }
 
@@ -102,10 +103,10 @@ class LabPriceManagementServiceTest extends TestCase
 
     private function createLabCostTreatment(string $code, string $name): Treatment
     {
-        $treatment = Treatment::query()->create([
+        $treatment = Treatment::query()->create($this->withClinicId([
             'code' => $code,
             'name' => $name,
-        ]);
+        ]));
         $treatment->has_lab_cost = true;
         $treatment->is_active = true;
         $treatment->save();

@@ -16,6 +16,7 @@ class Treatment extends Model
     use BelongsToClinic;
 
     protected $fillable = [
+        'clinic_id',
         'code',
         'name',
         'description',

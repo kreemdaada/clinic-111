@@ -21,6 +21,7 @@ class DoctorFixedFeeManagementServiceTest extends TestCase
         parent::setUp();
 
         $this->seedAccountingData();
+        $this->authenticateAdmin();
         $this->service = app(DoctorFixedFeeManagementService::class);
     }
 
@@ -89,10 +90,10 @@ class DoctorFixedFeeManagementServiceTest extends TestCase
 
     private function createTreatment(string $code, string $name): Treatment
     {
-        $treatment = Treatment::query()->create([
+        $treatment = Treatment::query()->create($this->withClinicId([
             'code' => $code,
             'name' => $name,
-        ]);
+        ]));
         $treatment->has_lab_cost = false;
         $treatment->is_active = true;
         $treatment->save();

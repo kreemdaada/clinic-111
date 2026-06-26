@@ -7,6 +7,7 @@ use App\Models\Doctor;
 use App\Models\DoctorLabBilling;
 use App\Models\Treatment;
 use App\Services\Audit\AuditLogService;
+use App\Services\Configuration\CurrentClinicResolver;
 use App\Support\LabCostTreatmentCatalog;
 use Illuminate\Support\Facades\DB;
 
@@ -17,6 +18,7 @@ class DoctorManagementService
 {
     public function __construct(
         private readonly AuditLogService $auditLogService,
+        private readonly CurrentClinicResolver $currentClinicResolver,
     ) {}
 
     /**
@@ -33,6 +35,7 @@ class DoctorManagementService
     {
         return DB::transaction(function () use ($data) {
             $doctor = Doctor::query()->create([
+                'clinic_id' => $this->currentClinicResolver->resolveId(),
                 'name' => $data['name'],
                 'code' => strtoupper(trim($data['code'])),
                 'commission_type' => $data['commission_type'],

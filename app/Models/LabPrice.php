@@ -16,6 +16,7 @@ class LabPrice extends Model
     use BelongsToClinic;
 
     protected $fillable = [
+        'clinic_id',
         'lab_id',
         'treatment_id',
         'doctor_id',

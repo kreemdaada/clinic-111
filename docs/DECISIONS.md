@@ -636,6 +636,214 @@ Tests
 Query isolation is intentionally postponed to the next milestone.
 ---
 
+# ADR-028
+
+## Title
+
+Explicit Query Isolation
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-26
+
+### Milestone
+
+Milestone 09
+
+---
+
+## Context
+
+After Milestone 08, every authenticated request has a resolved current clinic through `CurrentClinicResolver`.
+
+New configuration records already belong to the authenticated clinic.
+
+However, read operations are still global.
+
+For example:
+
+* Doctors
+* Labs
+* Treatments
+* Lab Prices
+* Fixed Fees
+* Configuration Dashboard
+
+still return data from every clinic.
+
+The application now requires tenant isolation for all configuration queries.
+
+---
+
+## Decision
+
+The application shall implement **explicit query isolation**.
+
+Every configuration query must explicitly filter by:
+
+```php
+clinic_id = CurrentClinicResolver::resolveId()
+```
+
+Query isolation belongs inside the Service Layer.
+
+Controllers must never build tenant-aware queries.
+
+---
+
+## Rules
+
+Every query that reads configuration data must use the current clinic.
+
+Examples:
+
+* DoctorManagementService
+* LabManagementService
+* TreatmentManagementService
+* LabPriceManagementService
+* DoctorFixedFeeManagementService
+* ConfigurationDashboardService
+
+Every create operation already uses the resolver.
+
+Now every read operation must also use it.
+
+---
+
+## No Global Scopes
+
+Laravel Global Scopes are explicitly forbidden.
+
+Reason:
+
+Global scopes hide business logic.
+
+Developers cannot easily understand why records disappear.
+
+Explicit filtering keeps the code predictable, readable, and easier to debug.
+
+---
+
+## Alternatives Considered
+
+### Laravel Global Scope
+
+Rejected.
+
+Advantages:
+
+* Automatic filtering.
+
+Disadvantages:
+
+* Hidden behavior.
+* Difficult debugging.
+* Complicated administrative queries.
+* Harder testing.
+
+---
+
+### Explicit Service Filtering
+
+Accepted.
+
+Advantages:
+
+* Every query is visible.
+* Easy debugging.
+* Easy testing.
+* Clear architecture.
+* Easier future maintenance.
+
+---
+
+## Consequences
+
+Advantages
+
+* No accidental cross-clinic data leakage.
+* Every service becomes tenant-aware.
+* Clear and predictable query behavior.
+* Easy unit testing.
+* Easy future extension.
+
+Disadvantages
+
+* Developers must remember to use the resolver in every configuration service.
+* More explicit code.
+
+---
+
+## Technical Impact
+
+CurrentClinicResolver becomes mandatory for all configuration read operations.
+
+Every configuration service becomes tenant-aware.
+
+ConfigurationDashboard will display only the current clinic.
+
+Reference APIs return only records of the authenticated clinic.
+
+---
+
+## Affected Components
+
+Models
+
+* none
+
+Services
+
+* DoctorManagementService
+* LabManagementService
+* TreatmentManagementService
+* LabPriceManagementService
+* DoctorFixedFeeManagementService
+* ConfigurationDashboardService
+
+Controllers
+
+No architectural changes.
+
+Database
+
+No schema changes.
+
+API
+
+Reference APIs become clinic-aware.
+
+UI
+
+Configuration pages display only the current clinic.
+
+Tests
+
+Cross-clinic leakage tests become mandatory.
+
+---
+
+## Related Documentation
+
+* PROJECT_OVERVIEW.md
+* SERVICES.md
+* WORKFLOWS.md
+* DEVELOPMENT_GUIDE.md
+* MULTI_CLINIC_ARCHITECTURE.md
+
+---
+
+## Notes
+
+This ADR isolates only **configuration data**.
+
+Accounting data (`daily_reports`, `payments`, `work_items`, `lab_jobs`, `audit_logs`) will be isolated in later milestones after configuration isolation is fully validated.
+----
+
 ### No Global Scope Decision
 
 The project will not use Laravel Global Scopes for clinic isolation.
@@ -796,6 +1004,7 @@ No milestone may introduce partial tenant isolation without tests.
 | ADR-024 | Admin-Managed Doctor Fixed Fee Catalog | Accepted |
 | ADR-025 | Configuration Layer                 | Accepted |
 | ADR-026 | Clinic Entity as Tenant Root        | Accepted |
+| ADR-027 | Current Clinic Resolver           | Accepted |
 
 ---
 
@@ -803,11 +1012,8 @@ No milestone may introduce partial tenant isolation without tests.
 
 The following architectural topics are expected to receive future ADRs.
 
-ADR-027
-Attach clinic_id
-
 ADR-028
-Current Clinic Resolver
+Attach clinic_id
 
 ADR-029
 Query Isolation

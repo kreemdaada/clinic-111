@@ -4,6 +4,7 @@ namespace App\Services\Accounting;
 
 use App\Models\Treatment;
 use App\Services\Audit\AuditLogService;
+use App\Services\Configuration\CurrentClinicResolver;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -13,6 +14,7 @@ class TreatmentManagementService
 {
     public function __construct(
         private readonly AuditLogService $auditLogService,
+        private readonly CurrentClinicResolver $currentClinicResolver,
     ) {}
 
     /**
@@ -27,6 +29,7 @@ class TreatmentManagementService
     {
         return DB::transaction(function () use ($data) {
             $treatment = Treatment::query()->create([
+                'clinic_id' => $this->currentClinicResolver->resolveId(),
                 'code' => strtoupper(trim($data['code'])),
                 'name' => trim($data['name']),
                 'description' => isset($data['description']) ? trim((string) $data['description']) : null,

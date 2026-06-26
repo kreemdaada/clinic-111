@@ -29,6 +29,7 @@ class LabPriceAdministrationWorkflowTest extends TestCase
         parent::setUp();
 
         $this->seedAccountingData();
+        $this->authenticateAdmin();
 
         $this->service = app(LabPriceManagementService::class);
         $this->resolver = app(LabPriceResolver::class);
