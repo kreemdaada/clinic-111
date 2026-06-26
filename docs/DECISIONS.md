@@ -72,19 +72,19 @@ Architecture history is valuable.
 
 Each ADR has one of the following statuses.
 
-Accepted
+**Accepted**
 
 The decision is active.
 
-Deprecated
+**Deprecated**
 
 The decision is no longer recommended.
 
-Superseded
+**Superseded**
 
 A newer ADR replaces this one.
 
-Proposed
+**Proposed**
 
 Under discussion.
 
@@ -176,6 +176,595 @@ Optional notes.
 
 ---
 
+## ADR-001
+
+### Title
+
+TOTAL Means Collected Payments
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-19
+
+### Milestone
+
+V1 MVP
+
+### Context
+
+The clinic calculates doctor income from collected payments, not from quoted treatment prices. A patient may pay partially or across multiple methods.
+
+### Decision
+
+`paid_total_aed` and `payments.amount_aed` represent money collected from the patient (DHS + USD + VISA), not the treatment invoice value (`total_cost`).
+
+---
+
+## ADR-002
+
+### Title
+
+JOB Means Lab Cost
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-19
+
+### Milestone
+
+V1 MVP
+
+### Context
+
+Clinic staff use "JOB" colloquially to mean the lab bill for a day's work, not an external work order ID.
+
+### Decision
+
+The term JOB in business language maps to `lab_jobs.total_cost_aed`, not an external work order ID.
+
+---
+
+## ADR-003
+
+### Title
+
+Database Driven Business Rules
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-19
+
+### Milestone
+
+V1 MVP
+
+### Context
+
+Doctors, rates, and lab assignments change over time. Hardcoded doctor names in services would require code deployment for every business change.
+
+### Decision
+
+All doctor commission logic reads from `doctors.commission_type`, `doctors.commission_percentage`, and `doctor_fixed_fees`. No `if ($doctor->name === 'Dr Jack')` anywhere in services.
+
+---
+
+## ADR-004
+
+### Title
+
+Lab Price Fallback Chain
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-19
+
+### Milestone
+
+V1 MVP
+
+### Context
+
+Dr Riyad has different lab prices and a different default lab. Other doctors share default prices.
+
+### Decision
+
+Lab prices resolve in order: (1) doctor-specific override, (2) default price where `doctor_id IS NULL`. Both scoped to the resolved lab.
+
+---
+
+## ADR-005
+
+### Title
+
+bcmath for Money Calculations
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-19
+
+### Milestone
+
+V1 MVP
+
+### Context
+
+Floating-point arithmetic causes rounding errors in financial systems.
+
+### Decision
+
+Use PHP `bcmath` via `MoneyCalculator` for all arithmetic. Never use float. Database columns are `decimal(12,2)`.
+
+---
+
+## ADR-006
+
+### Title
+
+Isolated Excel Parser
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-19
+
+### Milestone
+
+V1 MVP
+
+### Context
+
+V2 will replace Excel upload with manual web form entry. The import orchestrator should stay stable while the input layer changes.
+
+### Decision
+
+Excel reading is isolated in `ExcelDailyReportParser`, separate from `DailyReportImportService`.
+
+---
+
+## ADR-007
+
+### Title
+
+Rule-Based Treatment Parser
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-19
+
+### Milestone
+
+V1 MVP
+
+### Context
+
+Accounting calculations must be deterministic and testable.
+
+### Decision
+
+`TreatmentParserService` uses regex pattern matching against known treatment codes from the database. No AI or ML.
+
+---
+
+## ADR-008
+
+### Title
+
+Shared Accounting Pipeline
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-19
+
+### Milestone
+
+V1 MVP
+
+### Context
+
+V2 manual entry must not duplicate business logic.
+
+### Decision
+
+V2 manual entry will create the same records (`daily_work_rows`, `payments`, `work_items`, `lab_jobs`) and call the same calculation services. The only difference is the input source (Excel parser vs. web form).
+
+---
+
+## ADR-009
+
+### Title
+
+Approved Reports Are Read-Only
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-19
+
+### Milestone
+
+V1 MVP
+
+### Context
+
+Financial data integrity requires finalized accounting periods to remain immutable.
+
+### Decision
+
+Reports with `status = approved` cannot be re-imported for the same date or reprocessed.
+
+---
+
+## ADR-010
+
+### Title
+
+Soft Delete Strategy
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-19
+
+### Milestone
+
+V1 MVP
+
+### Context
+
+Audit trail and regulatory compliance require immutable history in accounting systems.
+
+### Decision
+
+Financial records (`lab_jobs`, reports) are never physically deleted. Use status fields (`cancelled`, `failed`) instead.
+
+---
+
+## ADR-011
+
+### Title
+
+Sanctum Authentication
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-19
+
+### Milestone
+
+V1 MVP
+
+### Context
+
+V1 is API-first. Role enforcement must remain lightweight for the MVP.
+
+### Decision
+
+Use Laravel Sanctum token-based auth with role middleware, not session-based web auth. Roles enforced via `EnsureUserHasRole` middleware.
+
+---
+
+## ADR-012
+
+### Title
+
+Private File Storage
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-19
+
+### Milestone
+
+V1 MVP
+
+### Context
+
+Uploaded files may contain patient names and financial data.
+
+### Decision
+
+Excel uploads stored on the `local` disk under `daily-reports/`, outside the public directory.
+
+---
+
+## ADR-013
+
+### Title
+
+Sanitized Raw Import Data
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-19
+
+### Milestone
+
+V1 MVP
+
+### Context
+
+Import debugging and audit requirements must not retain plain-text patient names.
+
+### Decision
+
+Every imported row stores a **sanitized** parsed row in `daily_work_rows.raw_data_json` (patient identifier keys removed, PII cells redacted).
+
+---
+
+## ADR-014
+
+### Title
+
+Financial Rounding Rules
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-19
+
+### Milestone
+
+V1 MVP
+
+### Context
+
+Standard financial rounding prevents off-by-one-cent errors in doctor payouts.
+
+### Decision
+
+`MoneyCalculator::percentage()` rounds half-up to 2 decimal places (e.g. 12456.9375 → 12456.94). bcmath truncates by default; explicit rounding is required.
+
+---
+
+## ADR-015
+
+### Title
+
+Explicit Null Checks
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-19
+
+### Milestone
+
+V1 MVP
+
+### Context
+
+The team prioritizes readability for developers who may not be familiar with modern PHP syntax.
+
+### Decision
+
+Prefer explicit `if ($value === null)` and `if ($object !== null)` over PHP shorthand operators `??`, `??=`, and `?->` in application code. Array defaults from parsed Excel rows use a dedicated `getParsedRowValue()` helper instead of inline `??`.
+
+---
+
+## ADR-016
+
+### Title
+
+Database Driven Export Profiles
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-19
+
+### Milestone
+
+V1 MVP
+
+### Context
+
+New or inactive doctors should be configurable without code deploy. JOB calculation must remain one pipeline.
+
+### Decision
+
+Server Income Excel layout (sheet name, column letters, layout type) is stored in `doctor_income_export_profiles`, loaded by `DoctorIncomeExportProfileService`. No hardcoded doctor profile arrays in export code.
+
+---
+
+## ADR-017
+
+### Title
+
+Patient Privacy
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-19
+
+### Milestone
+
+V1 MVP
+
+### Context
+
+Accounting traceability is required without storing reversible patient identifiers. GDPR-aligned minimization applies to this non-clinical system.
+
+### Decision
+
+Do not persist `patient_name`, `mrn`, or `file_number`. During import, read them in memory only, store `patient_reference_hash` (HMAC-SHA256), sanitize `raw_data_json`, and never return patient identifiers in API responses. Use dedicated `ACCOUNTING_PATIENT_REFERENCE_HMAC_KEY`, not `APP_KEY`.
+
+---
+
+## ADR-018
+
+### Title
+
+Work Items for All Valid Treatments
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-19
+
+### Milestone
+
+V1 MVP
+
+### Context
+
+CF, RCT, REPAIR, and REMOV (among others) affect treatment counts and doctor income context even when they do not all follow the same JOB rules.
+
+### Decision
+
+Every valid parsed treatment code creates a `work_item`. `lab_jobs` are created only when `treatments.has_lab_cost = true`. REMOV has lab cost (100 AED) and creates both work_item and lab_job.
+
+---
+
+## ADR-019
+
+### Title
+
+Import Validation Warnings
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-19
+
+### Milestone
+
+V1 MVP
+
+### Context
+
+Invalid treatments must not be silently ignored. Staff need a review queue before approving a month.
+
+### Decision
+
+`TreatmentImportValidationService` emits explicit warnings (`invalid_format`, `missing_quantity`, `unknown_treatment_code`, `lab_price_not_found`). Reports with warnings get status `needs_review` instead of `calculated`. Expose summary via `GET /api/daily-reports/{id}/validation-summary`.
+
+---
+
+## ADR-020
+
+### Title
+
+Delete Uploaded Excel Files
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-19
+
+### Milestone
+
+V1 MVP
+
+### Context
+
+Uploaded files contain patient names; retention should be minimized once data is extracted and sanitized in the database.
+
+### Decision
+
+Remove uploaded Excel from private storage after successful import unless `ACCOUNTING_DELETE_UPLOAD_AFTER_IMPORT=false`.
+
+---
+
+## ADR-021
+
+### Title
+
+Laboratory Soft Deactivate
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-25
+
+### Milestone
+
+Milestone 01
+
+### Context
+
+Accounting history must remain intact when a laboratory is retired from active use.
+
+### Decision
+
+Laboratories are configuration data managed via `LabManagementService`. Admins deactivate labs with `is_active = false` instead of deleting rows. Historical `lab_jobs` retain their `lab_id`. Inactive labs are excluded from active-lab queries used for new calculations only.
+
+---
+
+
 ## ADR-022
 
 ### Title
@@ -186,29 +775,29 @@ Database-Driven Treatment Catalog
 
 Accepted
 
+### Date
+
+2026-06-26
+
+### Milestone
+
+Milestone 02 — Treatments Administration
+
 ### Context
 
 Milestone 02 requires administrators to manage treatments from the UI. Runtime code previously used hardcoded arrays in `LabCostTreatmentCatalog` and `NonLabIncomeTreatmentCatalog`.
 
 ### Decision
 
-- `LabCostTreatmentCatalog::isLabCostCode()` and `codes()` read from the `treatments` table (`has_lab_cost`, `is_active`).
-- `TreatmentManagementService` manages create/update/activate/deactivate with audit logs.
-- Initial seed data remains in `TreatmentSeeder` only (not runtime business logic).
+* `LabCostTreatmentCatalog::isLabCostCode()` and `codes()` read from the `treatments` table (`has_lab_cost`, `is_active`).
+* `TreatmentManagementService` manages create/update/activate/deactivate with audit logs.
+* Initial seed data remains in `TreatmentSeeder` only (not runtime business logic).
 
 ### Consequences
 
-- New treatments and lab-cost flags are configurable without code deploy.
-- Parser known codes and editor catalog use active treatments only.
-- Historical `work_items` keep `treatment_id` references when treatments are deactivated.
-
-### Related Milestone
-
-Milestone 02 — Treatments Administration
-
-### Date
-
-2026-06-26
+* New treatments and lab-cost flags are configurable without code deploy.
+* Parser known codes and editor catalog use active treatments only.
+* Historical `work_items` keep `treatment_id` references when treatments are deactivated.
 
 ---
 
@@ -222,31 +811,31 @@ Admin-Managed Lab Price Catalog
 
 Accepted
 
+### Date
+
+2026-06-26
+
+### Milestone
+
+Milestone 03 — Laboratory Price Administration
+
 ### Context
 
 Lab unit prices were seeded in `LabPriceSeeder` and partially editable via a minimal admin page. Milestone 03 requires full UI/API administration without changing `LabPriceResolver` or accounting calculations.
 
 ### Decision
 
-- `LabPriceManagementService` owns create, update, activate, deactivate, and duplicate
-- `LabPriceOverlapValidator` enforces one active price per lab + treatment + doctor scope + validity period
-- General prices (`doctor_id IS NULL`) and doctor overrides managed from `/lab-prices` and `/api/admin/lab-prices`
-- Soft deactivate only; historical `lab_jobs.lab_price_id` references preserved
+* `LabPriceManagementService` owns create, update, activate, deactivate, and duplicate.
+* `LabPriceOverlapValidator` enforces one active price per lab + treatment + doctor scope + validity period.
+* General prices (`doctor_id IS NULL`) and doctor overrides managed from `/lab-prices` and `/api/admin/lab-prices`.
+* Soft deactivate only; historical `lab_jobs.lab_price_id` references preserved.
 
 ### Consequences
 
-- Administrators can change lab costs without code deploy
-- `LabPriceResolver` and `LabJobCalculationService` unchanged
-- Duplicate creates inactive copy — admin adjusts validity before activation
-- Ready for future `clinic_id` scoping without hardcoding a single catalog
-
-### Related Milestone
-
-Milestone 03 — Laboratory Price Administration
-
-### Date
-
-2026-06-26
+* Administrators can change lab costs without code deploy.
+* `LabPriceResolver` and `LabJobCalculationService` unchanged.
+* Duplicate creates inactive copy — admin adjusts validity before activation.
+* Ready for future `clinic_id` scoping without hardcoding a single catalog.
 
 ---
 
@@ -260,32 +849,32 @@ Admin-Managed Doctor Fixed Fee Catalog
 
 Accepted
 
+### Date
+
+2026-06-26
+
+### Milestone
+
+Milestone 04 — Doctor Fixed Fee Administration
+
 ### Context
 
 Fixed per-procedure fees for doctors with `commission_type = fixed` (e.g. Dr Wa: IMPL, BG, SINUS) were seeded in `DoctorFixedFeeSeeder` only. Milestone 04 requires full UI/API administration without changing `WaelFixedFeeCalculator`, `MonthlyIncomeCalculationService`, or other accounting engine services.
 
 ### Decision
 
-- `DoctorFixedFeeManagementService` owns create, update, activate, deactivate, and duplicate
-- `DoctorFixedFeeOverlapValidator` enforces one active fee per doctor + treatment + validity period
-- `DoctorFixedFeeResolver` resolves active fees by work date (used by editor catalog)
-- Soft deactivate only; `is_active` column added; unique `(doctor_id, treatment_id)` removed to allow scheduled fee changes
-- Admin UI at `/doctor-fixed-fees` and API at `/api/admin/doctor-fixed-fees`
+* `DoctorFixedFeeManagementService` owns create, update, activate, deactivate, and duplicate.
+* `DoctorFixedFeeOverlapValidator` enforces one active fee per doctor + treatment + validity period.
+* `DoctorFixedFeeResolver` resolves active fees by work date (used by editor catalog).
+* Soft deactivate only; `is_active` column added; unique `(doctor_id, treatment_id)` removed to allow scheduled fee changes.
+* Admin UI at `/doctor-fixed-fees` and API at `/api/admin/doctor-fixed-fees`.
 
 ### Consequences
 
-- Administrators can change fixed fees without code deploy
-- Accounting engine calculation logic unchanged; seeded single-row fees remain compatible
-- Duplicate creates inactive copy — admin adjusts validity before activation
-- Future `clinic_id` scoping can attach without hardcoding a single catalog
-
-### Related Milestone
-
-Milestone 04 — Doctor Fixed Fee Administration
-
-### Date
-
-2026-06-26
+* Administrators can change fixed fees without code deploy.
+* Accounting engine calculation logic unchanged; seeded single-row fees remain compatible.
+* Duplicate creates inactive copy — admin adjusts validity before activation.
+* Future `clinic_id` scoping can attach without hardcoding a single catalog.
 
 ---
 
@@ -299,18 +888,26 @@ Configuration Layer
 
 Accepted
 
+### Date
+
+2026-06-26
+
+### Milestone
+
+Milestone 05 — Configuration Dashboard
+
 ### Context
 
-The project has evolved from a single accounting MVP into a configurable accounting platform.
+The project has evolved from a single-clinic accounting MVP into a configurable accounting platform.
 
 The following modules are now fully managed through the administration interface:
 
-- Doctors
-- Laboratories
-- Treatments
-- Lab Prices
-- Doctor Fixed Fees
-- Users
+* Doctors
+* Laboratories
+* Treatments
+* Lab Prices
+* Doctor Fixed Fees
+* Users
 
 These modules are no longer runtime configuration stored inside PHP code or Seeders.
 
@@ -324,19 +921,19 @@ The Configuration Layer is responsible for managing all business configuration r
 
 It includes:
 
-- Doctors
-- Laboratories
-- Treatments
-- Lab Prices
-- Doctor Fixed Fees
-- Users
+* Doctors
+* Laboratories
+* Treatments
+* Lab Prices
+* Doctor Fixed Fees
+* Users
 
 Business Logic must never read configuration directly from Seeder classes, PHP arrays or hardcoded constants.
 
 Business Logic must access configuration only through:
 
-- Services
-- Resolver classes
+* Services
+* Resolver classes
 
 Controllers must never implement configuration logic.
 
@@ -356,43 +953,35 @@ Rejected because runtime administration would become impossible.
 
 **Advantages**
 
-- Clear separation between Accounting Engine and Configuration.
-- Easier Multi-Clinic implementation.
-- Easier testing.
-- Runtime configuration.
-- Better maintainability.
+* Clear separation between Accounting Engine and Configuration.
+* Easier Multi-Clinic implementation.
+* Easier testing.
+* Runtime configuration.
+* Better maintainability.
 
 **Disadvantages**
 
-- More service classes.
-- Slightly higher architectural complexity.
+* More service classes.
+* Slightly higher architectural complexity.
 
 ### Affected Components
 
-- Doctors
-- Labs
-- Treatments
-- Lab Prices
-- Doctor Fixed Fees
-- Users
-- Future Configuration Dashboard
-- Future Clinic Module
+* Doctors
+* Labs
+* Treatments
+* Lab Prices
+* Doctor Fixed Fees
+* Users
+* Configuration Dashboard
+* Future Clinic Module
 
 ### Related Documentation
 
-- PROJECT_OVERVIEW.md
-- SERVICES.md
-- WORKFLOWS.md
-- DATABASE_SCHEMA.md
-- DEVELOPMENT_GUIDE.md
-
-### Related Milestone
-
-Milestone 05 — Configuration Dashboard
-
-### Date
-
-2026-06-26
+* PROJECT_OVERVIEW.md
+* SERVICES.md
+* WORKFLOWS.md
+* DATABASE_SCHEMA.md
+* DEVELOPMENT_GUIDE.md
 
 ---
 
@@ -412,7 +1001,7 @@ Accepted
 
 ### Milestone
 
-Milestone 06 — Clinic Model
+Milestone 06 — Clinic Model (Milestone 07 — configuration `clinic_id` ownership)
 
 ### Context
 
@@ -446,8 +1035,6 @@ Each clinic may have:
 
 The application must support this without duplicating the codebase.
 
----
-
 ### Decision
 
 Introduce `Clinic` as the root tenant entity.
@@ -456,9 +1043,9 @@ A clinic represents one independent accounting tenant.
 
 Every authenticated user belongs to exactly one clinic.
 
-Future clinic-scoped data will be linked to `clinics.id` through `clinic_id`.
+Clinic-scoped data is linked to `clinics.id` through `clinic_id`.
 
-The following data will eventually be scoped by clinic:
+The following data is scoped by clinic:
 
 * Users
 * Doctors
@@ -477,11 +1064,7 @@ The initial implementation must not introduce global query scopes.
 
 Tenant isolation must be explicit.
 
-Clinic context will be resolved through a dedicated service in a later milestone:
-
-`CurrentClinicResolver`
-
----
+Clinic context will be resolved through `CurrentClinicResolver` (ADR-027).
 
 ### Registration Decision
 
@@ -496,6 +1079,133 @@ The future registration flow will be:
 The clinic and first user must be created inside one database transaction.
 
 A user must not remain permanently without a clinic.
+
+### No Global Scope Decision
+
+The project will not use Laravel Global Scopes for clinic isolation.
+
+Reason:
+
+* Global scopes hide query behavior.
+* They can break admin/reporting queries.
+* They make debugging harder.
+* They may accidentally affect imports, exports, audits, and background jobs.
+
+Instead, clinic isolation will be implemented explicitly using:
+
+* `CurrentClinicResolver`
+* route middleware
+* service-layer query scoping
+* authorization checks
+* tests verifying no cross-clinic leakage
+
+### Alternatives Considered
+
+**Alternative 1 — Separate Database per Clinic**
+
+Rejected.
+
+Reason:
+
+* More operational complexity
+* Harder backups
+* Harder reporting
+* Too early for current stage
+
+**Alternative 2 — Laravel Global Scopes**
+
+Rejected.
+
+Reason:
+
+* Hidden query behavior
+* Higher debugging risk
+* Possible accidental filtering in admin/reporting contexts
+
+**Alternative 3 — Single Shared Database with Explicit clinic_id**
+
+Accepted.
+
+Reason:
+
+* Simple operational model
+* Easier SaaS evolution
+* Clear tenant boundaries
+* Testable isolation
+* Fits the current Laravel architecture
+
+### Consequences
+
+**Advantages**
+
+* The system can evolve toward Multi-Clinic SaaS.
+* Each clinic can own independent configuration.
+* Future query isolation becomes explicit and testable.
+* The accounting engine can remain shared.
+
+**Disadvantages**
+
+* More explicit scoping is required in services.
+* Developers must consistently pass or resolve clinic context.
+* More tests are required to prevent cross-clinic data leakage.
+
+### Affected Components
+
+* Clinic Model
+* User Model
+* Doctor Model
+* Lab Model
+* Treatment Model
+* LabPrice Model
+* DoctorFixedFee Model
+* DailyReport Model
+* AuditLog Model
+* ConfigurationDashboardService
+* ClinicManagementService
+* Admin Controllers
+* Import Services
+* Accounting Resolvers
+
+### Related Documentation
+
+* PROJECT_OVERVIEW.md
+* DATABASE_SCHEMA.md
+* SERVICES.md
+* WORKFLOWS.md
+* API.md
+* DEVELOPMENT_GUIDE.md
+* MULTI_CLINIC_ARCHITECTURE.md
+* ARCHITECTURE_PRINCIPLES.md
+
+### Implementation (Milestone 06)
+
+Implemented 2026-06-26:
+
+* `Clinic` model and `clinics` table with `code`, `name`, `currency`, `timezone`, `is_active`
+* `ClinicManagementService` for admin CRUD
+* Web `/clinics` and API `/api/admin/clinics`
+* `ClinicSeeder` seeds `CLINIC_111`
+* No accounting, import, or login integration in Milestone 06
+
+### Implementation (Milestone 07)
+
+Implemented 2026-06-26:
+
+* `clinic_id` added to configuration tables: `users`, `doctors`, `labs`, `treatments`, `lab_prices`, `doctor_fixed_fees`
+* Existing rows backfilled to `CLINIC_111`
+* Models updated with `BelongsToClinic` concern
+* Transitional default on create until ADR-027 removed the hardcoded fallback
+* No global scopes, no query isolation, no accounting changes in Milestone 07
+
+### Notes
+
+Clinic 111 remains the first tenant.
+
+Multi-Clinic must be implemented gradually.
+
+No milestone may introduce partial tenant isolation without tests.
+
+Public clinic registration remains disabled until ADR-029 and ADR-030 are complete.
 
 ---
 
@@ -515,13 +1225,13 @@ Accepted
 
 ### Milestone
 
-Milestone 08
+Milestone 08 — Current Clinic Resolver
 
 ### Context
 
 After Milestone 07, every configuration record belongs to a clinic through `clinic_id`.
 
-However, new records are still assigned to `CLINIC_111` through a temporary default. The application has ownership information but no runtime clinic context.
+However, new records were still assigned to `CLINIC_111` through a temporary default. The application had ownership information but no runtime clinic context.
 
 The system now requires a single source that determines the active clinic for each authenticated request.
 
@@ -565,7 +1275,7 @@ Provides a single, explicit source of the current clinic while keeping business 
 
 ### Consequences
 
-Advantages
+**Advantages**
 
 * Single source of truth.
 * Removes hardcoded Clinic 111 fallback.
@@ -573,12 +1283,12 @@ Advantages
 * Ready for query isolation in later milestones.
 * Easy to test.
 
-Disadvantages
+**Disadvantages**
 
 * Resolver becomes required for configuration creation.
 * Future background jobs will also require clinic context.
 
-Technical Impact
+**Technical Impact**
 
 * Remove transitional default from `BelongsToClinic`.
 * Add `CurrentClinicResolver`.
@@ -587,11 +1297,11 @@ Technical Impact
 
 ### Affected Components
 
-Models
+**Models**
 
 * User
 
-Services
+**Services**
 
 * CurrentClinicResolver
 * ClinicManagementService
@@ -601,23 +1311,23 @@ Services
 * LabPriceManagementService
 * DoctorFixedFeeManagementService
 
-Controllers
+**Controllers**
 
 * none (remain thin)
 
-Database
+**Database**
 
 * unchanged
 
-API
+**API**
 
 * unchanged
 
-UI
+**UI**
 
 * unchanged
 
-Tests
+**Tests**
 
 * Resolver tests
 * Create ownership tests
@@ -633,12 +1343,13 @@ Tests
 
 ### Notes
 
-Query isolation is intentionally postponed to the next milestone.
+Query isolation is intentionally postponed to ADR-028.
+
 ---
 
-# ADR-028
+## ADR-028
 
-## Title
+### Title
 
 Explicit Query Isolation
 
@@ -652,17 +1363,15 @@ Accepted
 
 ### Milestone
 
-Milestone 09
+Milestone 09 — Explicit Query Isolation
 
----
-
-## Context
+### Context
 
 After Milestone 08, every authenticated request has a resolved current clinic through `CurrentClinicResolver`.
 
 New configuration records already belong to the authenticated clinic.
 
-However, read operations are still global.
+However, read operations were still global.
 
 For example:
 
@@ -673,13 +1382,11 @@ For example:
 * Fixed Fees
 * Configuration Dashboard
 
-still return data from every clinic.
+still returned data from every clinic.
 
 The application now requires tenant isolation for all configuration queries.
 
----
-
-## Decision
+### Decision
 
 The application shall implement **explicit query isolation**.
 
@@ -692,10 +1399,6 @@ clinic_id = CurrentClinicResolver::resolveId()
 Query isolation belongs inside the Service Layer.
 
 Controllers must never build tenant-aware queries.
-
----
-
-## Rules
 
 Every query that reads configuration data must use the current clinic.
 
@@ -712,25 +1415,11 @@ Every create operation already uses the resolver.
 
 Now every read operation must also use it.
 
----
-
-## No Global Scopes
-
 Laravel Global Scopes are explicitly forbidden.
 
-Reason:
+### Alternatives Considered
 
-Global scopes hide business logic.
-
-Developers cannot easily understand why records disappear.
-
-Explicit filtering keeps the code predictable, readable, and easier to debug.
-
----
-
-## Alternatives Considered
-
-### Laravel Global Scope
+**Laravel Global Scope**
 
 Rejected.
 
@@ -745,9 +1434,7 @@ Disadvantages:
 * Complicated administrative queries.
 * Harder testing.
 
----
-
-### Explicit Service Filtering
+**Explicit Service Filtering**
 
 Accepted.
 
@@ -759,11 +1446,9 @@ Advantages:
 * Clear architecture.
 * Easier future maintenance.
 
----
+### Consequences
 
-## Consequences
-
-Advantages
+**Advantages**
 
 * No accidental cross-clinic data leakage.
 * Every service becomes tenant-aware.
@@ -771,32 +1456,25 @@ Advantages
 * Easy unit testing.
 * Easy future extension.
 
-Disadvantages
+**Disadvantages**
 
 * Developers must remember to use the resolver in every configuration service.
 * More explicit code.
 
----
+**Technical Impact**
 
-## Technical Impact
+* `CurrentClinicResolver` becomes mandatory for all configuration read operations.
+* Every configuration service becomes tenant-aware.
+* Configuration Dashboard displays only the current clinic.
+* Reference APIs return only records of the authenticated clinic.
 
-CurrentClinicResolver becomes mandatory for all configuration read operations.
+### Affected Components
 
-Every configuration service becomes tenant-aware.
-
-ConfigurationDashboard will display only the current clinic.
-
-Reference APIs return only records of the authenticated clinic.
-
----
-
-## Affected Components
-
-Models
+**Models**
 
 * none
 
-Services
+**Services**
 
 * DoctorManagementService
 * LabManagementService
@@ -804,26 +1482,46 @@ Services
 * LabPriceManagementService
 * DoctorFixedFeeManagementService
 * ConfigurationDashboardService
+* ReferenceDataService
 
-Controllers
+**Controllers**
 
-No architectural changes.
+* No architectural changes.
 
-Database
+**Database**
 
-No schema changes.
+* No schema changes.
 
-API
+**API**
 
-Reference APIs become clinic-aware.
+* Reference APIs become clinic-aware.
 
-UI
+**UI**
 
-Configuration pages display only the current clinic.
+* Configuration pages display only the current clinic.
 
-Tests
+**Tests**
 
-Cross-clinic leakage tests become mandatory.
+* Cross-clinic leakage tests become mandatory.
+
+### Related Documentation
+
+* PROJECT_OVERVIEW.md
+* SERVICES.md
+* WORKFLOWS.md
+* DEVELOPMENT_GUIDE.md
+* MULTI_CLINIC_ARCHITECTURE.md
+
+### Implementation (Milestone 09)
+
+Implemented 2026-06-26 on branch `feature/query-isolation`:
+
+* `ScopesConfigurationQueries` trait — `forCurrentClinic()`, `assertSameClinic()`
+* All configuration management services expose clinic-scoped `listQuery()` / list helpers
+* `ReferenceDataService` for clinic-scoped reference API reads
+* `ConfigurationDashboardService` uses resolver for counts, health, and filtered audit activity
+* Overlap validators accept `clinicId` as first parameter
+* Cross-clinic mutations return HTTP 404
 
 ---
 
@@ -843,28 +1541,24 @@ Accepted
 
 ### Milestone
 
-Milestone 10
+Milestone 10 — Accounting Ownership and Isolation
 
----
-
-## Context
+### Context
 
 Milestones 06–09 established the multi-clinic foundation:
 
 * Clinic entity introduced.
 * Configuration data owns `clinic_id`.
-* CurrentClinicResolver provides the active clinic.
+* `CurrentClinicResolver` provides the active clinic.
 * Configuration queries are isolated through explicit service-layer filtering.
 
-However, the accounting engine still stores and processes accounting data without explicit tenant ownership.
+However, the accounting engine still stored and processed accounting data without explicit tenant ownership.
 
 To safely support multiple clinics, every accounting record must belong to exactly one clinic.
 
-Accounting isolation must be completed before introducing the Registration Wizard.
+Accounting isolation must be completed before introducing the Registration Wizard (ADR-030).
 
----
-
-## Decision
+### Decision
 
 Every accounting entity shall explicitly own a `clinic_id`.
 
@@ -874,9 +1568,24 @@ The authenticated clinic resolved by `CurrentClinicResolver` is the only runtime
 
 No accounting service may infer, guess, or hardcode clinic ownership.
 
----
+### Accounting Ownership Chain
 
-## Accounting Ownership
+```text
+Clinic
+    │
+    ▼
+DailyReport
+    │
+    ▼
+DailyWorkRow
+    │
+    ├──────────────┐
+    ▼              ▼
+Payment       WorkItem
+                    │
+                    ▼
+                 LabJob
+```
 
 The following tables must own `clinic_id`:
 
@@ -889,9 +1598,7 @@ The following tables must own `clinic_id`:
 
 Future accounting tables must also contain `clinic_id`.
 
----
-
-## Import Pipeline
+### Import Pipeline
 
 Every import must follow this ownership flow:
 
@@ -913,9 +1620,7 @@ Every created record inherits the same `clinic_id`.
 
 No step may overwrite the clinic context.
 
----
-
-## Immutable Ownership
+### Immutable Ownership
 
 `clinic_id` is **immutable** after create.
 
@@ -923,9 +1628,7 @@ Once assigned at insert time, no runtime code may change it — not admin UI, no
 
 Only **new** records receive `clinic_id`.
 
----
-
-## Parent Inheritance (No Resolver on Children)
+### Parent Inheritance (No Resolver on Children)
 
 Child entities must **never** resolve their own clinic from `CurrentClinicResolver`.
 
@@ -942,9 +1645,7 @@ Only **root** accounting creates (e.g. `DailyReport`) use `CurrentClinicResolver
 
 This prevents tenant mismatches when the resolver and parent disagree.
 
----
-
-## Query Rules
+### Query Rules
 
 Every accounting query must explicitly filter by:
 
@@ -976,9 +1677,7 @@ Filtering belongs inside the Service Layer.
 
 Controllers must never build tenant-aware accounting queries.
 
----
-
-## Calculation Rules
+### Calculation Rules
 
 Accounting calculations must never mix data from different clinics.
 
@@ -993,9 +1692,7 @@ Examples:
 
 Every calculation must operate only on records belonging to one clinic.
 
----
-
-## No Global Scopes
+### No Global Scopes
 
 Laravel Global Scopes remain forbidden.
 
@@ -1003,9 +1700,7 @@ Accounting isolation must always be explicit and visible inside the Service Laye
 
 Hidden tenant filtering is not allowed.
 
----
-
-## Security Rules
+### Security Rules
 
 The following must never be accepted from HTTP requests:
 
@@ -1016,21 +1711,9 @@ These values are assigned exclusively by `CurrentClinicResolver`.
 
 Any request attempting to submit a clinic identifier must be ignored or rejected.
 
----
+### Alternatives Considered
 
-## Registration Dependency
-
-The Registration Wizard depends on this ADR.
-
-Public clinic registration must remain disabled until accounting ownership and isolation are fully implemented and verified.
-
-No new clinic may enter the system before tenant isolation is complete.
-
----
-
-## Alternatives Considered
-
-### Global Scopes
+**Global Scopes**
 
 Rejected.
 
@@ -1041,9 +1724,7 @@ Reason:
 * Harder testing
 * Administrative queries become unpredictable
 
----
-
-### Explicit Service Layer Isolation
+**Explicit Service Layer Isolation**
 
 Accepted.
 
@@ -1055,28 +1736,39 @@ Reason:
 * Easy to test
 * Consistent with ADR-028
 
----
+**Resolver on Every Entity**
 
-## Consequences
+Rejected.
 
-Advantages
+Child entities already have a trusted parent. Resolving the clinic multiple times introduces unnecessary complexity.
+
+**Mutable Ownership**
+
+Rejected.
+
+Financial ownership must remain permanent. Changing ownership after creation would compromise accounting integrity.
+
+### Consequences
+
+**Advantages**
 
 * Complete tenant ownership
 * No accounting data leakage
 * Safe multi-clinic accounting
 * Predictable service behaviour
-* Simpler future SaaS deployment
+* Deterministic ownership
+* Stable audit trail
+* SaaS-ready architecture
 
-Disadvantages
+**Disadvantages**
 
 * Every accounting service must explicitly use `CurrentClinicResolver`
 * More explicit queries throughout the accounting layer
+* Additional helper services are required
 
----
+### Affected Components
 
-## Affected Components
-
-### Database
+**Database**
 
 * daily_reports
 * daily_work_rows
@@ -1085,9 +1777,20 @@ Disadvantages
 * lab_jobs
 * audit_logs (financial)
 
-### Services
+**Models**
+
+* DailyReport
+* DailyWorkRow
+* Payment
+* WorkItem
+* LabJob
+* AuditLog
+
+**Services**
 
 * DailyReportImportService
+* DailyReportQueryService
+* AccountingScopedQuery
 * PaymentCalculationService
 * LabJobCalculationService
 * MonthlyIncomeCalculationService
@@ -1095,36 +1798,28 @@ Disadvantages
 * DailyReportEditorService
 * Import Services
 * Export Services
+* AuditLogService
 
-### Controllers
+**Controllers**
 
-No architectural changes.
+* No architectural changes. Controllers remain thin.
 
-Controllers remain thin.
+**API**
 
-### API
+* No endpoint changes. Only ownership and filtering behaviour changes.
 
-No endpoint changes.
+**UI**
 
-Only ownership and filtering behaviour changes.
+* No functional changes. Existing screens automatically display only accounting data belonging to the authenticated clinic.
 
-### UI
+**Tests**
 
-No functional changes.
+* AccountingOwnershipTest
+* CrossClinicAccountingIsolationTest
+* Mandatory regression tests
+* Mandatory import ownership tests
 
-Existing screens automatically display only accounting data belonging to the authenticated clinic.
-
-### Tests
-
-Mandatory cross-clinic accounting isolation tests.
-
-Mandatory regression tests.
-
-Mandatory import ownership tests.
-
----
-
-## Related Documentation
+### Related Documentation
 
 * PROJECT_OVERVIEW.md
 * DATABASE_SCHEMA.md
@@ -1133,23 +1828,7 @@ Mandatory import ownership tests.
 * DEVELOPMENT_GUIDE.md
 * MULTI_CLINIC_ARCHITECTURE.md
 
----
-
-## Success Criteria
-
-Milestone 10 is considered complete only when:
-
-* Every accounting table owns `clinic_id`.
-* Every accounting service is clinic-aware.
-* Every accounting query is explicitly filtered.
-* Every import assigns the current clinic automatically.
-* Cross-clinic accounting access is impossible.
-* Registration Wizard remains disabled.
-
-Only after these conditions are satisfied may the Registration Wizard (ADR-030) begin.
----
-
-## Implementation (Milestone 10)
+### Implementation (Milestone 10)
 
 Implemented 2026-06-27 on branch `feature/accounting-ownership`:
 
@@ -1160,169 +1839,29 @@ Implemented 2026-06-27 on branch `feature/accounting-ownership`:
 * All accounting services inject `CurrentClinicResolver` and filter reads explicitly
 * `AuditLogService` persists `clinic_id` on every log row
 * Cross-clinic accounting access returns HTTP 404
-* `CrossClinicAccountingIsolationTest` + `AccountingOwnershipTest` added (291 tests green)
-* `ImmutableClinicOwnership` trait enforces clinic_id immutability on accounting models
+* `CrossClinicAccountingIsolationTest` + `AccountingOwnershipTest` added
+* `ImmutableClinicOwnership` trait enforces `clinic_id` immutability on accounting models
 * `AccountingScopedQuery` — explicit `clinic_id` + parent-key queries (no `$report->payments()`)
 
----
-
-## Implementation (Milestone 09)
-
-Implemented 2026-06-26 on branch `feature/query-isolation`:
-
-* `ScopesConfigurationQueries` trait — `forCurrentClinic()`, `assertSameClinic()`
-* All configuration management services expose clinic-scoped `listQuery()` / list helpers
-* `ReferenceDataService` for clinic-scoped reference API reads
-* `ConfigurationDashboardService` uses resolver for counts, health, and filtered audit activity
-* Overlap validators accept `clinicId` as first parameter
-* Cross-clinic mutations return HTTP 404
-
----
-
-## Related Documentation
-
-* PROJECT_OVERVIEW.md
-* SERVICES.md
-* WORKFLOWS.md
-* DEVELOPMENT_GUIDE.md
-* MULTI_CLINIC_ARCHITECTURE.md
-
----
-
-## Notes
+### Notes
 
 This ADR isolates **accounting data** after configuration isolation (ADR-028).
+
+Clinic 111 remains the first tenant. During migration, all existing data was assigned to `CLINIC_111`.
 
 Registration Wizard (ADR-030) begins only after Milestone 10 is validated.
 
 ---
 
-### No Global Scope Decision
-
-The project will not use Laravel Global Scopes for clinic isolation.
-
-Reason:
-
-* Global scopes hide query behavior.
-* They can break admin/reporting queries.
-* They make debugging harder.
-* They may accidentally affect imports, exports, audits, and background jobs.
-
-Instead, clinic isolation will be implemented explicitly using:
-
-* `CurrentClinicResolver`
-* route middleware
-* service-layer query scoping
-* authorization checks
-* tests verifying no cross-clinic leakage
-
----
-
-### Alternatives Considered
-
-#### Alternative 1 — Separate Database per Clinic
-
-Rejected.
-
-Reason:
-
-* More operational complexity
-* Harder backups
-* Harder reporting
-* Too early for current stage
-
-#### Alternative 2 — Laravel Global Scopes
-
-Rejected.
-
-Reason:
-
-* Hidden query behavior
-* Higher debugging risk
-* Possible accidental filtering in admin/reporting contexts
-
-#### Alternative 3 — Single Shared Database with Explicit clinic_id
-
-Accepted.
-
-Reason:
-
-* Simple operational model
-* Easier SaaS evolution
-* Clear tenant boundaries
-* Testable isolation
-* Fits the current Laravel architecture
-
----
-
-### Consequences
-
-Advantages:
-
-* The system can evolve toward Multi-Clinic SaaS.
-* Each clinic can own independent configuration.
-* Future query isolation becomes explicit and testable.
-* The accounting engine can remain shared.
-
-Disadvantages:
-
-* More explicit scoping is required in services.
-* Developers must consistently pass or resolve clinic context.
-* More tests are required to prevent cross-clinic data leakage.
-
----
-
-### Affected Components
-
-Future changes will affect:
-
-* Clinic Model
-* User Model
-* Doctor Model
-* Lab Model
-* Treatment Model
-* LabPrice Model
-* DoctorFixedFee Model
-* DailyReport Model
-* AuditLog Model
-* ConfigurationDashboardService
-* Admin Controllers
-* Import Services
-* Accounting Resolvers
-
----
-
-### Related Documentation
-
-* ROADMAP.md
-* DEVELOPMENT_GUIDE.md
-* ARCHITECTURE_PRINCIPLES.md
-* DATABASE_SCHEMA.md
-* SERVICES.md
-* WORKFLOWS.md
-* API.md
-
----
-
-### Related Future Milestones
-
-* Milestone 06 — Clinic Model
-* Milestone 07 — Attach clinic_id
-* Milestone 08 — Current Clinic Resolver
-* Milestone 09 — Query Isolation
-* Milestone 10 — Dynamic Business Rules
-* Milestone 11 — Multi-Clinic Testing
-
----
-## ADR-029
+## ADR-030
 
 ### Title
 
-Accounting Ownership and Isolation
+Clinic Onboarding Workflow
 
 ### Status
 
-Accepted
+Proposed
 
 ### Date
 
@@ -1330,339 +1869,109 @@ Accepted
 
 ### Milestone
 
-Milestone 10
+Milestone 11 — Clinic Onboarding Workflow
 
----
+### Context
 
-## Context
+Milestones 06–10 established tenant ownership and isolation for configuration and accounting data.
 
-Milestones 07–09 introduced clinic ownership for configuration data and explicit query isolation.
+The system still has a single seeded clinic (`CLINIC_111`) and no public self-service registration.
 
-Accounting data was still the final shared area of the system.
+Before the platform can operate as a SaaS product, new clinics must be onboarded safely with default configuration and an initial admin user.
 
-To complete the multi-clinic architecture, every accounting entity must belong to exactly one clinic and remain isolated throughout its lifetime.
+### Decision
 
-Accounting ownership must be deterministic, immutable, and inherited through the accounting hierarchy.
+Introduce a Registration Wizard that:
 
----
+1. Accepts a public registration form.
+2. Creates a new clinic inside a database transaction.
+3. Creates the first admin/owner user assigned to that clinic.
+4. Seeds or initializes default configuration for the clinic.
+5. Redirects the user to the Configuration Dashboard.
 
-## Decision
+The clinic and first user must be created atomically.
 
-Every accounting record belongs to exactly one clinic.
+A user must not remain permanently without a clinic.
 
-The ownership is established only once when the root accounting object is created.
+Public registration remains disabled until ADR-029 is fully validated in production.
 
-After creation, ownership never changes.
+### Alternatives Considered
 
-All accounting queries must explicitly filter by the current clinic.
+**Manual admin-only clinic creation**
 
-Global scopes are forbidden.
+Rejected for SaaS scale.
 
----
+Requires platform staff for every new tenant.
 
-## Accounting Ownership Chain
-
-The accounting ownership hierarchy is fixed.
-
-```text
-Clinic
-    │
-    ▼
-DailyReport
-    │
-    ▼
-DailyWorkRow
-    │
-    ├──────────────┐
-    ▼              ▼
-Payment       WorkItem
-                    │
-                    ▼
-                 LabJob
-```
-
-Each child entity inherits the clinic_id from its parent.
-
-Child entities never resolve their own clinic.
-
----
-
-## Ownership Rules
-
-### Root Objects
-
-Only root accounting objects may use CurrentClinicResolver.
-
-Example:
-
-* DailyReport
-
-When a DailyReport is created:
-
-* clinic_id is resolved from CurrentClinicResolver
-* clinic_id is stored permanently
-
----
-
-### Child Objects
-
-Child entities never call CurrentClinicResolver.
-
-They inherit clinic ownership from their parent.
-
-Examples:
-
-DailyWorkRow → DailyReport
-
-Payment → DailyWorkRow
-
-WorkItem → DailyWorkRow
-
-LabJob → WorkItem
-
-This guarantees consistent ownership across the accounting graph.
-
----
-
-## Immutable Ownership
-
-clinic_id is immutable.
-
-After a record has been created:
-
-* clinic_id must never change
-* no service may update clinic_id
-* no controller may update clinic_id
-* no administrator may change clinic ownership
-
-Ownership changes require creating new records, not modifying existing ones.
-
----
-
-## Query Isolation
-
-Every accounting query must explicitly filter by clinic_id.
-
-Example:
-
-```php
-Payment::query()
-    ->where('clinic_id', $resolver->resolveId())
-```
-
-Global scopes are forbidden.
-
-Hidden tenant filtering is not allowed.
-
----
-
-## Explicit Accounting Queries
-
-Accounting queries must always contain both:
-
-* clinic_id
-* parent identifier
-
-Preferred:
-
-```php
-Payment
-WHERE clinic_id = ?
-AND daily_work_row_id = ?
-```
-
-Avoid relying only on Eloquent parent relations for tenant filtering.
-
-Dedicated query helpers or scoped services should be used instead.
-
----
-
-## Accounting Isolation
-
-The following tables are tenant-owned:
-
-* daily_reports
-* daily_work_rows
-* payments
-* work_items
-* lab_jobs
-* audit_logs
-
-Every read and write operation must remain inside the authenticated clinic.
-
-Cross-clinic access returns 404.
-
----
-
-## Alternatives Considered
-
-### Global Scopes
+**Registration without default configuration seed**
 
 Rejected.
 
-Implicit filtering hides business rules and complicates debugging.
+Empty clinics cannot operate the accounting engine.
 
----
+### Consequences
 
-### Resolver on Every Entity
+**Advantages**
 
-Rejected.
+* Enables self-service SaaS onboarding.
+* Each new tenant starts with usable defaults.
+* Reuses the registration flow defined in ADR-026.
 
-Child entities already have a trusted parent.
+**Disadvantages**
 
-Resolving the clinic multiple times introduces unnecessary complexity.
+* Requires additional security, validation, and abuse prevention (see ADR-032).
+* Must not bypass accounting or configuration isolation rules.
 
----
-
-### Mutable Ownership
-
-Rejected.
-
-Financial ownership must remain permanent.
-
-Changing ownership after creation would compromise accounting integrity.
-
----
-
-## Consequences
-
-### Advantages
-
-* Deterministic ownership
-* Fully isolated accounting
-* Predictable queries
-* Easier debugging
-* Stable audit trail
-* SaaS-ready architecture
-
-### Disadvantages
-
-* Every query requires explicit clinic filtering
-* Additional helper services are required
-
----
-
-## Affected Components
-
-### Database
-
-Accounting tables with clinic_id.
-
-### Models
-
-DailyReport
-
-DailyWorkRow
-
-Payment
-
-WorkItem
-
-LabJob
-
-AuditLog
-
-### Services
-
-CurrentClinicResolver
-
-DailyReportQueryService
-
-AccountingScopedQuery
-
-PaymentCalculationService
-
-LabJobCalculationService
-
-MonthlyIncomeCalculationService
-
-TreatmentParserService
-
-### Controllers
-
-Daily Report
-
-Import
-
-Editor
-
-Income
-
-### Tests
-
-AccountingOwnershipTest
-
-CrossClinicAccountingIsolationTest
-
----
-
-## Related Documentation
+### Related Documentation
 
 * PROJECT_OVERVIEW.md
-* DATABASE_SCHEMA.md
-* SERVICES.md
-* WORKFLOWS.md
-* DEVELOPMENT_GUIDE.md
 * MULTI_CLINIC_ARCHITECTURE.md
-
----
-
-## Success Criteria
-
-Milestone 10 is complete only when:
-
-* Every accounting table owns clinic_id.
-* clinic_id is immutable.
-* Child entities inherit ownership only from their parent.
-* Global scopes are not used.
-* Every accounting query explicitly filters by clinic_id.
-* Cross-clinic accounting access is impossible.
-* All accounting tests pass.
----
+* WORKFLOWS.md
+* ROADMAP.md
 
 ### Notes
 
-Clinic 111 remains the first tenant.
+Depends on ADR-029 (Accounting Ownership and Isolation).
 
-During migration, all existing data will eventually be assigned to `CLINIC_111`.
-
-Multi-Clinic must be implemented gradually.
-
-No milestone may introduce partial tenant isolation without tests.
+Tenant security hardening (ADR-032) should follow or run in parallel before public launch.
 
 ---
 
+
 # ADR Index
 
-| ADR     | Title                               | Status   |
-| ------- | ----------------------------------- | -------- |
-| ADR-001 | TOTAL Means Collected Payments      | Accepted |
-| ADR-002 | JOB Means Lab Cost                  | Accepted |
-| ADR-003 | Database Driven Business Rules      | Accepted |
-| ADR-004 | Lab Price Fallback Chain            | Accepted |
-| ADR-005 | bcmath for Money Calculations       | Accepted |
-| ADR-006 | Isolated Excel Parser               | Accepted |
-| ADR-007 | Rule-Based Treatment Parser         | Accepted |
-| ADR-008 | Shared Accounting Pipeline          | Accepted |
-| ADR-009 | Approved Reports Are Read-Only      | Accepted |
-| ADR-010 | Soft Delete Strategy                | Accepted |
-| ADR-011 | Sanctum Authentication              | Accepted |
-| ADR-012 | Private File Storage                | Accepted |
-| ADR-013 | Sanitized Raw Import Data           | Accepted |
-| ADR-014 | Financial Rounding Rules            | Accepted |
-| ADR-015 | Explicit Null Checks                | Accepted |
-| ADR-016 | Database Driven Export Profiles     | Accepted |
-| ADR-017 | Patient Privacy                     | Accepted |
-| ADR-018 | Work Items for All Valid Treatments | Accepted |
-| ADR-019 | Import Validation Warnings          | Accepted |
-| ADR-020 | Delete Uploaded Excel Files         | Accepted |
-| ADR-021 | Laboratory Soft Deactivate          | Accepted |
-| ADR-022 | Database-Driven Treatment Catalog   | Accepted |
-| ADR-023 | Admin-Managed Lab Price Catalog     | Accepted |
+| ADR     | Title                                  | Status   |
+| ------- | -------------------------------------- | -------- |
+| ADR-001 | TOTAL Means Collected Payments         | Accepted |
+| ADR-002 | JOB Means Lab Cost                     | Accepted |
+| ADR-003 | Database Driven Business Rules         | Accepted |
+| ADR-004 | Lab Price Fallback Chain               | Accepted |
+| ADR-005 | bcmath for Money Calculations          | Accepted |
+| ADR-006 | Isolated Excel Parser                  | Accepted |
+| ADR-007 | Rule-Based Treatment Parser            | Accepted |
+| ADR-008 | Shared Accounting Pipeline             | Accepted |
+| ADR-009 | Approved Reports Are Read-Only         | Accepted |
+| ADR-010 | Soft Delete Strategy                   | Accepted |
+| ADR-011 | Sanctum Authentication                 | Accepted |
+| ADR-012 | Private File Storage                   | Accepted |
+| ADR-013 | Sanitized Raw Import Data              | Accepted |
+| ADR-014 | Financial Rounding Rules               | Accepted |
+| ADR-015 | Explicit Null Checks                   | Accepted |
+| ADR-016 | Database Driven Export Profiles        | Accepted |
+| ADR-017 | Patient Privacy                        | Accepted |
+| ADR-018 | Work Items for All Valid Treatments    | Accepted |
+| ADR-019 | Import Validation Warnings             | Accepted |
+| ADR-020 | Delete Uploaded Excel Files            | Accepted |
+| ADR-021 | Laboratory Soft Deactivate             | Accepted |
+| ADR-022 | Database-Driven Treatment Catalog      | Accepted |
+| ADR-023 | Admin-Managed Lab Price Catalog        | Accepted |
 | ADR-024 | Admin-Managed Doctor Fixed Fee Catalog | Accepted |
-| ADR-025 | Configuration Layer                 | Accepted |
-| ADR-026 | Clinic Entity as Tenant Root        | Accepted |
-| ADR-027 | Current Clinic Resolver           | Accepted |
+| ADR-025 | Configuration Layer                    | Accepted |
+| ADR-026 | Clinic Entity as Tenant Root           | Accepted |
+| ADR-027 | Current Clinic Resolver                | Accepted |
+| ADR-028 | Explicit Query Isolation               | Accepted |
+| ADR-029 | Accounting Ownership and Isolation     | Accepted |
+| ADR-030 | Clinic Onboarding Workflow             | Proposed |
 
 ---
 
@@ -1670,30 +1979,21 @@ No milestone may introduce partial tenant isolation without tests.
 
 The following architectural topics are expected to receive future ADRs.
 
-ADR-028
-Attach clinic_id
+**ADR-030** — Clinic Onboarding Workflow
 
-ADR-029
-Query Isolation
+**ADR-031** — Clinic Business Configuration
 
-ADR-030
-Dynamic Business Rules
+**ADR-032** — Tenant Security
 
-ADR-031
-Multi-Clinic Registration Wizard
+**ADR-033** — Multi-Currency Strategy
 
-ADR-032
-Tenant Security
+**ADR-034** — Subscription & Licensing
 
-ADR-033
-Multi-Currency Strategy
-
-ADR-034
-Accounting Rule Engine
+**ADR-035** — Public SaaS Platform
 
 ---
 
-# Documentation Rule
+# Documentation Rules
 
 Whenever an architectural decision affects one or more of the following:
 
@@ -1712,54 +2012,36 @@ A new ADR must be created.
 
 Minor implementation details do not require an ADR.
 
+Implementation notes for a milestone belong inside the ADR that introduced the architecture, under an **Implementation** subsection — not as a duplicate ADR.
+
+Business requirements evolve. Configuration changes. Accounting data grows. Architecture should remain stable. Every ADR exists to protect that stability.
+
+Do not modify accepted ADRs unless correcting factual mistakes. New architectural decisions must always be appended as new ADR entries.
+
 ---
 
 # Long-Term Vision
 
 The project evolves through the following stages.
 
-V1
+**V1**
 
 Single Clinic Accounting Engine
 
 ↓
 
-V2
+**V2**
 
 Configurable Accounting Platform
 
 ↓
 
-V3
+**V3**
 
 Multi-Clinic SaaS Platform
 
 ↓
 
-Future
+**Future**
 
 Enterprise Dental Accounting Platform
-
----
-
-# Architectural Principle
-
-Business requirements evolve.
-
-Configuration changes.
-
-Accounting data grows.
-
-Architecture should remain stable.
-
-Every ADR exists to protect that stability.
-
----
-
-# Architecture History
-
-All ADRs below represent the historical evolution of the project.
-
-Do not modify them unless correcting factual mistakes.
-
-New architectural decisions must always be appended as new ADR entries.
