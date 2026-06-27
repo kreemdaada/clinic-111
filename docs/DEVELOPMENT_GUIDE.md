@@ -399,6 +399,10 @@ Session cookies must be `HttpOnly`, `SameSite=lax` (or `strict`), and `Secure` i
 
 Security events (`login_succeeded`, `login_failed`, `login_lockout`, `clinic_registered`) are audit-logged. Never log passwords, tokens, or session IDs.
 
+Business configuration progress is calculated dynamically — never auto-create doctors, treatments, or prices during onboarding (ADR-031).
+
+Import endpoints must reject uploads when required business configuration is missing.
+
 ---
 
 # Naming Rules

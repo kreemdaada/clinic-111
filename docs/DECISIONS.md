@@ -92,7 +92,7 @@ Under discussion.
 
 # ADR Template
 
-Every new ADR should follow this structure.
+Every new ADR must follow this structure and section order:
 
 ```markdown
 ## ADR-XXX
@@ -103,7 +103,7 @@ Short descriptive title.
 
 ### Status
 
-Accepted
+Accepted | Proposed | Deprecated | Superseded
 
 ### Date
 
@@ -123,55 +123,27 @@ Describe the chosen solution.
 
 ### Alternatives Considered
 
-Alternative A
-
-Alternative B
-
-Alternative C
+Alternative A — reason accepted or rejected.
 
 ### Consequences
 
-Advantages
-
-Disadvantages
-
-Technical impact
+Advantages and disadvantages.
 
 ### Affected Components
 
-Models
-
-Services
-
-Controllers
-
-Database
-
-API
-
-UI
-
-Tests
+Models, services, controllers, database, API, UI, tests.
 
 ### Related Documentation
 
-DATABASE_SCHEMA.md
+PROJECT_OVERVIEW.md, SERVICES.md, WORKFLOWS.md, API.md, etc.
 
-SERVICES.md
+### Implementation
 
-WORKFLOWS.md
-
-API.md
-
-ROADMAP.md
-
-### Related Commit
-
-git commit message
+(optional) Milestone delivery notes, files, tests.
 
 ### Notes
 
-Optional notes.
+(optional) Dependencies, follow-up ADRs, clarifications.
 ```
 
 ---
@@ -1871,52 +1843,36 @@ Accepted
 
 Milestone 11 — Clinic Registration / Onboarding Wizard
 
----
+### Context
 
-## Context
-
-Milestones 06–10 completed the Multi-Clinic foundation.
-
-The system now has:
+Milestones 06–10 completed the multi-clinic foundation:
 
 * Clinic entity as tenant root
-* clinic_id ownership on configuration data
-* CurrentClinicResolver
+* `clinic_id` ownership on configuration data
+* `CurrentClinicResolver`
 * Explicit configuration query isolation
-* clinic_id ownership on accounting data
+* `clinic_id` ownership on accounting data
 * Explicit accounting isolation
 * Immutable accounting ownership
 * Cross-clinic isolation tests
 
-The platform is now ready to allow new clinics to join without developer intervention.
+The platform is ready to allow new clinics to join without developer intervention.
 
-Before this milestone, clinics could only be created manually by an admin or through seeders.
+Before this milestone, clinics could only be created manually by an admin or through seeders. That is not acceptable for a SaaS-style platform.
 
-That is not acceptable for a SaaS-style platform.
+### Decision
 
----
+Introduce a transactional **Clinic Onboarding Workflow** as the only supported way to create production clinics.
 
-## Decision
-
-Introduce a transactional Clinic Onboarding Workflow.
-
-The onboarding workflow is the only supported way to create production clinics.
-
-The workflow creates:
+The workflow creates, inside one database transaction:
 
 * Clinic
-* Owner/Admin user
-* Minimal default clinic configuration
+* Owner/admin user (`role = admin`, `clinic_id` assigned internally)
+* Minimal default configuration (one default laboratory only)
 
-The workflow must run inside one database transaction.
+If any step fails, all changes roll back. Partial clinics are forbidden.
 
-If any step fails, all changes must roll back.
-
-Partial clinics are forbidden.
-
----
-
-## Onboarding Flow
+**Onboarding flow:**
 
 ```text
 Submit Onboarding Form
@@ -1933,7 +1889,7 @@ Create Owner/Admin User
         ↓
 Assign owner.clinic_id
         ↓
-Create Minimal Default Configuration
+Create Default Laboratory ({CLINIC_CODE}_MAIN_LAB)
         ↓
 Activate Clinic
         ↓
@@ -1944,51 +1900,91 @@ Login Owner
 Redirect to Configuration Dashboard
 ```
 
----
+**Required form data — clinic:** name, code, country, base currency, timezone.
 
-## Required Form Data
+**Required form data — owner:** name, email, password, password confirmation.
 
-### Clinic Data
-
-* Clinic name
-* Clinic code
-* Country
-* Base currency
-* Timezone
-
-### Owner Data
-
-* Owner name
-* Owner email
-* Owner password
-* Password confirmation
-
----
-
-## Default Configuration Rules
-
-A new clinic must start with minimal configuration only.
+**Default configuration rules:**
 
 Allowed during onboarding:
 
 * Clinic record
-* Owner/Admin user
-* Optional default laboratory
-* Optional default settings
+* Owner/admin user
+* One default laboratory
 
 Not allowed during onboarding:
 
-* Accounting records
-* Daily reports
-* Payments
-* Work items
-* Lab jobs
-* Imported Excel files
-* Doctor income data
+* Accounting records (daily reports, payments, work items, lab jobs)
+* Doctors, treatments, lab prices, doctor fixed fees
+* Imported Excel files or doctor income data
 
-Business configuration such as doctors, treatments, lab prices, and fixed fees should be created after onboarding through the Configuration Dashboard.
+Business configuration is created **after** onboarding through the Configuration Dashboard (ADR-031).
 
 Clinic 111 must not be copied as a template.
+
+**Ownership rules:** All created records belong to the new clinic. The client must never submit `clinic_id` or ownership overrides.
+
+**Transaction rules:** Allowed end states are full success or full rollback. Forbidden: clinic without owner, owner without clinic, partial configuration beyond the default lab.
+
+### Alternatives Considered
+
+**Manual admin setup** — Rejected. Requires platform-admin intervention; not scalable.
+
+**Seeder-based clinic creation** — Rejected. Seeders are for development and bootstrap data, not production tenant creation.
+
+**Transactional onboarding service** — Accepted. Provides consistency, testability, and SaaS readiness.
+
+### Consequences
+
+**Advantages**
+
+* Clinics can onboard without developer intervention
+* Repeatable tenant creation with no partial tenants
+* Foundation for future billing and subscription integration
+
+**Disadvantages**
+
+* More validation and transactional testing required
+* Future onboarding templates require additional design
+
+### Affected Components
+
+**Services:** `ClinicOnboardingService`, `ClinicManagementService`, `UserManagementService`, `AuditLogService`
+
+**Controllers:** `ClinicOnboardingController` (web + API)
+
+**Requests:** `RegisterClinicRequest`
+
+**UI:** `/register-clinic` (GET form, POST submit)
+
+**Tests:** `ClinicOnboardingTest`, `ClinicOnboardingServiceTest`
+
+### Related Documentation
+
+* PROJECT_OVERVIEW.md
+* DATABASE_SCHEMA.md
+* SERVICES.md
+* WORKFLOWS.md
+* API.md
+* DEVELOPMENT_GUIDE.md
+* MULTI_CLINIC_ARCHITECTURE.md
+
+### Implementation (Milestone 11)
+
+Implemented 2026-06-27 on branch `feature/clinic-onboarding`:
+
+* `ClinicOnboardingService` — transactional clinic + owner + default lab creation
+* `RegisterClinicRequest` — validates clinic and owner fields; rejects `clinic_id`, role, and accounting data
+* Web `/register-clinic` — guest-only POST; logs in owner and redirects to `/configuration`
+* API `POST /api/register-clinic` — returns Sanctum token, clinic, and user (201)
+* Default configuration: one lab (`{CLINIC_CODE}_MAIN_LAB`) only
+* Audit logs: `clinic_created`, `user_created`, `lab_created`, `clinic_registered`
+
+### Notes
+
+Depends on ADR-029 (Accounting Ownership and Isolation).
+
+Post-onboarding business configuration is defined in ADR-031. Platform authentication controls are defined in ADR-032.
 
 ---
 
@@ -2000,15 +1996,17 @@ Clinic Business Configuration
 
 ### Status
 
-Proposed
+Accepted
+
+### Date
+
+2026-06-27
 
 ### Milestone
 
-Milestone 12
+Milestone 12 — Guided Business Configuration
 
----
-
-## Context
+### Context
 
 A newly registered clinic contains only infrastructure:
 
@@ -2016,82 +2014,239 @@ A newly registered clinic contains only infrastructure:
 * Owner
 * Default laboratory
 
-The accounting engine cannot operate until the clinic defines its own business configuration.
+The accounting engine cannot operate until the clinic defines its own business configuration. Each clinic must independently configure its accounting rules without copying Clinic 111.
 
-Each clinic must independently configure its accounting rules.
+### Decision
 
----
+Every clinic owns its business configuration. Business configuration is never shared between clinics. The accounting engine remains identical for every tenant; only configuration differs.
 
-## Decision
-
-Every clinic owns its business configuration.
-
-Business configuration is never shared between clinics.
-
-The accounting engine remains identical for every tenant.
-
-Only the configuration changes.
-
----
-
-## Configuration Modules
-
-Each clinic manages:
+**Configuration modules (per clinic):**
 
 * Doctors
 * Laboratories
 * Treatments
 * Lab Prices
-* Doctor Fixed Fees
-* Currency
-* Timezone
-* Export Profiles (future)
+* Doctor Fixed Fees (conditional)
+* Currency and timezone (set at registration)
 
----
-
-## Configuration Rules
-
-Clinic administrators configure the business.
-
-Developers never edit business rules directly in production.
-
-Configuration changes require no deployment.
-
----
-
-## Guided Setup
-
-After onboarding, the administrator is redirected to a setup checklist.
-
-Suggested order:
+**Guided setup order:**
 
 1. Doctors
 2. Laboratories
 3. Treatments
 4. Lab Prices
-5. Doctor Fixed Fees
-6. Import First Report
+5. Doctor Fixed Fees (when required)
+6. Import first report
 
----
+**Completion rules (dynamic, per clinic):**
 
-## Consequences
+| Module | Required | Complete when |
+|---|---|---|
+| Doctors | Yes | ≥ 1 active doctor |
+| Laboratories | Yes | ≥ 1 active laboratory |
+| Treatments | Yes | ≥ 1 active treatment |
+| Lab Prices | Yes | ≥ 1 active lab price |
+| Doctor Fixed Fees | Conditional | Required only when active no-commission doctors exist; each such doctor needs active fee rules |
+| Import | — | Allowed when all required modules are complete |
 
-Advantages:
+Introduce `ConfigurationProgressService` to calculate progress, missing modules, current step, and `ready_for_import`.
 
-* Self-service onboarding
-* No developer involvement
-* Consistent accounting engine
-* Independent tenant configuration
+Introduce `BusinessConfigurationService` as the facade for dashboard, import guard, and API status.
 
----
+Block import (web and API) when required configuration is missing. Show a friendly message; never crash or allow partial accounting configuration.
 
-## Success Criteria
+Never auto-create doctors, treatments, or prices during onboarding.
 
-A clinic can configure its complete accounting environment without developer assistance.
+### Alternatives Considered
+
+**Copy Clinic 111 as a template** — Rejected. Violates tenant independence; each clinic defines its own rules.
+
+**Manual developer setup after registration** — Rejected. Not self-service; does not scale.
+
+**Static checklist without dynamic detection** — Rejected. Fixed-fee doctors require conditional completion logic.
+
+### Consequences
+
+**Advantages**
+
+* Administrators are guided through setup with visible progress
+* Import is blocked until minimum viable configuration exists
+* Percentage-only clinics complete without fixed-fee configuration
+* No accounting logic changes
+
+**Disadvantages**
+
+* Additional setup steps before the first import
+* Progress UI must stay aligned with completion rules
+
+### Affected Components
+
+**Services:** `ConfigurationProgressService`, `BusinessConfigurationService`, `ConfigurationDashboardService`
+
+**Controllers:** `ConfigurationDashboardController`, `ImportController`, `ConfigurationStatusController` (API)
+
+**Requests:** `ImportDailyReportRequest` (readiness validation)
+
+**UI:** Configuration Dashboard wizard; import page guard
+
+**Tests:** `BusinessConfigurationTest`, `ConfigurationProgressServiceTest`, `BusinessConfigurationServiceTest`
+
+### Related Documentation
+
+* PROJECT_OVERVIEW.md
+* SERVICES.md
+* WORKFLOWS.md
+* API.md
+* DEVELOPMENT_GUIDE.md
+* MULTI_CLINIC_ARCHITECTURE.md
+
+### Implementation (Milestone 12)
+
+Implemented 2026-06-27 on branch `feature/clinic-business-configuration`:
+
+* `ConfigurationProgressService` — dynamic completion rules per clinic
+* `BusinessConfigurationService` — import guard + status facade for UI/API
+* Configuration Dashboard — Business Configuration wizard with progress percentage and next-step links
+* Import page — friendly block when configuration is incomplete
+* `ImportDailyReportRequest` — validates readiness after file validation
+* API `GET /api/admin/configuration/status` — admin-only, non-breaking
+* Tests: `BusinessConfigurationTest`, `ConfigurationProgressServiceTest`, `BusinessConfigurationServiceTest`
+
+### Notes
+
+Onboarding infrastructure (clinic, owner, default lab) remains in ADR-030 only. This ADR covers post-onboarding business configuration and import readiness.
 
 ---
 
 ## ADR-032
+
+### Title
+
+Platform Authentication Security
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-27
+
+### Milestone
+
+Security Hardening (pre–Milestone 13)
+
+### Context
+
+Public clinic registration (`/register-clinic`) and login endpoints are exposed before multi-tenant SaaS launch. The platform must mitigate brute-force attacks, registration abuse, credential stuffing, user enumeration, and weak passwords without changing accounting or business logic.
+
+### Decision
+
+Treat platform authentication security as first-class infrastructure.
+
+**Login protection**
+
+* Laravel `RateLimiter` via `LoginThrottleService`
+* Key: `login|{email}|{ip}`
+* Maximum 5 failed attempts per email + IP
+* 5-minute lockout; successful login clears the counter
+* Generic error: `The provided credentials are invalid.` (never distinguish wrong email vs wrong password vs deactivated account)
+
+**Registration protection**
+
+* Named rate limiter `register-clinic`: maximum 3 POST attempts per minute per IP
+* Duplicate clinic codes and emails rejected with generic messages (no enumeration)
+
+**Password policy**
+
+* `Password::defaults()` in `AppServiceProvider`
+* Minimum 12 characters, uppercase, lowercase, number, special character
+* Applies to registration, admin user create, and password reset
+
+**Session security**
+
+* On login: regenerate session ID (`regenerate(true)`) and CSRF token
+* On logout: invalidate session and regenerate token
+
+**HTTP cookie settings**
+
+* `HttpOnly` enabled
+* `SameSite=lax` (configurable)
+* `Secure` in production via `SESSION_SECURE_COOKIE` / `config/session.php`
+
+**Security audit logging**
+
+* Actions: `login_succeeded`, `login_failed`, `login_lockout`, `clinic_registered`
+* Never log passwords, tokens, or session IDs
+
+**Shared authentication service**
+
+* `AuthenticationService` used by web and API auth controllers
+* Configuration in `config/auth_security.php`
+
+**Out of scope (later milestones):** CAPTCHA, email verification, two-factor authentication, OAuth, subscription, billing.
+
+### Alternatives Considered
+
+**Custom cache-based throttle** — Rejected. Use Laravel `RateLimiter` exclusively.
+
+**Per-IP login limit only** — Rejected. Credential-based throttle (email + IP) reduces collateral lockout while stopping targeted attacks.
+
+**Distinct error messages for wrong email vs wrong password** — Rejected. Enables user enumeration.
+
+### Consequences
+
+**Advantages**
+
+* Reduced brute-force and registration abuse surface
+* Consistent security behavior across web session and API token login
+* Auditable authentication events
+
+**Disadvantages**
+
+* Unknown-email login audit rows currently fall back to legacy clinic for `clinic_id` (see ADR-033)
+* Shared NAT may cause false lockouts with email + IP key alone (see ADR-033)
+
+### Affected Components
+
+**Services:** `LoginThrottleService`, `AuthenticationService`, `AuditLogService`
+
+**Controllers:** `AuthController` (web + API), `ClinicOnboardingController`
+
+**Configuration:** `config/auth_security.php`, `config/session.php`, `AppServiceProvider`
+
+**Requests:** `LoginRequest`, `RegisterClinicRequest`
+
+**Tests:** `AuthenticationSecurityTest`, `LoginThrottleServiceTest`, `PasswordPolicyTest`
+
+### Related Documentation
+
+* PROJECT_OVERVIEW.md
+* SERVICES.md
+* WORKFLOWS.md
+* API.md
+* DEVELOPMENT_GUIDE.md
+
+### Implementation
+
+Implemented 2026-06-27 on branch `feature/security-hardening`:
+
+* `app/Services/Auth/LoginThrottleService.php`
+* `app/Services/Auth/AuthenticationService.php`
+* `app/Support/SecurePassword.php`
+* `config/auth_security.php`
+* Web + API auth controllers delegate to `AuthenticationService`
+* `AppServiceProvider` configures `Password::defaults()` and `register-clinic` rate limiter
+* Audit actions: `LoginSucceeded`, `LoginFailed`, `LoginLockout`, `ClinicRegistered`
+* Tests: `tests/Feature/AuthenticationSecurityTest.php`, `tests/Unit/LoginThrottleServiceTest.php`, `tests/Unit/PasswordPolicyTest.php`
+
+### Notes
+
+Tenant-level security hardening beyond authentication (platform audit context, NAT-aware throttling) is defined in ADR-033.
+
+---
+
+## ADR-033
 
 ### Title
 
@@ -2101,255 +2256,144 @@ Tenant Security
 
 Proposed
 
+### Date
+
+2026-06-27
+
 ### Milestone
 
-Milestone 13
+Milestone 13 — Tenant Security
 
----
+### Context
 
-## Context
+Milestones 06–12 introduced the complete multi-tenant foundation:
 
-The platform now supports public clinic registration.
+* Clinic entity
+* Configuration ownership
+* Accounting ownership
+* `CurrentClinicResolver`
+* Explicit query isolation
+* Accounting isolation
+* Transactional clinic onboarding
+* Business configuration wizard
+* Authentication security
 
-Public access introduces new security risks.
+The platform now supports multiple independent clinics within the same application.
 
-The platform must resist common attacks before public SaaS deployment.
+The next architectural objective is protecting tenant data against malicious users, configuration mistakes, privilege escalation, and future SaaS attacks.
 
----
+Tenant isolation must remain secure even if developers accidentally write incorrect application code.
 
-## Decision
+### Decision
 
-Security becomes a first-class architectural concern.
+Introduce a dedicated **Tenant Security Layer**.
 
-Authentication, authorization and abuse prevention are treated as platform infrastructure.
+Tenant Security is independent from authentication.
 
----
+* **Authentication** answers: Who is the user?
+* **Tenant Security** answers: Is the user allowed to access this tenant?
 
-## Security Areas
+Every authenticated request must satisfy both.
 
-* Login Rate Limiting
-* Registration Rate Limiting
-* Strong Password Policy
-* Email Verification
-* CAPTCHA / Cloudflare Turnstile
-* Session Security
-* CSRF Protection
-* Audit Logging
-* Abuse Detection
-* Secure Cookies
-* HTTPS-only deployment
-* Security Headers
+**Security principles**
 
----
+1. Every authenticated user belongs to exactly one clinic.
+2. `clinic_id` is the root security boundary. No request may cross that boundary.
+3. `clinic_id` is never accepted from HTTP requests. Ownership is resolved internally.
+4. Services never trust client-supplied identifiers. Every resource access must verify ownership.
+5. Every cross-clinic access attempt is treated as unauthorized. Return HTTP 404 instead of revealing resource existence.
+6. Authorization belongs inside the Service Layer. Controllers remain thin.
+7. Background jobs must execute inside an explicit clinic context. Jobs must never guess the tenant.
+8. Every security-relevant action must generate an audit log (login, failed login, lockout, password reset, clinic onboarding, privilege changes, account activation/deactivation).
 
-## Principles
+**Security areas**
 
-Never expose:
+| Area | Scope |
+|---|---|
+| Authentication | Login throttling, registration throttling, password policy, session regeneration, secure cookies (see ADR-032) |
+| Authorization | RBAC, tenant ownership validation, service-layer authorization |
+| Abuse protection | Rate limiting, CAPTCHA / Turnstile, email verification, spam prevention |
+| Audit | Every security event traceable; unknown users use Platform Audit Context |
+| Platform security | Future: CSP, HSTS, trusted proxies, reverse-proxy headers, HTTPS-only, secret rotation |
 
-* Account existence
-* Clinic existence
-* Internal errors
-* Sensitive configuration
+**Platform audit context**
 
-Every authentication action must be auditable.
+Authentication events occurring before tenant resolution must never fall back to Clinic 111.
 
----
+Examples: unknown email, invalid password, registration abuse, password reset request.
 
-## Consequences
+These events belong to the platform itself. Future implementation may introduce `platform` or `platform_id` instead of assigning them to any clinic.
 
-Advantages:
+**Login throttling (future)**
 
-* Reduced attack surface
-* SaaS-ready authentication
-* Better compliance
-* Strong tenant protection
+| | Key |
+|---|---|
+| Current (ADR-032) | `login\|email\|ip` |
+| Target (ADR-033) | `login\|email\|ip\|user-agent` |
 
----
+Reason: users behind the same NAT should not accidentally lock each other out.
 
-## Success Criteria
+### Alternatives Considered
 
-The platform is protected against brute-force attacks, automated registration abuse, credential stuffing and common authentication attacks.
----
+**Global middleware only** — Rejected. Security must remain enforceable inside services.
 
-## Ownership Rules
+**Controller authorization** — Rejected. Business logic becomes duplicated across controllers.
 
-All created records must belong to the newly created clinic.
+**Dedicated tenant security layer** — Accepted. Provides centralized authorization, easy testing, and future SaaS readiness.
 
-The client must never submit:
+### Consequences
 
-* clinic_id
-* clinic_code for ownership override
+**Advantages**
 
-Ownership is assigned internally.
+* Strong tenant isolation
+* Better SaaS security
+* Easier auditing and compliance
+* Predictable authorization
 
----
+**Disadvantages**
 
-## Security Rules
+* More authorization checks
+* More integration tests
+* Slightly more service complexity
 
-Onboarding must not expose existing clinic data.
+### Affected Components
 
-A new clinic owner must only see their own clinic after login.
+**Models:** `User`, `Clinic`
 
-No accounting data may be created during onboarding.
+**Services:** `CurrentClinicResolver`, `AuthenticationService`, authorization services, `AuditLogService`
 
-No existing clinic may be modified during onboarding.
+**Controllers:** All authenticated controllers
 
----
+**Database:** `audit_logs`
 
-## Transaction Rules
+**API:** All authenticated endpoints
 
-The onboarding workflow must be atomic.
+**Tests:** Cross-tenant security tests, authorization tests, abuse tests
 
-Allowed states:
-
-```text
-Everything succeeds
-```
-
-or
-
-```text
-Everything rolls back
-```
-
-Forbidden states:
-
-```text
-Clinic exists without owner
-Owner exists without clinic
-Clinic partially configured
-```
-
----
-
-## Alternatives Considered
-
-### Manual Admin Setup
-
-Rejected.
-
-Requires developer or platform-admin intervention.
-
-Not scalable.
-
----
-
-### Seeder-Based Clinic Creation
-
-Rejected.
-
-Seeders are for development and default bootstrap data, not production tenant creation.
-
----
-
-### Transactional Onboarding Service
-
-Accepted.
-
-Provides consistency, testability, and SaaS readiness.
-
----
-
-## Consequences
-
-### Advantages
-
-* Clinics can onboard without developer intervention.
-* Tenant creation becomes repeatable.
-* No partial tenants.
-* SaaS onboarding becomes possible.
-* Future billing/subscription integration becomes easier.
-
-### Disadvantages
-
-* More validation required.
-* Onboarding service must be carefully tested.
-* Future templates require additional design.
-
----
-
-## Affected Components
-
-### Services
-
-* ClinicOnboardingService
-* ClinicManagementService
-* UserManagementService
-
-### Controllers
-
-* ClinicRegistrationController
-* OnboardingController or RegistrationController
-
-### Requests
-
-* StoreClinicRegistrationRequest
-
-### UI
-
-* Public or protected onboarding form
-* Registration wizard
-* Redirect to Configuration Dashboard
-
-### Tests
-
-* Onboarding success test
-* Rollback test
-* Duplicate clinic code test
-* Duplicate owner email test
-* Owner login test
-* Tenant isolation after onboarding
-
----
-
-## Related Documentation
+### Related Documentation
 
 * PROJECT_OVERVIEW.md
-* DATABASE_SCHEMA.md
-* SERVICES.md
-* WORKFLOWS.md
-* API.md
 * DEVELOPMENT_GUIDE.md
 * MULTI_CLINIC_ARCHITECTURE.md
-
----
-
-## Success Criteria
-
-Milestone 11 is complete only when:
-
-* A new clinic can be created through the onboarding workflow.
-* The first owner/admin user is created automatically.
-* The owner belongs to the new clinic.
-* The owner can log in immediately.
-* The owner sees only their clinic data.
-* No accounting records are created during onboarding.
-* The workflow is fully transactional.
-* Rollback is tested.
-* Cross-clinic isolation remains intact.
-* All tests pass.
-
----
-
-### Implementation (Milestone 11)
-
-Implemented 2026-06-27 on branch `feature/clinic-onboarding`:
-
-* `ClinicOnboardingService` — transactional clinic + owner + default lab creation (ADR-030)
-* `RegisterClinicRequest` — validates clinic and owner fields; rejects `clinic_id`, role, and accounting data
-* Web `/register-clinic` (GET form, POST submit) — guest-only POST; logs in owner and redirects to `/configuration`
-* API `POST /api/register-clinic` — returns Sanctum token, clinic, and user (201)
-* Default configuration: one lab (`{CLINIC_CODE}_MAIN_LAB`) only — no doctors, treatments, prices, or accounting records
-* `ClinicOnboardingTest` + `ClinicOnboardingServiceTest` (313 tests green)
+* SERVICES.md
+* API.md
+* WORKFLOWS.md
 
 ### Notes
 
-Depends on ADR-029 (Accounting Ownership and Isolation).
+**Success criteria — Milestone 13 is complete only when:**
 
-Authentication security hardening (ADR-032) is implemented. Additional tenant isolation hardening should follow before public launch.
+* Cross-tenant access is impossible
+* Platform audit context replaces Clinic 111 fallback
+* Login throttling uses email + IP + user-agent
+* CAPTCHA can be enabled
+* Email verification is supported
+* All security events are auditable
+* All security tests pass
+
+Builds on ADR-028 (Explicit Query Isolation), ADR-029 (Accounting Ownership), and ADR-032 (Platform Authentication Security).
 
 ---
-
 
 # ADR Index
 
@@ -2385,55 +2429,9 @@ Authentication security hardening (ADR-032) is implemented. Additional tenant is
 | ADR-028 | Explicit Query Isolation               | Accepted |
 | ADR-029 | Accounting Ownership and Isolation     | Accepted |
 | ADR-030 | Clinic Onboarding Workflow             | Accepted |
-| ADR-032 | Authentication Security Hardening      | Accepted |
-
----
-
-## ADR-032
-
-### Title
-
-Authentication Security Hardening
-
-### Status
-
-Accepted
-
-### Date
-
-2026-06-27
-
-### Milestone
-
-Pre–Milestone 12 (Security)
-
-### Context
-
-Public clinic registration (`/register-clinic`) and login endpoints are exposed before multi-tenant SaaS launch. The platform must mitigate brute-force attacks, registration abuse, user enumeration, and weak passwords without changing accounting or business logic.
-
-### Decision
-
-- Login: Laravel `RateLimiter` via `LoginThrottleService` — max 5 failed attempts per email + IP, 5-minute lockout; successful login clears counter.
-- Registration: named rate limiter `register-clinic` — max 3 POST attempts per minute per IP.
-- Password policy: `Password::defaults()` — minimum 12 characters, uppercase, lowercase, number, special character.
-- User enumeration: generic credential and duplicate-registration messages only.
-- Sessions: regenerate session ID and CSRF token on login; invalidate session on logout.
-- Security audit: `login_succeeded`, `login_failed`, `login_lockout`, `clinic_registered` — never log passwords, tokens, or session IDs.
-
-### Out of Scope
-
-CAPTCHA, email verification, two-factor authentication, OAuth, subscription, billing.
-
-### Implementation
-
-- `app/Services/Auth/LoginThrottleService.php`
-- `app/Services/Auth/AuthenticationService.php`
-- `config/auth_security.php`
-- Web + API auth controllers delegate to `AuthenticationService`
-- `AppServiceProvider` configures `Password::defaults()` and `register-clinic` rate limiter
-- Tests: `tests/Feature/AuthenticationSecurityTest.php`, `tests/Unit/LoginThrottleServiceTest.php`, `tests/Unit/PasswordPolicyTest.php`
-
-Tenant isolation hardening beyond authentication remains a separate follow-up before public launch.
+| ADR-031 | Clinic Business Configuration          | Accepted |
+| ADR-032 | Platform Authentication Security       | Accepted |
+| ADR-033 | Tenant Security                        | Proposed |
 
 ---
 
@@ -2441,13 +2439,11 @@ Tenant isolation hardening beyond authentication remains a separate follow-up be
 
 The following architectural topics are expected to receive future ADRs.
 
-**ADR-031** — Clinic Business Configuration
+**ADR-034** — Multi-Currency Strategy (Proposed)
 
-**ADR-033** — Multi-Currency Strategy
+**ADR-035** — Subscription & Licensing (Proposed)
 
-**ADR-034** — Subscription & Licensing
-
-**ADR-035** — Public SaaS Platform
+**ADR-036** — Public SaaS Platform (Proposed)
 
 ---
 
@@ -2503,3 +2499,4 @@ Multi-Clinic SaaS Platform
 **Future**
 
 Enterprise Dental Accounting Platform
+

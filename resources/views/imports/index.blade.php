@@ -52,8 +52,25 @@
     </div>
 @endif
 
-<div class="card">
-    <form id="import-form" method="POST" action="{{ route('imports.store') }}" enctype="multipart/form-data">
+@if (isset($canImport) && ! $canImport)
+    <div class="alert alert-error">
+        {{ \App\Services\Configuration\BusinessConfigurationService::INCOMPLETE_MESSAGE }}
+        @if (isset($configurationStatus['current_step']))
+            @php
+                $nextStep = collect($configurationStatus['steps'] ?? [])->firstWhere('key', $configurationStatus['current_step']);
+            @endphp
+            @if ($nextStep)
+                <div style="margin-top:0.75rem;">
+                    <a href="{{ route($nextStep['index_route']) }}" class="btn btn-primary btn-sm">Continue configuration</a>
+                    <a href="{{ route('configuration.dashboard') }}" class="btn btn-ghost btn-sm">View setup progress</a>
+                </div>
+            @endif
+        @endif
+    </div>
+@endif
+
+<div class="card" @if(isset($canImport) && ! $canImport) style="opacity:0.65;" @endif>
+    <form id="import-form" method="POST" action="{{ route('imports.store') }}" enctype="multipart/form-data" data-can-import="{{ ($canImport ?? true) ? '1' : '0' }}">
         @csrf
 
         <div id="dropzone" class="dropzone">
@@ -68,7 +85,7 @@
         </div>
 
         <div class="import-actions" style="margin-top:1.25rem;">
-            <button type="submit" id="submit-btn" class="btn btn-primary" disabled>Import file</button>
+            <button type="submit" id="submit-btn" class="btn btn-primary" @if(isset($canImport) && ! $canImport) disabled @endif>Import file</button>
             <div id="spinner" class="spinner">
                 <span>Importing… this may take a minute for large files.</span>
             </div>
@@ -136,6 +153,7 @@
     const submitBtn = document.getElementById('submit-btn');
     const form = document.getElementById('import-form');
     const spinner = document.getElementById('spinner');
+    const canImport = form.dataset.canImport === '1';
 
     const allowed = ['.xlsx', '.xlsm'];
 
@@ -154,7 +172,7 @@
         fileInput.files = dt.files;
         fileName.textContent = file.name + ' (' + Math.round(file.size / 1024) + ' KB)';
         fileSelected.classList.add('visible');
-        submitBtn.disabled = false;
+        submitBtn.disabled = !canImport;
     }
 
     dropzone.addEventListener('click', () => fileInput.click());

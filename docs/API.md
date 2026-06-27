@@ -1159,6 +1159,31 @@ Web-only — no API endpoint in Milestone 05. Entry point for the Configuration 
 - **Module cards** — Doctors, Laboratories, Treatments, Lab Prices, No-commission fees, Users (total / active / inactive + quick links)
 - **Recent activity** — Latest configuration-related `audit_logs` (date, user, action, target)
 - **Configuration health** — Read-only warnings (e.g. no active labs, missing fee rules); never auto-modifies data
+- **Business configuration wizard** — Progress percentage, step checklist, next-step links, ready-for-import indicator (ADR-031)
+
+### GET /api/admin/configuration/status
+
+**Purpose:** Return business-configuration progress for the authenticated clinic.
+
+**Role:** admin
+
+**Response `200`:**
+
+```json
+{
+  "data": {
+    "progress_percentage": 75,
+    "ready_for_import": false,
+    "missing_modules": ["lab_prices"],
+    "current_step": "lab_prices",
+    "steps": [
+      { "key": "doctors", "label": "Doctors", "completed": true, "required": true }
+    ]
+  }
+}
+```
+
+**Import guard:** `POST /imports` and `POST /api/daily-reports/import` return a validation error when required configuration is missing.
 
 ---
 
@@ -1166,6 +1191,7 @@ Web-only — no API endpoint in Milestone 05. Entry point for the Configuration 
 
 **Updated — 2026-06-27**
 
+- Business configuration status API `GET /api/admin/configuration/status` (Milestone 12, ADR-031)
 - Clinic onboarding API `POST /api/register-clinic` (Milestone 11, ADR-030)
 - Web onboarding route `GET/POST /register-clinic`
 

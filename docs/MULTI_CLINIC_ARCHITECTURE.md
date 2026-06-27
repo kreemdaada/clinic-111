@@ -707,6 +707,7 @@ Multi-Clinic is complete only when:
 * Admin screens are clinic-scoped
 * Cross-clinic leakage tests exist
 * Clinic registration works
+* Guided business configuration blocks import until ready (ADR-031)
 * Clinic 111 reports remain unchanged
 * Documentation is updated
 * ADRs are complete
@@ -728,3 +729,20 @@ php artisan test
 ```
 
 and all tests green.
+
+---
+
+# 29. Guided Business Configuration (ADR-031)
+
+After onboarding, each clinic administrator configures business rules independently:
+
+| Step | Required | Completion rule |
+|---|---|---|
+| Doctors | Yes | ≥ 1 active doctor |
+| Laboratories | Yes | ≥ 1 active lab (default lab from onboarding satisfies this) |
+| Treatments | Yes | ≥ 1 active treatment |
+| Lab Prices | Yes | ≥ 1 active lab price |
+| Doctor Fixed Fees | Conditional | Required only when active no-commission doctors exist |
+| Import | — | Allowed when all required steps are complete |
+
+Nothing is copied from Clinic 111. Import is blocked until the checklist passes.

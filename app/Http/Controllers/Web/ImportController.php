@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DailyReports\ImportDailyReportRequest;
 use App\Models\DailyReport;
+use App\Services\Configuration\BusinessConfigurationService;
 use App\Services\DailyReport\DailyReportQueryService;
 use App\Services\Export\DoctorsIncomeExcelExportService;
 use App\Services\Import\DailyReportImportService;
@@ -29,6 +30,7 @@ class ImportController extends Controller
         private readonly DailyReportImportService $importService,
         private readonly DoctorsIncomeExcelExportService $incomeExporter,
         private readonly DailyReportQueryService $dailyReportQueryService,
+        private readonly BusinessConfigurationService $businessConfigurationService,
     ) {}
 
     /**
@@ -39,9 +41,12 @@ class ImportController extends Controller
     public function index(): View
     {
         $recentReports = $this->dailyReportQueryService->listRecent(10);
+        $configurationStatus = $this->businessConfigurationService->status();
 
         return view('imports.index', [
             'recentReports' => $recentReports,
+            'configurationStatus' => $configurationStatus,
+            'canImport' => $configurationStatus['ready_for_import'],
         ]);
     }
 

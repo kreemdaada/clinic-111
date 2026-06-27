@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\ConfigurationStatusController;
 use App\Http\Controllers\Api\ClinicAdminController;
 use App\Http\Controllers\Api\ClinicOnboardingController;
 use App\Http\Controllers\Api\AuthController;
@@ -20,6 +21,10 @@ Route::post('/register-clinic', [ClinicOnboardingController::class, 'store'])
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    Route::middleware('role:admin')->group(function () {
+        Route::get('/admin/configuration/status', [ConfigurationStatusController::class, 'show']);
+    });
 
     Route::middleware('role:admin,accountant,viewer')->group(function () {
         Route::get('/doctors', [ReferenceDataController::class, 'doctors']);
