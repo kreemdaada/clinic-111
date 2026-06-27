@@ -12,6 +12,7 @@ class IncomeSheetColumnMapTest extends TestCase
         parent::setUp();
 
         $this->seedAccountingData();
+        $this->authenticateAdmin();
     }
 
     public function test_puriya_has_lab_treatment_columns(): void

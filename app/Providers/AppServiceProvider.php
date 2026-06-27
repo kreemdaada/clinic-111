@@ -2,7 +2,13 @@
 
 namespace App\Providers;
 
+use App\View\Composers\ClinicContextComposer;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
 
 /**
  * Application-wide service provider for container bindings and bootstrapping.
@@ -28,6 +34,31 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Password::defaults(function () {
+            return Password::min(12)
+                ->mixedCase()
+                ->numbers()
+                ->symbols();
+        });
+
+        RateLimiter::for('register-clinic', function (Request $request) {
+            return Limit::perMinute(
+                (int) config('auth_security.registration.max_attempts', 3)
+            )->by($request->ip());
+        });
+
+        View::composer([
+            'layouts.app',
+            'logs.*',
+            'daily-reports.*',
+            'imports.*',
+            'configuration.dashboard',
+            'lab-prices.*',
+            'doctor-fixed-fees.*',
+            'doctors.*',
+            'labs.*',
+            'treatments.*',
+            'clinics.*',
+        ], ClinicContextComposer::class);
     }
 }

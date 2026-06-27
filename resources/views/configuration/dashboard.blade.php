@@ -140,7 +140,12 @@
 @section('content')
 <div class="cfg-intro">
     <h1 class="page-title">Configuration</h1>
-    <p class="page-subtitle">Central dashboard for doctors, laboratories, treatments, prices, fee rules, and users. Accounting engine is unchanged — configuration only.</p>
+    <p class="page-subtitle">
+        Central dashboard for doctors, laboratories, treatments, prices, fee rules, and users.
+        @isset($currentClinic)
+        <strong>{{ $currentClinic->name }}</strong> · base currency <strong>{{ $clinicCurrency }}</strong>.
+        @endisset
+    </p>
 </div>
 
 <div class="cfg-grid">

@@ -109,7 +109,7 @@ class LabPriceManagementService
                 'treatment_id' => $data['treatment_id'],
                 'doctor_id' => $doctorId,
                 'unit_cost' => $data['unit_cost'],
-                'currency' => strtoupper($data['currency'] ?? 'AED'),
+                'currency' => strtoupper($data['currency'] ?? $this->currentClinicResolver->resolve()->currency ?? 'AED'),
                 'valid_from' => $validFrom,
                 'valid_to' => $validTo,
             ]);

@@ -31,7 +31,8 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
 
-    Route::post('/register-clinic', [ClinicOnboardingController::class, 'store'])->name('register-clinic.store');
+    Route::post('/register-clinic', [ClinicOnboardingController::class, 'store'])->name('register-clinic.store')
+        ->middleware('throttle:register-clinic');
 });
 
 Route::middleware('auth')->group(function () {

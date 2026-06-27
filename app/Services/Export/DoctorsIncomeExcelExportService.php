@@ -3,6 +3,7 @@
 namespace App\Services\Export;
 
 use App\Enums\CommissionType;
+use App\Models\Clinic;
 use App\Models\DailyReport;
 use App\Models\DailyWorkRow;
 use App\Models\Doctor;
@@ -13,6 +14,7 @@ use App\Services\Accounting\WaelFixedFeeCalculator;
 use App\Services\Configuration\CurrentClinicResolver;
 use App\Support\ClinicCurrencySupport;
 use App\Support\DoctorLabelNormalizer;
+use App\Support\IncomeExportStandardLayout;
 use App\Support\MoneyCalculator;
 use App\Support\ReportMonthResolver;
 use Carbon\Carbon;
@@ -50,6 +52,7 @@ class DoctorsIncomeExcelExportService
         private readonly WaelFixedFeeCalculator $waelFixedFeeCalculator,
         private readonly CurrentClinicResolver $currentClinicResolver,
         private readonly PaymentCalculationService $paymentCalculationService,
+        private readonly DoctorIncomeExportProfileProvisioner $exportProfileProvisioner,
         private readonly string $defaultUsdExchangeRate = '3.65',
     ) {}
 
@@ -105,9 +108,8 @@ class DoctorsIncomeExcelExportService
         }
 
         $spreadsheet = IOFactory::load($templatePath);
-        $clinicCurrency = ClinicCurrencySupport::normalize(
-            $this->currentClinicResolver->resolve()->currency ?? 'AED',
-        );
+        $clinic = $this->currentClinicResolver->resolve();
+        $clinicCurrency = ClinicCurrencySupport::baseCurrency($clinic);
 
         $workRowsQuery = $this->forCurrentClinic(DailyWorkRow::class)
             ->with(['doctor', 'workItems.treatment', 'workItems.labJob']);
@@ -134,7 +136,13 @@ class DoctorsIncomeExcelExportService
             $profile = $this->resolveExportProfile($doctor);
 
             if ($profile === null) {
-                $profile = $this->buildFallbackProfile($doctor, $doctorRows);
+                $this->exportProfileProvisioner->ensureForDoctor($doctor);
+                $this->exportProfileService->forgetCachedProfiles();
+                $profile = $this->resolveExportProfile($doctor);
+            }
+
+            if ($profile === null) {
+                continue;
             }
 
             $sheetName = $profile['sheet_name'];
@@ -150,7 +158,7 @@ class DoctorsIncomeExcelExportService
                     $doctorRows,
                     $monthStart,
                     $monthEnd,
-                    $clinicCurrency,
+                    $clinic,
                 );
             }
 
@@ -218,8 +226,9 @@ class DoctorsIncomeExcelExportService
         Collection $doctorRows,
         Carbon $monthStart,
         Carbon $monthEnd,
-        string $clinicCurrency,
+        Clinic $clinic,
     ): void {
+        $clinicCurrency = ClinicCurrencySupport::baseCurrency($clinic);
         $daysInMonth = (int) $monthStart->daysInMonth;
         $firstDayRow = (int) $profile['first_day_row'];
         $lastDayRow = $firstDayRow + $daysInMonth - 1;
@@ -227,7 +236,7 @@ class DoctorsIncomeExcelExportService
         $clearToColumn = $this->resolveClearToColumn($profile);
 
         $this->clearDataArea($sheet, $firstDayRow, $totalRow + 12, $clearToColumn);
-        $this->writeStandardHeaders($sheet, $profile, $clinicCurrency);
+        $this->writeStandardHeaders($sheet, $profile, $clinic);
 
         $paymentsOnly = ($profile['treatment_columns'] ?? []) === [];
         /** @var array<string, string> $treatmentColumns */
@@ -235,7 +244,7 @@ class DoctorsIncomeExcelExportService
         $dailyData = $this->aggregateStandardDailyData(
             $doctorRows,
             $monthStart,
-            $clinicCurrency,
+            $clinic,
             $paymentsOnly,
             array_keys($treatmentColumns),
         );
@@ -329,7 +338,7 @@ class DoctorsIncomeExcelExportService
             $columnTotals,
             $labCostTotal,
             $doctor,
-            $clinicCurrency,
+            $clinic,
         );
     }
 
@@ -346,9 +355,10 @@ class DoctorsIncomeExcelExportService
         array $columnTotals,
         string $labCostTotal,
         Doctor $doctor,
-        string $clinicCurrency,
+        Clinic $clinic,
     ): void {
-        $isLegacyAed = ClinicCurrencySupport::isLegacyAedClinic($clinicCurrency);
+        $clinicCurrency = ClinicCurrencySupport::baseCurrency($clinic);
+        $isLegacyAed = ClinicCurrencySupport::usesLegacyPaymentLayout($clinic);
         $foreignCurrency = ClinicCurrencySupport::foreignCashCurrency($clinicCurrency);
         $primaryLabel = $isLegacyAed ? 'DHS' : $clinicCurrency;
         $foreignLabel = $isLegacyAed
@@ -605,13 +615,14 @@ class DoctorsIncomeExcelExportService
     private function aggregateStandardDailyData(
         Collection $doctorRows,
         Carbon $monthStart,
-        string $clinicCurrency,
+        Clinic $clinic,
         bool $paymentsOnly = false,
         array $treatmentColumnCodes = [],
     ): array {
         /** @var array<string, array<string, mixed>> $daily */
         $daily = [];
-        $isLegacyAed = ClinicCurrencySupport::isLegacyAedClinic($clinicCurrency);
+        $clinicCurrency = ClinicCurrencySupport::baseCurrency($clinic);
+        $isLegacyAed = ClinicCurrencySupport::usesLegacyPaymentLayout($clinic);
 
         foreach ($doctorRows as $workRow) {
             $sheetDay = null;
@@ -649,7 +660,7 @@ class DoctorsIncomeExcelExportService
                 $daily[$dateKey]['total'] = MoneyCalculator::add($daily[$dateKey]['total'], (string) $workRow->paid_total_aed);
             } else {
                 $paymentTotals = $this->paymentCalculationService->calculateTotalCollected(
-                    $clinicCurrency,
+                    $clinic,
                     (string) $workRow->dhs_amount,
                     (string) $workRow->usd_amount,
                     (string) $workRow->visa_amount,
@@ -821,7 +832,7 @@ class DoctorsIncomeExcelExportService
      * @param  Worksheet  $sheet  Target worksheet.
      * @param  array<string, mixed>  $profile  Export profile with header flags.
      */
-    private function writeStandardHeaders(Worksheet $sheet, array $profile, string $clinicCurrency): void
+    private function writeStandardHeaders(Worksheet $sheet, array $profile, Clinic $clinic): void
     {
         if ($profile['first_day_row'] > 2) {
             $sheet->setCellValue('A' . ($profile['first_day_row'] - 1), 'Date');
@@ -831,7 +842,8 @@ class DoctorsIncomeExcelExportService
             return;
         }
 
-        $isLegacyAed = ClinicCurrencySupport::isLegacyAedClinic($clinicCurrency);
+        $clinicCurrency = ClinicCurrencySupport::baseCurrency($clinic);
+        $isLegacyAed = ClinicCurrencySupport::usesLegacyPaymentLayout($clinic);
         $foreignCurrency = ClinicCurrencySupport::foreignCashCurrency($clinicCurrency);
         $primaryLabel = $isLegacyAed ? 'DHS' : $clinicCurrency;
         $foreignLabel = $isLegacyAed
@@ -852,17 +864,7 @@ class DoctorsIncomeExcelExportService
             $sheet->setCellValue('G1', 'visa');
             $sheet->setCellValue('H1', 'DAILY TOTAL');
             $sheet->setCellValue('I1', 'JOB');
-            $sheet->setCellValue('J1', 'M/C-CR');
-            $sheet->setCellValue('K1', 'ZIR-CR');
-            $sheet->setCellValue('L1', 'IMPL-CR');
-            $sheet->setCellValue('M1', 'IMPL-ZIR');
-            $sheet->setCellValue('N1', 'VENEER');
-            $sheet->setCellValue('O1', 'REIMPL');
-            $sheet->setCellValue('P1', 'IMPL');
-            $sheet->setCellValue('Q1', 'REPEAR');
-            $sheet->setCellValue('R1', 'POST');
-            $sheet->setCellValue('S1', 'ABT');
-            $sheet->setCellValue('T1', 'REMOVABLE');
+            $this->writeTreatmentColumnHeaders($sheet, $profile);
 
             return;
         }
@@ -872,19 +874,21 @@ class DoctorsIncomeExcelExportService
         $sheet->setCellValue('E1', 'VISA');
         $sheet->setCellValue('F1', 'DAILY TOTAL');
         $sheet->setCellValue('G1', 'JOB');
-        $sheet->setCellValue('H1', 'M/C-CR');
-        $sheet->setCellValue('I1', 'ZIR-CR');
-        $sheet->setCellValue('J1', 'IMPL-CR');
-        $sheet->setCellValue('K1', 'IMPL-ZIR');
-        $sheet->setCellValue('L1', 'VENEER');
-        $sheet->setCellValue('M1', 'REIMPL');
-        $sheet->setCellValue('N1', 'IMPL');
-        $sheet->setCellValue('O1', 'REPEAR');
-        $sheet->setCellValue('P1', 'POST');
-        $sheet->setCellValue('Q1', 'ABT');
-        $sheet->setCellValue('R1', 'REMOVABLE');
-        $sheet->setCellValue('S1', 'PARTIAL');
-        $sheet->setCellValue('T1', 'BLEACHING');
+
+        $this->writeTreatmentColumnHeaders($sheet, $profile);
+    }
+
+    /**
+     * @param  array<string, mixed>  $profile
+     */
+    private function writeTreatmentColumnHeaders(Worksheet $sheet, array $profile): void
+    {
+        foreach ($profile['treatment_columns'] ?? [] as $code => $column) {
+            $sheet->setCellValue(
+                $column . '1',
+                IncomeExportStandardLayout::treatmentHeaderLabel((string) $code),
+            );
+        }
     }
 
     /**
@@ -955,62 +959,6 @@ class DoctorsIncomeExcelExportService
     private function resolveExportProfile(Doctor $doctor): ?array
     {
         return $this->exportProfileService->resolveForDoctor($doctor);
-    }
-
-    /**
-     * @param  Collection<int, DailyWorkRow>  $doctorRows
-     * @return array<string, mixed>
-     */
-    private function buildFallbackProfile(Doctor $doctor, Collection $doctorRows): array
-    {
-        $treatmentColumns = [];
-        $columnIndex = 0;
-        $columnLetters = array_merge(range('H', 'Z'), ['AA', 'AB', 'AC', 'AD']);
-
-        foreach ($doctorRows as $workRow) {
-            foreach ($workRow->workItems as $workItem) {
-                $code = strtoupper(trim($workItem->treatment->code));
-
-                if ($code === '' || array_key_exists($code, $treatmentColumns)) {
-                    continue;
-                }
-
-                if (! array_key_exists($columnIndex, $columnLetters)) {
-                    break;
-                }
-
-                $treatmentColumns[$code] = $columnLetters[$columnIndex];
-                $columnIndex++;
-            }
-        }
-
-        return [
-            'sheet_name' => $this->fallbackSheetName($doctor),
-            'layout' => 'standard',
-            'first_day_row' => 3,
-            'write_payment_headers' => true,
-            'summary_shows_net_total' => true,
-            'payment_columns' => [
-                'dhs' => 'B',
-                'usd' => 'C',
-                'usd_to_aed' => 'D',
-                'visa' => 'E',
-                'total' => 'F',
-                'job' => 'G',
-            ],
-            'treatment_columns' => $treatmentColumns,
-        ];
-    }
-
-    private function fallbackSheetName(Doctor $doctor): string
-    {
-        $label = trim($doctor->name);
-
-        if ($label === '') {
-            $label = trim($doctor->code);
-        }
-
-        return 'Dr. ' . $label;
     }
 
     private function ensureDoctorSheet(Spreadsheet $spreadsheet, string $sheetName): Worksheet

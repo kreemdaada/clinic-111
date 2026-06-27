@@ -59,6 +59,8 @@ class ClinicOnboardingService
 
             $this->auditLogService->logUserCreated($owner);
 
+            $this->auditLogService->logClinicRegistered($clinic, $owner);
+
             $defaultLab = $this->createDefaultLab($clinic);
 
             return [

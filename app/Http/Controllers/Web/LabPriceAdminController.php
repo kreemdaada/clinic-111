@@ -10,6 +10,7 @@ use App\Models\LabPrice;
 use App\Services\Accounting\LabManagementService;
 use App\Services\Accounting\LabPriceManagementService;
 use App\Services\Accounting\TreatmentManagementService;
+use App\Services\Configuration\CurrentClinicResolver;
 use App\Services\DailyReport\DoctorManagementService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,6 +28,7 @@ class LabPriceAdminController extends Controller
         private readonly LabManagementService $labManagementService,
         private readonly TreatmentManagementService $treatmentManagementService,
         private readonly DoctorManagementService $doctorManagementService,
+        private readonly CurrentClinicResolver $currentClinicResolver,
     ) {}
 
     public function index(ListLabPricesRequest $request): View
@@ -58,6 +60,7 @@ class LabPriceAdminController extends Controller
             'doctorFilter' => $doctorFilter,
             'status' => $status,
             'currency' => $currency,
+            'clinicCurrency' => $this->currentClinicResolver->resolve()->currency,
         ]);
     }
 

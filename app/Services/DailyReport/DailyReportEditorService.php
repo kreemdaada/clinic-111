@@ -20,6 +20,7 @@ use App\Services\Audit\AuditLogService;
 use App\Services\Configuration\CurrentClinicResolver;
 use App\Services\Import\DailyReportImportService;
 use App\Support\AccountingScopedQuery;
+use App\Support\ClinicCurrencySupport;
 use App\Support\MoneyCalculator;
 use App\Support\TreatmentTextBuilder;
 use Carbon\Carbon;
@@ -103,9 +104,10 @@ class DailyReportEditorService
         $usd = $this->decimal($payload['usd_amount'] ?? '0');
         $visa = $this->decimal($payload['visa_amount'] ?? '0');
 
-        $clinicCurrency = $this->currentClinicResolver->resolve()->currency;
+        $clinic = $this->currentClinicResolver->resolve();
+        $clinicCurrency = ClinicCurrencySupport::baseCurrency($clinic);
         $paymentTotals = $this->paymentCalculationService->calculateTotalCollected(
-            $clinicCurrency,
+            $clinic,
             $dhs,
             $usd,
             $visa,
@@ -247,9 +249,10 @@ class DailyReportEditorService
         $usd = $this->decimal($usd);
         $visa = $this->decimal($visa);
 
-        $clinicCurrency = $this->currentClinicResolver->resolve()->currency;
+        $clinic = $this->currentClinicResolver->resolve();
+        $clinicCurrency = ClinicCurrencySupport::baseCurrency($clinic);
         $paymentTotals = $this->paymentCalculationService->calculateTotalCollected(
-            $clinicCurrency,
+            $clinic,
             $dhs,
             $usd,
             $visa,
@@ -341,7 +344,7 @@ class DailyReportEditorService
                 continue;
             }
 
-            $unitInClinicCurrency = MoneyCalculator::convertBetween(
+            $unitInClinicCurrency = ClinicCurrencySupport::toClinicCurrency(
                 (string) $resolved['price']->unit_cost,
                 $resolved['price']->currency,
                 $clinicCurrency,

@@ -66,9 +66,9 @@ class IncomeReconciliationService
     {
         $issues = [];
         $dailyWorkRow->loadMissing('clinic');
-        $clinicCurrency = ClinicCurrencySupport::normalize($dailyWorkRow->clinic?->currency ?? 'AED');
+        $clinic = $dailyWorkRow->clinic ?? abort(404);
         $expectedTotals = $this->paymentCalculationService->calculateTotalCollected(
-            $clinicCurrency,
+            $clinic,
             (string) $dailyWorkRow->dhs_amount,
             (string) $dailyWorkRow->usd_amount,
             (string) $dailyWorkRow->visa_amount,

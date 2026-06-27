@@ -387,6 +387,18 @@ Every admin operation must be authorized.
 
 Every important financial modification must create an Audit Log.
 
+Authentication endpoints must use generic error messages — never reveal whether an email, account, or clinic exists.
+
+Login brute-force protection uses Laravel `RateLimiter` (`LoginThrottleService`) — max 5 failed attempts, 5-minute lockout.
+
+Public registration is rate-limited to 3 attempts per minute per IP.
+
+New passwords (registration, admin user create, password reset) must satisfy `Password::defaults()` — minimum 12 characters with mixed case, number, and symbol.
+
+Session cookies must be `HttpOnly`, `SameSite=lax` (or `strict`), and `Secure` in production (`SESSION_SECURE_COOKIE` / `config/session.php`).
+
+Security events (`login_succeeded`, `login_failed`, `login_lockout`, `clinic_registered`) are audit-logged. Never log passwords, tokens, or session IDs.
+
 ---
 
 # Naming Rules

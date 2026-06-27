@@ -780,9 +780,11 @@ $issueSummary[$severity]++;
                     <tr>
                         <th>Day</th>
                         <th>Row in file</th>
-                        <th>DHS</th>
-                        <th>USD</th>
-                        <th>Visa</th>
+                        <th>{{ $primaryCashLabel ?? 'Cash' }}</th>
+                        @if ($foreignCashCurrency)
+                        <th>{{ $foreignCashCurrency }}</th>
+                        @endif
+                        <th>Visa ({{ $clinicCurrency ?? 'AED' }})</th>
                         <th>TOTAL</th>
                         <th>Treatment</th>
                     </tr>
@@ -796,7 +798,9 @@ $issueSummary[$severity]++;
                         <td><strong>{{ $row['sheet_day'] ?? '—' }}</strong></td>
                         <td>{{ $row['excel_row'] ?? '—' }}</td>
                         <td>{{ $row['dhs_aed'] ?? '0.00' }}</td>
+                        @if ($foreignCashCurrency)
                         <td>{{ $row['usd'] ?? '0.00' }}</td>
+                        @endif
                         <td>{{ $row['visa_aed'] ?? '0.00' }}</td>
                         <td><strong>{{ $total }}</strong></td>
                         <td class="extraction-treatment-text">{{ $row['treatment_text'] ?? '—' }}</td>
@@ -826,8 +830,8 @@ $issueSummary[$severity]++;
                     <th>Imported days</th>
                     <th>Skipped rows</th>
                     <th>Unresolved</th>
-                    <th>Total paid (AED)</th>
-                    <th>Total lab cost (AED)</th>
+                    <th>Total paid ({{ $clinicCurrency ?? 'AED' }})</th>
+                    <th>Total lab cost ({{ $clinicCurrency ?? 'AED' }})</th>
                     <th>Issues</th>
                 </tr>
             </thead>
@@ -841,8 +845,8 @@ $issueSummary[$severity]++;
                     <td>{{ $totals['day_count'] ?? 0 }}</td>
                     <td>{{ $totals['skipped_rows_on_sheet'] ?? 0 }}</td>
                     <td>{{ $totals['unresolved_rows'] ?? 0 }}</td>
-                    <td>{{ $totals['paid_total_aed'] ?? '0.00' }}</td>
-                    <td>{{ $totals['lab_total_aed'] ?? '0.00' }}</td>
+                    <td>{{ $totals['paid_total'] ?? $totals['paid_total_aed'] ?? '0.00' }}</td>
+                    <td>{{ $totals['lab_total'] ?? $totals['lab_total_aed'] ?? '0.00' }}</td>
                     <td>{{ $totals['issue_count'] ?? 0 }}</td>
                 </tr>
                 @empty
@@ -896,8 +900,8 @@ $rows = $importedByDoctor[$doctorCode] ?? [];
                 <div class="extraction-row-head-main">
                     <span class="extraction-row-day">Day {{ $row['sheet_day'] ?? '—' }}</span>
                     <div class="extraction-row-amounts">
-                        <span class="extraction-row-amount">Paid <strong>{{ $row['paid_total_aed'] ?? '0.00' }}</strong> AED</span>
-                        <span class="extraction-row-amount">Lab <strong>{{ $row['lab_total_aed'] ?? '0.00' }}</strong> AED</span>
+                        <span class="extraction-row-amount">Paid <strong>{{ $row['display_paid_total'] ?? $row['paid_total_aed'] ?? '0.00' }}</strong> {{ $clinicCurrency ?? 'AED' }}</span>
+                        <span class="extraction-row-amount">Lab <strong>{{ $row['display_lab_total'] ?? $row['lab_total_aed'] ?? '0.00' }}</strong> {{ $clinicCurrency ?? 'AED' }}</span>
                     </div>
                     <div class="extraction-row-badges">
                         @if ($issueCount > 0)
@@ -917,10 +921,14 @@ $rows = $importedByDoctor[$doctorCode] ?? [];
                 <div>
                     <div class="extraction-entry-block-title">Patient payment</div>
                     <div class="extraction-entry-lines">
-                        <div>Cash (AED): {{ $row['dhs_aed'] ?? '0.00' }}</div>
-                        <div>Cash (USD): {{ $row['usd'] ?? '0.00' }} <span class="extraction-entry-line-muted">(→ {{ $row['usd_to_aed'] ?? '0.00' }} AED)</span></div>
-                        <div>Card (Visa): {{ $row['visa_aed'] ?? '0.00' }}</div>
-                        <div class="extraction-entry-total">Total paid: {{ $row['paid_total_aed'] ?? '0.00' }} AED</div>
+                        <div>Cash ({{ $primaryCashLabel ?? $clinicCurrency ?? 'AED' }}): {{ $row['display_primary_cash'] ?? $row['dhs_aed'] ?? '0.00' }}</div>
+                        @if ($foreignCashCurrency)
+                        <div>Cash ({{ $row['display_foreign_currency'] ?? $foreignCashCurrency }}): {{ $row['display_foreign_cash'] ?? $row['usd'] ?? '0.00' }}
+                            <span class="extraction-entry-line-muted">(→ {{ $row['display_foreign_in_clinic'] ?? $row['usd_to_aed'] ?? '0.00' }} {{ $clinicCurrency ?? 'AED' }})</span>
+                        </div>
+                        @endif
+                        <div>Card (Visa, {{ $clinicCurrency ?? 'AED' }}): {{ $row['display_visa'] ?? $row['visa_aed'] ?? '0.00' }}</div>
+                        <div class="extraction-entry-total">Total paid: {{ $row['display_paid_total'] ?? $row['paid_total_aed'] ?? '0.00' }} {{ $clinicCurrency ?? 'AED' }}</div>
                     </div>
                     @if ($diag && ! ($diag['payments']['payment_ok'] ?? true))
                     <p class="extraction-issue-line extraction-issue-line--error" style="margin:0.5rem 0 0;">
@@ -935,11 +943,11 @@ $rows = $importedByDoctor[$doctorCode] ?? [];
                         @foreach ($diag['job']['lines'] as $jobLine)
                         <div>
                             {{ $jobLine['code'] }} × {{ $jobLine['quantity'] }}
-                            @ {{ $jobLine['unit_cost_aed'] }} AED
-                            = <strong>{{ $jobLine['line_total_aed'] }} AED</strong>
+                            @ {{ $jobLine['display_unit_cost'] ?? $jobLine['unit_cost_aed'] }} {{ $clinicCurrency ?? 'AED' }}
+                            = <strong>{{ $jobLine['display_line_total'] ?? $jobLine['line_total_aed'] }} {{ $clinicCurrency ?? 'AED' }}</strong>
                         </div>
                         @endforeach
-                        <div class="extraction-entry-total">Total lab: {{ $diag['job']['total_aed'] ?? '0.00' }} AED</div>
+                        <div class="extraction-entry-total">Total lab: {{ $diag['job']['display_total'] ?? $diag['job']['total_aed'] ?? '0.00' }} {{ $clinicCurrency ?? 'AED' }}</div>
                     </div>
                     @else
                     <p class="extraction-empty-note" style="margin:0;">No lab costs for this treatment.</p>

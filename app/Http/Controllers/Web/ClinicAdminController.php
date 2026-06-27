@@ -8,6 +8,7 @@ use App\Http\Requests\Clinics\StoreClinicRequest;
 use App\Http\Requests\Clinics\UpdateClinicRequest;
 use App\Models\Clinic;
 use App\Services\Configuration\ClinicManagementService;
+use App\Support\ClinicRegistrationOptions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -38,6 +39,7 @@ class ClinicAdminController extends Controller
             'clinics' => $clinics,
             'search' => $search,
             'status' => $status,
+            'currencies' => ClinicRegistrationOptions::currencies(),
         ]);
     }
 

@@ -4,10 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
-use App\Models\User;
+use App\Services\Auth\AuthenticationService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 
 /**
  * Sanctum token authentication for the REST API.
@@ -16,31 +14,19 @@ use Illuminate\Validation\ValidationException;
  */
 class AuthController extends Controller
 {
+    public function __construct(
+        private readonly AuthenticationService $authenticationService,
+    ) {}
+
     /**
      * Authenticate credentials and return a Bearer API token.
      *
      * @param  LoginRequest  $request  Validated email + password.
      * @return JsonResponse `{ token, user: { id, name, email, role } }`
-     *
-     * @throws ValidationException When email/password do not match.
      */
     public function login(LoginRequest $request): JsonResponse
     {
-        $credentials = $request->validated();
-
-        $user = User::query()->where('email', $credentials['email'])->first();
-
-        if ($user === null || ! Hash::check($credentials['password'], $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
-            ]);
-        }
-
-        if (! $user->is_active) {
-            throw ValidationException::withMessages([
-                'email' => ['This account has been deactivated.'],
-            ]);
-        }
+        $user = $this->authenticationService->authenticate($request->validated(), $request);
 
         $token = $user->createToken('api-token')->plainTextToken;
 

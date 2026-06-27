@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Models\Clinic;
 use App\Services\Accounting\PaymentCalculationService;
 use Tests\TestCase;
 
@@ -44,8 +45,18 @@ class PaymentCalculationServiceTest extends TestCase
 
     public function test_usd_clinic_collects_primary_payments_in_usd(): void
     {
+        $clinic = Clinic::query()->create([
+            'name' => 'Syria Clinic',
+            'code' => 'SYRIA_USD',
+            'currency' => 'USD',
+            'timezone' => 'Asia/Damascus',
+            'country' => 'Syria',
+        ]);
+        $clinic->is_active = true;
+        $clinic->save();
+
         $result = $this->paymentCalculationService->calculateTotalCollected(
-            clinicCurrency: 'USD',
+            $clinic,
             dhsAmount: '1000.00',
             usdAmount: '0.00',
             visaAmount: '200.00',
@@ -56,5 +67,49 @@ class PaymentCalculationServiceTest extends TestCase
         $this->assertSame('1275.00', $result['paid_total']);
         $this->assertSame('USD', $result['currency']);
         $this->assertSame('4653.75', $result['paid_total_aed']);
+    }
+
+    public function test_new_aed_clinic_uses_base_currency_model_not_clinic_111_legacy(): void
+    {
+        $clinic = Clinic::query()->create([
+            'name' => 'Dubai Branch',
+            'code' => 'DUBAI_AED',
+            'currency' => 'AED',
+            'timezone' => 'Asia/Dubai',
+            'country' => 'UAE',
+        ]);
+        $clinic->is_active = true;
+        $clinic->save();
+
+        $this->assertFalse(\App\Support\ClinicCurrencySupport::usesLegacyPaymentLayout($clinic));
+
+        $result = $this->paymentCalculationService->calculateTotalCollected(
+            $clinic,
+            dhsAmount: '100.00',
+            usdAmount: '10.00',
+            visaAmount: '50.00',
+        );
+
+        $this->assertSame('AED', $result['currency']);
+        $this->assertSame('186.50', $result['paid_total']);
+        $this->assertSame('186.50', $result['paid_total_aed']);
+    }
+
+    public function test_clinic_111_keeps_legacy_payment_layout(): void
+    {
+        $this->seedAccountingData();
+        $clinic = $this->clinic111();
+
+        $this->assertTrue(\App\Support\ClinicCurrencySupport::usesLegacyPaymentLayout($clinic));
+
+        $result = $this->paymentCalculationService->calculateTotalCollected(
+            $clinic,
+            dhsAmount: '100.00',
+            usdAmount: '10.00',
+            visaAmount: '50.00',
+        );
+
+        $this->assertSame('AED', $result['currency']);
+        $this->assertSame('186.50', $result['paid_total']);
     }
 }

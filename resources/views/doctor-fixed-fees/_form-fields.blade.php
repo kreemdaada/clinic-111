@@ -24,8 +24,9 @@
     <div class="form-group" style="margin:0;">
         <label class="form-label">Currency</label>
         <select class="form-input" name="currency" id="dff-{{ $prefix }}-currency" required>
-            <option value="AED" @selected(old('currency', 'AED') === 'AED')>AED</option>
-            <option value="USD" @selected(old('currency') === 'USD')>USD</option>
+            @foreach (\App\Support\ClinicRegistrationOptions::currencyCodes() as $code)
+            <option value="{{ $code }}" @selected(old('currency', $defaultCurrency ?? 'AED') === $code)>{{ $code }}</option>
+            @endforeach
         </select>
     </div>
 </div>

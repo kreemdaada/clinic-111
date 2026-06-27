@@ -12,6 +12,7 @@ use App\Models\Payment;
 use App\Models\Treatment;
 use App\Models\User;
 use App\Models\WorkItem;
+use App\Support\SecurePassword;
 use App\Services\Audit\AuditLogService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
@@ -34,8 +35,8 @@ class ClinicOnboardingTest extends TestCase
             'timezone' => 'Asia/Dubai',
             'owner_name' => 'Dr Owner',
             'owner_email' => 'owner@sunrise.test',
-            'owner_password' => 'password123',
-            'owner_password_confirmation' => 'password123',
+            'owner_password' => SecurePassword::example(),
+            'owner_password_confirmation' => SecurePassword::example(),
         ], $overrides);
     }
 
@@ -159,6 +160,7 @@ class ClinicOnboardingTest extends TestCase
         $this->mock(AuditLogService::class, function ($mock) {
             $mock->shouldReceive('logClinicCreated')->once();
             $mock->shouldReceive('logUserCreated')->once()->andThrow(new \RuntimeException('Simulated failure'));
+            $mock->shouldReceive('logClinicRegistered')->never();
         });
 
         $this->post(route('register-clinic.store'), $this->validPayload([

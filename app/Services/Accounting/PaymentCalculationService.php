@@ -3,6 +3,7 @@
 namespace App\Services\Accounting;
 
 use App\Enums\PaymentMethod;
+use App\Models\Clinic;
 use App\Models\DailyWorkRow;
 use App\Models\Payment;
 use App\Support\ClinicCurrencySupport;
@@ -86,7 +87,7 @@ class PaymentCalculationService
      * @return array{paid_total: string, paid_total_aed: string, usd_to_aed_amount: string, currency: string}
      */
     public function calculateTotalCollected(
-        string $clinicCurrency,
+        Clinic $clinic,
         string $dhsAmount,
         string $usdAmount,
         string $visaAmount,
@@ -94,10 +95,10 @@ class PaymentCalculationService
         string $chequeAmount = '0.00',
         string $tabbyAmount = '0.00',
     ): array {
-        $clinicCurrency = strtoupper($clinicCurrency);
+        $clinicCurrency = ClinicCurrencySupport::baseCurrency($clinic);
         $exchangeRate = $usdExchangeRate ?? $this->defaultUsdExchangeRate;
 
-        if (ClinicCurrencySupport::isLegacyAedClinic($clinicCurrency)) {
+        if (ClinicCurrencySupport::usesLegacyPaymentLayout($clinic)) {
             $result = $this->calculateTotalCollectedAed(
                 $dhsAmount,
                 $usdAmount,
@@ -159,38 +160,78 @@ class PaymentCalculationService
             $exchangeRate = $usdExchangeRate;
         }
 
-        $paymentDefinitions = [
-            [
-                'method' => PaymentMethod::Dhs,
-                'amount' => (string) $dailyWorkRow->dhs_amount,
-                'currency' => 'AED',
-                'exchange_rate' => '1',
-            ],
-            [
-                'method' => PaymentMethod::Cheque,
-                'amount' => (string) $dailyWorkRow->cheque_amount,
-                'currency' => 'AED',
-                'exchange_rate' => '1',
-            ],
-            [
-                'method' => PaymentMethod::Tabby,
-                'amount' => (string) $dailyWorkRow->tabby_amount,
-                'currency' => 'AED',
-                'exchange_rate' => '1',
-            ],
-            [
-                'method' => PaymentMethod::Usd,
-                'amount' => (string) $dailyWorkRow->usd_amount,
-                'currency' => 'USD',
-                'exchange_rate' => $exchangeRate,
-            ],
-            [
-                'method' => PaymentMethod::Visa,
-                'amount' => (string) $dailyWorkRow->visa_amount,
-                'currency' => 'AED',
-                'exchange_rate' => '1',
-            ],
-        ];
+        $dailyWorkRow->loadMissing('clinic');
+        $clinic = $dailyWorkRow->clinic;
+        $clinicCurrency = ClinicCurrencySupport::baseCurrency($clinic);
+        $foreignCurrency = ClinicCurrencySupport::foreignCashCurrency($clinicCurrency);
+
+        if (ClinicCurrencySupport::usesLegacyPaymentLayout($clinic)) {
+            $paymentDefinitions = [
+                [
+                    'method' => PaymentMethod::Dhs,
+                    'amount' => (string) $dailyWorkRow->dhs_amount,
+                    'currency' => 'AED',
+                    'exchange_rate' => '1',
+                ],
+                [
+                    'method' => PaymentMethod::Cheque,
+                    'amount' => (string) $dailyWorkRow->cheque_amount,
+                    'currency' => 'AED',
+                    'exchange_rate' => '1',
+                ],
+                [
+                    'method' => PaymentMethod::Tabby,
+                    'amount' => (string) $dailyWorkRow->tabby_amount,
+                    'currency' => 'AED',
+                    'exchange_rate' => '1',
+                ],
+                [
+                    'method' => PaymentMethod::Usd,
+                    'amount' => (string) $dailyWorkRow->usd_amount,
+                    'currency' => 'USD',
+                    'exchange_rate' => $exchangeRate,
+                ],
+                [
+                    'method' => PaymentMethod::Visa,
+                    'amount' => (string) $dailyWorkRow->visa_amount,
+                    'currency' => 'AED',
+                    'exchange_rate' => '1',
+                ],
+            ];
+        } else {
+            $paymentDefinitions = [
+                [
+                    'method' => PaymentMethod::Dhs,
+                    'amount' => (string) $dailyWorkRow->dhs_amount,
+                    'currency' => $clinicCurrency,
+                    'exchange_rate' => MoneyCalculator::rateToAed($clinicCurrency, $exchangeRate),
+                ],
+                [
+                    'method' => PaymentMethod::Cheque,
+                    'amount' => (string) $dailyWorkRow->cheque_amount,
+                    'currency' => $clinicCurrency,
+                    'exchange_rate' => MoneyCalculator::rateToAed($clinicCurrency, $exchangeRate),
+                ],
+                [
+                    'method' => PaymentMethod::Tabby,
+                    'amount' => (string) $dailyWorkRow->tabby_amount,
+                    'currency' => $clinicCurrency,
+                    'exchange_rate' => MoneyCalculator::rateToAed($clinicCurrency, $exchangeRate),
+                ],
+                [
+                    'method' => PaymentMethod::Usd,
+                    'amount' => (string) $dailyWorkRow->usd_amount,
+                    'currency' => $foreignCurrency ?? 'USD',
+                    'exchange_rate' => MoneyCalculator::rateToAed($foreignCurrency ?? 'USD', $exchangeRate),
+                ],
+                [
+                    'method' => PaymentMethod::Visa,
+                    'amount' => (string) $dailyWorkRow->visa_amount,
+                    'currency' => $clinicCurrency,
+                    'exchange_rate' => MoneyCalculator::rateToAed($clinicCurrency, $exchangeRate),
+                ],
+            ];
+        }
 
         foreach ($paymentDefinitions as $definition) {
             if (bccomp($definition['amount'], '0', 2) <= 0) {

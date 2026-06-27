@@ -6,6 +6,7 @@ use App\Enums\AuditAction;
 use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Support\SecurePassword;
 use Tests\TestCase;
 
 class UserAdminTest extends TestCase
@@ -52,7 +53,7 @@ class UserAdminTest extends TestCase
                 'name' => 'New Viewer',
                 'email' => 'new-viewer@clinic.test',
                 'role' => 'viewer',
-                'password' => 'password123',
+                'password' => SecurePassword::example(),
             ])
             ->assertRedirect(route('admin.users.index'))
             ->assertSessionHas('success');

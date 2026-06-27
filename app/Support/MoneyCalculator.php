@@ -89,40 +89,80 @@ class MoneyCalculator
     }
 
     /**
-     * Normalize an amount to AED using the given exchange rate for non-AED currency.
-     *
-     * @param  string  $amount  Original amount.
-     * @param  string  $currency  ISO-style code (`AED`, `USD`, …).
-     * @param  string  $exchangeRate  USD→AED rate (default 3.65).
-     * @return string Amount in AED with 2 decimal places.
+     * How many AED one unit of the given currency is worth.
      */
-    public static function convertToAed(string $amount, string $currency, string $exchangeRate = '3.65'): string
+    public static function rateToAed(string $currency, ?string $usdToAedRate = null): string
     {
-        if (strtoupper($currency) === 'AED') {
-            return bcadd((string) $amount, '0', 2);
+        $code = strtoupper(trim($currency));
+
+        if ($code === 'AED') {
+            return '1';
         }
 
-        if (strtoupper($currency) === 'USD') {
-            return bcmul((string) $amount, $exchangeRate, 2);
+        if ($code === 'USD') {
+            return $usdToAedRate ?? (string) config('accounting.usd_exchange_rate', '3.65');
         }
 
-        return bcadd((string) $amount, '0', 2);
+        if ($code === 'RUB') {
+            return (string) config('accounting.rub_to_aed_rate', '0.0481');
+        }
+
+        $rates = config('accounting.currency_to_aed_rates', []);
+
+        if (isset($rates[$code])) {
+            return (string) $rates[$code];
+        }
+
+        return '1';
     }
 
     /**
-     * Convert an amount between supported currencies (AED ↔ USD via exchange rate).
+     * Normalize an amount to AED using configured exchange rates.
+     *
+     * @param  string  $amount  Original amount.
+     * @param  string  $currency  ISO-style code (`AED`, `USD`, `EUR`, …).
+     * @param  string|null  $usdToAedRate  Override USD→AED rate when converting USD.
+     * @return string Amount in AED with 2 decimal places.
+     */
+    public static function convertToAed(string $amount, string $currency, ?string $usdToAedRate = null): string
+    {
+        $rate = self::rateToAed($currency, $usdToAedRate);
+
+        if ($rate === '1') {
+            return bcadd((string) $amount, '0', 2);
+        }
+
+        return bcmul((string) $amount, $rate, 2);
+    }
+
+    /**
+     * Convert an AED amount into another currency.
+     */
+    public static function convertFromAed(string $amount, string $currency, ?string $usdToAedRate = null): string
+    {
+        $rate = self::rateToAed($currency, $usdToAedRate);
+
+        if ($rate === '1') {
+            return bcadd((string) $amount, '0', 2);
+        }
+
+        return bcdiv((string) $amount, $rate, 2);
+    }
+
+    /**
+     * Convert an amount between supported currencies (via AED pivot).
      *
      * @param  string  $amount  Original amount.
      * @param  string  $fromCurrency  Source currency code.
      * @param  string  $toCurrency  Target currency code.
-     * @param  string  $usdToAedRate  USD→AED rate used for cross conversion.
+     * @param  string|null  $usdToAedRate  USD→AED rate used for cross conversion.
      * @return string Amount in target currency with 2 decimal places.
      */
     public static function convertBetween(
         string $amount,
         string $fromCurrency,
         string $toCurrency,
-        string $usdToAedRate = '3.65',
+        ?string $usdToAedRate = null,
     ): string {
         $from = strtoupper($fromCurrency);
         $to = strtoupper($toCurrency);
@@ -131,14 +171,8 @@ class MoneyCalculator
             return bcadd((string) $amount, '0', 2);
         }
 
-        if ($from === 'USD' && $to === 'AED') {
-            return bcmul((string) $amount, $usdToAedRate, 2);
-        }
+        $inAed = self::convertToAed((string) $amount, $from, $usdToAedRate);
 
-        if ($from === 'AED' && $to === 'USD') {
-            return bcdiv((string) $amount, $usdToAedRate, 2);
-        }
-
-        return bcadd((string) $amount, '0', 2);
+        return self::convertFromAed($inAed, $to, $usdToAedRate);
     }
 }

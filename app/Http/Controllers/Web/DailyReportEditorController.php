@@ -132,7 +132,7 @@ class DailyReportEditorController extends Controller
             ->orderBy('id')
             ->get();
 
-        $clinicCurrency = $this->clinicCurrency();
+        $clinicCurrency = $this->clinicCurrency($dailyReport);
 
         return view('daily-reports.editor', [
             'dailyReport' => $dailyReport,
@@ -291,7 +291,8 @@ class DailyReportEditorController extends Controller
      */
     private function serializeRow(DailyWorkRow $row): array
     {
-        $clinicCurrency = $this->clinicCurrency();
+        $row->loadMissing('dailyReport.clinic');
+        $clinicCurrency = $this->clinicCurrency($row->dailyReport);
         $labTotalAed = '0.00';
 
         foreach ($row->workItems as $workItem) {
@@ -330,10 +331,16 @@ class DailyReportEditorController extends Controller
         ];
     }
 
-    private function clinicCurrency(): string
+    private function clinicCurrency(?DailyReport $dailyReport = null): string
     {
-        return ClinicCurrencySupport::normalize(
-            $this->currentClinicResolver->resolve()->currency ?? 'AED',
-        );
+        if ($dailyReport !== null) {
+            $dailyReport->loadMissing('clinic');
+
+            if ($dailyReport->clinic !== null) {
+                return ClinicCurrencySupport::baseCurrency($dailyReport->clinic);
+            }
+        }
+
+        return ClinicCurrencySupport::baseCurrency($this->currentClinicResolver->resolve());
     }
 }

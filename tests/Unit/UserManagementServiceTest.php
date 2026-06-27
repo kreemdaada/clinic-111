@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
 use RuntimeException;
+use App\Support\SecurePassword;
 use Tests\TestCase;
 
 class UserManagementServiceTest extends TestCase
@@ -35,11 +36,11 @@ class UserManagementServiceTest extends TestCase
             'name' => 'Manual Password User',
             'email' => 'manual@clinic.test',
             'role' => UserRole::Viewer->value,
-            'password' => 'password123',
+            'password' => SecurePassword::example(),
         ]);
 
         $this->assertNull($result['temporary_password']);
-        $this->assertTrue(Hash::check('password123', $result['user']->password));
+        $this->assertTrue(Hash::check(SecurePassword::example(), $result['user']->password));
         $this->assertDatabaseHas('users', [
             'email' => 'manual@clinic.test',
             'role' => UserRole::Viewer->value,

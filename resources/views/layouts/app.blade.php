@@ -441,7 +441,12 @@
 <body>
     @auth
     <header class="topbar">
-        <a href="{{ route('imports.index') }}" class="topbar-brand">Clinic 111 Accounting</a>
+        <a href="{{ route('imports.index') }}" class="topbar-brand">
+            {{ $currentClinic->name ?? 'Clinic Accounting' }}
+            @isset($clinicCurrency)
+            <span style="font-size:0.75rem;font-weight:500;color:var(--text-muted);margin-left:0.35rem;">({{ $clinicCurrency }})</span>
+            @endisset
+        </a>
         <nav class="topbar-nav">
             <a href="{{ route('imports.index') }}" @class(['active'=> request()->routeIs('imports.*') || request()->routeIs('logs.*')])>Import</a>
             <a href="{{ route('daily-report.index') }}" @class(['active'=> request()->routeIs('daily-report.*')])>Daily Report</a>
