@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Services\Audit\AuditLogService;
+use App\Support\EmailVerificationSupport;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,7 +26,16 @@ class EmailVerificationController extends Controller
             return redirect()->intended(route('configuration.dashboard'));
         }
 
-        return view('auth.verify-email');
+        $verificationUrl = null;
+        $user = $request->user();
+
+        if ($user instanceof User && EmailVerificationSupport::shouldExposeVerificationLink()) {
+            $verificationUrl = EmailVerificationSupport::signedVerificationUrl($user);
+        }
+
+        return view('auth.verify-email', [
+            'verificationUrl' => $verificationUrl,
+        ]);
     }
 
     public function verify(EmailVerificationRequest $request): RedirectResponse

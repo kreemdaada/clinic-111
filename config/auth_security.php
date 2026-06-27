@@ -47,4 +47,20 @@ return [
         'fake_token' => env('AUTH_CAPTCHA_FAKE_TOKEN', 'test-captcha-token'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Email Verification (local development)
+    |--------------------------------------------------------------------------
+    |
+    | When MAIL_MAILER is log or array, verification emails are not delivered.
+    | In local, auto-verify new owners by default and show a signed link on the
+    | verify page for accounts that are still unverified. Override with env vars.
+    |
+    */
+
+    'email_verification' => [
+        'auto_verify_without_delivery' => env('AUTH_EMAIL_VERIFICATION_AUTO_VERIFY'),
+        'show_link_without_delivery' => env('AUTH_EMAIL_VERIFICATION_SHOW_LINK'),
+    ],
+
 ];

@@ -10,6 +10,20 @@
         Please verify your email before using the clinic dashboard.
     </p>
 
+    @if (session('success'))
+        <div class="alert alert-success">{{ session('success') }}</div>
+    @endif
+
+    @if ($verificationUrl ?? null)
+        <div class="alert alert-info" data-testid="verification-link-dev">
+            <strong>Local development:</strong> Mail is not delivered (<code>{{ config('mail.default') }}</code> driver).
+            Use this link to verify without a real inbox:
+            <p style="margin:0.75rem 0 0;word-break:break-all;">
+                <a href="{{ $verificationUrl }}">Verify email now</a>
+            </p>
+        </div>
+    @endif
+
     @if (session('status') === 'verification-link-sent')
         <div class="alert alert-success">A new verification link has been sent.</div>
     @endif

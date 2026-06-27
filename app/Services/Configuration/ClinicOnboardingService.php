@@ -7,6 +7,7 @@ use App\Models\Clinic;
 use App\Models\Lab;
 use App\Models\User;
 use App\Services\Audit\AuditLogService;
+use App\Support\EmailVerificationSupport;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -70,8 +71,13 @@ class ClinicOnboardingService
             ];
         });
 
-        $result['owner']->sendEmailVerificationNotification();
-        $this->auditLogService->logEmailVerificationSent($result['owner']);
+        if (EmailVerificationSupport::shouldAutoVerifyWithoutDelivery()) {
+            $result['owner']->forceFill(['email_verified_at' => now()])->save();
+            $this->auditLogService->logEmailVerified($result['owner']);
+        } else {
+            $result['owner']->sendEmailVerificationNotification();
+            $this->auditLogService->logEmailVerificationSent($result['owner']);
+        }
 
         return $result;
     }

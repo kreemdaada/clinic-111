@@ -289,4 +289,40 @@ class ClinicOnboardingTest extends TestCase
             ->get(route('register-clinic.create'))
             ->assertRedirect(route('configuration.dashboard'));
     }
+
+    public function test_verify_notice_shows_dev_link_when_mail_cannot_deliver(): void
+    {
+        config([
+            'mail.default' => 'log',
+            'auth_security.email_verification.show_link_without_delivery' => true,
+            'auth_security.email_verification.auto_verify_without_delivery' => false,
+        ]);
+
+        $owner = $this->registerOwner();
+
+        $this->actingAs($owner)
+            ->get(route('verification.notice'))
+            ->assertOk()
+            ->assertSee('data-testid="verification-link-dev"', false)
+            ->assertSee('Verify email now', false);
+    }
+
+    public function test_registration_auto_verifies_owner_when_mail_cannot_deliver(): void
+    {
+        config([
+            'mail.default' => 'log',
+            'auth_security.email_verification.auto_verify_without_delivery' => true,
+        ]);
+
+        $this->post(route('register-clinic.store'), $this->validPayload([
+            'owner_email' => 'auto-verify@sunrise.test',
+        ]))->assertRedirect(route('imports.index'));
+
+        $owner = User::query()->where('email', 'auto-verify@sunrise.test')->firstOrFail();
+        $this->assertNotNull($owner->email_verified_at);
+
+        $this->actingAs($owner)
+            ->get(route('imports.index'))
+            ->assertOk();
+    }
 }

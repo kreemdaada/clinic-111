@@ -41,8 +41,16 @@ class ClinicOnboardingController extends Controller
         $request->session()->regenerate(true);
         $request->session()->regenerateToken();
 
+        $welcome = "Welcome! Clinic {$result['clinic']->code} is ready.";
+
+        if ($result['owner']->hasVerifiedEmail()) {
+            return redirect()
+                ->route('imports.index')
+                ->with('success', "{$welcome} You can start using the dashboard.");
+        }
+
         return redirect()
             ->route('verification.notice')
-            ->with('success', "Welcome! Clinic {$result['clinic']->code} is ready — please verify your email to continue.");
+            ->with('success', "{$welcome} Please verify your email to continue.");
     }
 }
