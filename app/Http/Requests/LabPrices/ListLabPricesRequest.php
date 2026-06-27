@@ -2,6 +2,10 @@
 
 namespace App\Http\Requests\LabPrices;
 
+use App\Models\Doctor;
+use App\Models\Lab;
+use App\Models\Treatment;
+use App\Rules\BelongsToCurrentClinic;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ListLabPricesRequest extends FormRequest
@@ -18,8 +22,8 @@ class ListLabPricesRequest extends FormRequest
     {
         return [
             'search' => ['nullable', 'string', 'max:100'],
-            'lab_id' => ['nullable', 'integer', 'exists:labs,id'],
-            'treatment_id' => ['nullable', 'integer', 'exists:treatments,id'],
+            'lab_id' => ['nullable', 'integer', new BelongsToCurrentClinic(Lab::class, nullable: true)],
+            'treatment_id' => ['nullable', 'integer', new BelongsToCurrentClinic(Treatment::class, nullable: true)],
             'doctor_id' => ['nullable', 'string', 'max:20'],
             'status' => ['nullable', 'in:all,active,inactive'],
             'currency' => ['nullable', 'string', 'size:3'],

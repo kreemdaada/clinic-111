@@ -19,7 +19,7 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register-clinic', [ClinicOnboardingController::class, 'store'])
     ->middleware('throttle:register-clinic');
 
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::middleware('role:admin')->group(function () {
@@ -85,8 +85,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::middleware('role:admin')->prefix('users')->group(function () {
         Route::get('/', [UserAdminController::class, 'index']);
         Route::post('/', [UserAdminController::class, 'store']);
-        Route::put('/{user}', [UserAdminController::class, 'update']);
-        Route::delete('/{user}', [UserAdminController::class, 'destroy']);
-        Route::post('/{user}/reset-password', [UserAdminController::class, 'resetPassword']);
+        Route::put('/{managedUser}', [UserAdminController::class, 'update']);
+        Route::delete('/{managedUser}', [UserAdminController::class, 'destroy']);
+        Route::post('/{managedUser}/reset-password', [UserAdminController::class, 'resetPassword']);
     });
 });

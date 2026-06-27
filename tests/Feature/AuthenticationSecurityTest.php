@@ -219,7 +219,7 @@ class AuthenticationSecurityTest extends TestCase
 
         for ($index = 1; $index <= 3; $index++) {
             $this->post(route('register-clinic.store'), $payload($index))
-                ->assertRedirect(route('configuration.dashboard'));
+                ->assertRedirect(route('verification.notice'));
 
             Auth::logout();
         }
@@ -284,7 +284,7 @@ class AuthenticationSecurityTest extends TestCase
             'owner_email' => 'owner@audit-clinic.test',
             'owner_password' => SecurePassword::example(),
             'owner_password_confirmation' => SecurePassword::example(),
-        ])->assertRedirect(route('configuration.dashboard'));
+        ])->assertRedirect(route('verification.notice'));
 
         $clinic = Clinic::query()->where('code', 'AUDIT_CLINIC')->firstOrFail();
 

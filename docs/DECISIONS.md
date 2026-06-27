@@ -2204,8 +2204,8 @@ Treat platform authentication security as first-class infrastructure.
 
 **Disadvantages**
 
-* Unknown-email login audit rows currently fall back to legacy clinic for `clinic_id` (see ADR-033)
-* Shared NAT may cause false lockouts with email + IP key alone (see ADR-033)
+* ~~Unknown-email login audit rows currently fall back to legacy clinic for `clinic_id` (see ADR-033)~~ — resolved in Milestone 13A (ADR-033)
+* ~~Shared NAT may cause false lockouts with email + IP key alone (see ADR-033)~~ — mitigated in Milestone 13A via user-agent segment (ADR-033)
 
 ### Affected Components
 
@@ -2242,7 +2242,7 @@ Implemented 2026-06-27 on branch `feature/security-hardening`:
 
 ### Notes
 
-Tenant-level security hardening beyond authentication (platform audit context, NAT-aware throttling) is defined in ADR-033.
+Platform audit context, NAT-aware login throttling, CAPTCHA abstraction, email verification, and security headers are implemented in Milestone 13A (ADR-033). Full tenant authorization review remains Milestone 13B.
 
 ---
 
@@ -2254,7 +2254,7 @@ Tenant Security
 
 ### Status
 
-Proposed
+Accepted
 
 ### Date
 
@@ -2262,7 +2262,7 @@ Proposed
 
 ### Milestone
 
-Milestone 13 — Tenant Security
+Milestone 13 — Tenant Security (13A platform security + 13B tenant authorization review)
 
 ### Context
 
@@ -2324,14 +2324,96 @@ Examples: unknown email, invalid password, registration abuse, password reset re
 
 These events belong to the platform itself. Future implementation may introduce `platform` or `platform_id` instead of assigning them to any clinic.
 
-**Login throttling (future)**
+**Login throttling**
 
 | | Key |
 |---|---|
-| Current (ADR-032) | `login\|email\|ip` |
-| Target (ADR-033) | `login\|email\|ip\|user-agent` |
+| ADR-032 (original) | `login\|email\|ip` |
+| ADR-033 / Milestone 13A (current) | `login\|email\|ip\|user-agent` |
 
-Reason: users behind the same NAT should not accidentally lock each other out.
+Reason: users behind the same NAT should not accidentally lock each other out. User-agent is stored as a SHA-256 hash in the throttle key (never logged in audit JSON).
+
+### Milestone 13A Implementation Notes
+
+Implemented 2026-06-27 on branch `feature/platform-security`:
+
+**Platform audit context**
+
+* `audit_logs.clinic_id` is nullable for platform-scoped events
+* Unknown authentication events (`login_failed`, `login_lockout` for unknown email, `registration_abuse`) use `clinic_id = null` and `new_values.audit_context = platform`
+* No fallback to `CLINIC_111` for pre-tenant events
+* `PlatformAuditContext` tags platform logs; `AuditLogService::logPlatform()` is the entry point
+
+**Login throttle**
+
+* `LoginThrottleService` key: `login|{email}|{ip}|{sha256(user-agent)}` (or `unknown` when absent)
+* Config unchanged: 5 attempts, 5-minute decay (`config/auth_security.php`)
+
+**Email verification**
+
+* `User` implements `MustVerifyEmail`
+* New clinic owners start unverified; seeded and admin-provisioned users have `email_verified_at` set
+* Web routes use `verified` middleware; verification notice at `/email/verify`
+* `ClinicOnboardingService` sends verification notification after registration
+* Audit: `email_verification_sent`, `email_verified`
+
+**CAPTCHA abstraction**
+
+* Contract: `App\Contracts\Security\CaptchaVerifier`
+* Service: `CaptchaVerificationService` (controllers/requests delegate here)
+* Default driver: `FakeCaptchaVerifier` (`config/auth_security.php` → `captcha.enabled`, `captcha.driver`, `captcha.fake_token`)
+* `RegisterClinicRequest` validates CAPTCHA when enabled
+
+**Security headers**
+
+* `SecurityHeadersMiddleware` + `config/security.php`
+* HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, basic CSP
+* Disabled outside production by default (safe for local dev)
+
+**Security audit (extended)**
+
+* Added actions: `logout`, `email_verification_sent`, `email_verified`, `registration_abuse`
+* Registration rate-limit 429 triggers platform `registration_abuse` audit
+* Never log passwords, tokens, session IDs, or raw secrets
+
+**Tests:** `tests/Feature/PlatformSecurityTest.php`; updates to `AuthenticationSecurityTest`, `ClinicOnboardingTest`, `LoginThrottleServiceTest`
+
+### Milestone 13B Implementation Notes
+
+Implemented 2026-06-27 on branch `feature/tenant-authorization-review`:
+
+**Tenant ownership rule**
+
+* Every clinic-owned resource access verifies `resource.clinic_id === CurrentClinicResolver::resolveId()`
+* Cross-clinic access returns HTTP **404** (never 403) via `assertSameClinic()` / `TenantResourceGuard`
+
+**New components**
+
+* `TenantResourceGuard` — `assertAccessible(Model)` and `findAccessibleOrAbort(modelClass, id)` for route-bound resources
+* `BelongsToCurrentClinic` validation rule — clinic-scoped foreign keys in form requests
+* User admin routes use `{managedUser}` int parameter + `TenantResourceGuard` (avoids Laravel `{user}` / auth binding conflict)
+
+**Gaps closed**
+
+* `DailyReportEditorController::doctorTreatments()` — tenant guard on route-bound `Doctor`
+* Daily report editor `store` / `rows` / `preview` — doctor resolved via `TenantResourceGuard`, not unscoped `exists:doctors,id`
+* `DoctorManagementService`, `LabPriceManagementService`, `DoctorFixedFeeManagementService` — related FK ownership validated on create/update
+* Form requests — clinic-scoped FK rules for doctors, lab prices, fixed fees, daily work rows
+* `ConfigurationDashboardService::recentActivity()` — explicit `clinic_id` filter (platform events excluded)
+* `ReportLockController` — explicit `assertAccessible()` before approve/unlock
+
+**Review outcome**
+
+* Configuration, accounting, import, export, audit views, user admin, and clinic admin paths reviewed
+* Existing service-layer `assertSameClinic()` / `assertAccessible()` patterns confirmed; gaps above patched
+* Clinic admins see only their own clinic in clinic admin (list scoped to current clinic)
+
+**Background jobs (documented rule)**
+
+* No queued tenant jobs exist yet
+* Future jobs processing tenant data must receive explicit `clinic_id`; must not rely on `CurrentClinicResolver` without authenticated context
+
+**Tests:** `tests/Feature/CrossClinicAuthorizationTest.php` (22 tests); existing `CrossClinicIsolationTest`, `CrossClinicAccountingIsolationTest` unchanged and passing
 
 ### Alternatives Considered
 
@@ -2431,7 +2513,7 @@ Builds on ADR-028 (Explicit Query Isolation), ADR-029 (Accounting Ownership), an
 | ADR-030 | Clinic Onboarding Workflow             | Accepted |
 | ADR-031 | Clinic Business Configuration          | Accepted |
 | ADR-032 | Platform Authentication Security       | Accepted |
-| ADR-033 | Tenant Security                        | Proposed |
+| ADR-033 | Tenant Security                        | Accepted |
 
 ---
 

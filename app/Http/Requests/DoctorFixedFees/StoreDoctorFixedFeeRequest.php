@@ -3,6 +3,9 @@
 namespace App\Http\Requests\DoctorFixedFees;
 
 use App\Enums\CommissionType;
+use App\Models\Doctor;
+use App\Models\Treatment;
+use App\Rules\BelongsToCurrentClinic;
 use App\Support\DoctorFixedFeeOverlapValidator;
 use App\Services\Configuration\CurrentClinicResolver;
 use Illuminate\Foundation\Http\FormRequest;
@@ -25,9 +28,12 @@ class StoreDoctorFixedFeeRequest extends FormRequest
             'doctor_id' => [
                 'required',
                 'integer',
-                Rule::exists('doctors', 'id')->where(fn ($query) => $query->where('commission_type', CommissionType::Fixed->value)),
+                new BelongsToCurrentClinic(Doctor::class),
+                Rule::exists('doctors', 'id')->where(fn ($query) => $query
+                    ->where('commission_type', CommissionType::Fixed->value)
+                    ->where('clinic_id', $this->user()?->clinic_id ?? 0)),
             ],
-            'treatment_id' => ['required', 'integer', 'exists:treatments,id'],
+            'treatment_id' => ['required', 'integer', new BelongsToCurrentClinic(Treatment::class)],
             'fee_amount' => ['required', 'numeric', 'min:0.01'],
             'currency' => ['required', 'string', 'size:3', Rule::in(['AED', 'USD'])],
             'valid_from' => ['nullable', 'date'],

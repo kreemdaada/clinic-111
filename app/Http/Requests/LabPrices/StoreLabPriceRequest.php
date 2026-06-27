@@ -2,8 +2,13 @@
 
 namespace App\Http\Requests\LabPrices;
 
-use App\Support\LabPriceOverlapValidator;
+use App\Models\Doctor;
+use App\Models\Lab;
+use App\Models\LabPrice;
+use App\Models\Treatment;
+use App\Rules\BelongsToCurrentClinic;
 use App\Services\Configuration\CurrentClinicResolver;
+use App\Support\LabPriceOverlapValidator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -27,9 +32,9 @@ class StoreLabPriceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'lab_id' => ['required', 'integer', 'exists:labs,id'],
-            'treatment_id' => ['required', 'integer', 'exists:treatments,id'],
-            'doctor_id' => ['nullable', 'integer', 'exists:doctors,id'],
+            'lab_id' => ['required', 'integer', new BelongsToCurrentClinic(Lab::class)],
+            'treatment_id' => ['required', 'integer', new BelongsToCurrentClinic(Treatment::class)],
+            'doctor_id' => ['nullable', 'integer', new BelongsToCurrentClinic(Doctor::class, nullable: true)],
             'unit_cost' => ['required', 'numeric', 'min:0.01'],
             'currency' => ['required', 'string', 'size:3'],
             'valid_from' => ['nullable', 'date'],

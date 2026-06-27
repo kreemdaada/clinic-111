@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\User;
+use App\Services\Audit\AuditLogService;
 use App\Services\Auth\AuthenticationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,6 +22,7 @@ class AuthController extends Controller
 {
     public function __construct(
         private readonly AuthenticationService $authenticationService,
+        private readonly AuditLogService $auditLogService,
     ) {}
 
     /**
@@ -30,6 +33,10 @@ class AuthController extends Controller
     public function showLogin(): View|RedirectResponse
     {
         if (Auth::check()) {
+            if (! Auth::user()->hasVerifiedEmail()) {
+                return redirect()->route('verification.notice');
+            }
+
             return redirect()->route('imports.index');
         }
 
@@ -70,6 +77,12 @@ class AuthController extends Controller
      */
     public function logout(Request $request): RedirectResponse
     {
+        $user = Auth::user();
+
+        if ($user instanceof User) {
+            $this->auditLogService->logLogout($user);
+        }
+
         Auth::logout();
 
         $request->session()->invalidate();

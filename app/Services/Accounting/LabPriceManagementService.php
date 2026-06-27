@@ -2,10 +2,14 @@
 
 namespace App\Services\Accounting;
 
+use App\Models\Doctor;
+use App\Models\Lab;
 use App\Models\LabPrice;
+use App\Models\Treatment;
 use App\Services\Audit\AuditLogService;
 use App\Services\Configuration\Concerns\ScopesConfigurationQueries;
 use App\Services\Configuration\CurrentClinicResolver;
+use App\Services\Configuration\TenantResourceGuard;
 use App\Support\LabPriceOverlapValidator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +26,7 @@ class LabPriceManagementService
         private readonly AuditLogService $auditLogService,
         private readonly LabPriceOverlapValidator $overlapValidator,
         private readonly CurrentClinicResolver $currentClinicResolver,
+        private readonly TenantResourceGuard $tenantResourceGuard,
     ) {}
 
     public function listQuery(
@@ -87,6 +92,13 @@ class LabPriceManagementService
      */
     public function create(array $data): LabPrice
     {
+        $doctorId = $data['doctor_id'] ?? null;
+        $this->assertRelatedResourcesAccessible(
+            (int) $data['lab_id'],
+            (int) $data['treatment_id'],
+            $doctorId !== null ? (int) $doctorId : null,
+        );
+
         return DB::transaction(function () use ($data) {
             $doctorId = $data['doctor_id'] ?? null;
             $validFrom = $data['valid_from'] ?? null;
@@ -144,6 +156,12 @@ class LabPriceManagementService
             $labId = (int) ($data['lab_id'] ?? $labPrice->lab_id);
             $treatmentId = (int) ($data['treatment_id'] ?? $labPrice->treatment_id);
             $doctorId = array_key_exists('doctor_id', $data) ? $data['doctor_id'] : $labPrice->doctor_id;
+
+            $this->assertRelatedResourcesAccessible(
+                $labId,
+                $treatmentId,
+                $doctorId !== null ? (int) $doctorId : null,
+            );
             $validFrom = array_key_exists('valid_from', $data) ? $data['valid_from'] : $labPrice->valid_from?->toDateString();
             $validTo = array_key_exists('valid_to', $data) ? $data['valid_to'] : $labPrice->valid_to?->toDateString();
             $willBeActive = array_key_exists('is_active', $data) ? (bool) $data['is_active'] : $labPrice->is_active;
@@ -249,5 +267,15 @@ class LabPriceManagementService
             'valid_to' => $labPrice->valid_to?->toDateString(),
             'is_active' => $labPrice->is_active,
         ];
+    }
+
+    private function assertRelatedResourcesAccessible(int $labId, int $treatmentId, ?int $doctorId): void
+    {
+        $this->tenantResourceGuard->findAccessibleOrAbort(Lab::class, $labId);
+        $this->tenantResourceGuard->findAccessibleOrAbort(Treatment::class, $treatmentId);
+
+        if ($doctorId !== null) {
+            $this->tenantResourceGuard->findAccessibleOrAbort(Doctor::class, $doctorId);
+        }
     }
 }

@@ -218,7 +218,7 @@ class BusinessConfigurationTest extends TestCase
             'owner_password_confirmation' => SecurePassword::example(),
         ]);
 
-        return User::query()->where('email', $email)->firstOrFail();
+        return $this->verifyUser(User::query()->where('email', $email)->firstOrFail());
     }
 
     private function seedMinimumBusinessConfiguration(

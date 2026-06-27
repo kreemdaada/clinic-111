@@ -668,7 +668,7 @@ flowchart TD
 
 ---
 
-## 23. Authentication Security (ADR-032)
+## 23. Authentication Security (ADR-032, ADR-033)
 
 ```mermaid
 sequenceDiagram
@@ -680,16 +680,16 @@ sequenceDiagram
 
     User->>Web: POST /login
     Web->>Auth: authenticate(credentials)
-    Auth->>RL: tooManyAttempts(email+ip)?
+    Auth->>RL: tooManyAttempts(email+ip+ua)?
     alt locked out
-        Auth->>Audit: login_lockout
+        Auth->>Audit: login_lockout (platform if unknown email)
         Auth-->>Web: 429 / generic lockout message
     else credentials invalid
-        Auth->>RL: hit(email+ip)
-        Auth->>Audit: login_failed
+        Auth->>RL: hit(email+ip+ua)
+        Auth->>Audit: login_failed (platform if unknown email)
         Auth-->>Web: generic invalid credentials
     else success
-        Auth->>RL: clear(email+ip)
+        Auth->>RL: clear(email+ip+ua)
         Auth->>Audit: login_succeeded
         Web->>Web: session regenerate + CSRF token
         Web->>User: redirect / token
@@ -699,8 +699,47 @@ sequenceDiagram
 
 - Same generic message for wrong email, wrong password, and deactivated account
 - Successful login clears failed-attempt counter
-- Logout invalidates session and regenerates CSRF token
-- No CAPTCHA, email verification, or 2FA in this milestone
+- Logout invalidates session, regenerates CSRF token, and writes `logout` audit entry
+- Unknown-email failures use platform audit context (`clinic_id = null`) — never `CLINIC_111`
+- New clinic owners must verify email before accessing protected routes (`verified` middleware)
+
+---
+
+## 24. Platform Security (Milestone 13A, ADR-033)
+
+```mermaid
+sequenceDiagram
+    actor Owner
+    participant Web as ClinicOnboardingController
+    participant Svc as ClinicOnboardingService
+    participant Captcha as CaptchaVerificationService
+    participant Audit as AuditLogService
+    participant Mail as VerifyEmail notification
+
+    Owner->>Web: POST /register-clinic
+    Web->>Captcha: verify(token) when enabled
+    alt CAPTCHA invalid
+        Web-->>Owner: validation error
+    else valid
+        Web->>Svc: register(data)
+        Svc->>Audit: clinic_created, user_created, clinic_registered
+        Svc->>Mail: sendEmailVerificationNotification
+        Svc->>Audit: email_verification_sent
+        Web->>Owner: redirect /email/verify
+    end
+```
+
+**Registration abuse (429):**
+
+- Rate limiter on `register-clinic` writes `registration_abuse` with platform audit context
+
+**Background jobs:** Future queued tenant work must receive explicit `clinic_id`; must not call `CurrentClinicResolver` without authenticated context.
+
+---
+
+## 25. Tenant Authorization (Milestone 13B, ADR-033)
+
+Cross-clinic resource access returns **404** via `TenantResourceGuard` and service-layer `assertSameClinic()`. User admin routes resolve `{managedUser}` by integer ID through the guard (not implicit `{user}` binding).
 
 ---
 
@@ -724,6 +763,8 @@ Same pipeline after row creation: `TreatmentImportValidationService` → `LabJob
 
 **Updated — 2026-06-27**
 
+- Platform security workflows — email verification, CAPTCHA registration, platform audit context, security headers (Milestone 13A, ADR-033)
+- Tenant authorization workflow — cross-clinic 404, TenantResourceGuard, clinic-scoped FK validation (Milestone 13B, ADR-033)
 - Business configuration wizard and import readiness guard (Milestone 12, ADR-031)
 - Clinic onboarding workflow (Milestone 11, ADR-030)
 - Accounting ownership and isolation (Milestone 10, ADR-029)

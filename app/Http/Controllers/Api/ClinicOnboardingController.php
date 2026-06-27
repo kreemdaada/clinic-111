@@ -39,6 +39,7 @@ class ClinicOnboardingController extends Controller
                 'name' => $result['owner']->name,
                 'email' => $result['owner']->email,
                 'role' => $result['owner']->role->value,
+                'email_verified' => $result['owner']->hasVerifiedEmail(),
             ],
         ], 201);
     }

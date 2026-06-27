@@ -7,6 +7,7 @@ use App\Http\Requests\Users\ResetUserPasswordRequest;
 use App\Http\Requests\Users\StoreUserRequest;
 use App\Http\Requests\Users\UpdateUserRequest;
 use App\Models\User;
+use App\Services\Configuration\TenantResourceGuard;
 use App\Services\User\UserManagementService;
 use Illuminate\Http\JsonResponse;
 use RuntimeException;
@@ -18,6 +19,7 @@ class UserAdminController extends Controller
 {
     public function __construct(
         private readonly UserManagementService $userManagementService,
+        private readonly TenantResourceGuard $tenantResourceGuard,
     ) {}
 
     public function index(): JsonResponse
@@ -43,38 +45,44 @@ class UserAdminController extends Controller
         ], 201);
     }
 
-    public function update(UpdateUserRequest $request, User $user): JsonResponse
+    public function update(UpdateUserRequest $request, int $managedUser): JsonResponse
     {
+        $account = $this->tenantResourceGuard->findAccessibleOrAbort(User::class, $managedUser);
+
         try {
-            $user = $this->userManagementService->update($user, $request->validated(), $request->user());
+            $account = $this->userManagementService->update($account, $request->validated(), $request->user());
         } catch (RuntimeException $exception) {
             return response()->json(['message' => $exception->getMessage()], 422);
         }
 
         return response()->json([
             'message' => 'User updated.',
-            'data' => $this->formatUser($user),
+            'data' => $this->formatUser($account),
         ]);
     }
 
-    public function destroy(User $user): JsonResponse
+    public function destroy(int $managedUser): JsonResponse
     {
+        $account = $this->tenantResourceGuard->findAccessibleOrAbort(User::class, $managedUser);
+
         try {
-            $user = $this->userManagementService->deactivate($user, request()->user());
+            $account = $this->userManagementService->deactivate($account, request()->user());
         } catch (RuntimeException $exception) {
             return response()->json(['message' => $exception->getMessage()], 422);
         }
 
         return response()->json([
             'message' => 'User deactivated.',
-            'data' => $this->formatUser($user),
+            'data' => $this->formatUser($account),
         ]);
     }
 
-    public function resetPassword(ResetUserPasswordRequest $request, User $user): JsonResponse
+    public function resetPassword(ResetUserPasswordRequest $request, int $managedUser): JsonResponse
     {
+        $account = $this->tenantResourceGuard->findAccessibleOrAbort(User::class, $managedUser);
+
         try {
-            $result = $this->userManagementService->resetPassword($user, $request->validated());
+            $result = $this->userManagementService->resetPassword($account, $request->validated());
         } catch (RuntimeException $exception) {
             return response()->json(['message' => $exception->getMessage()], 422);
         }

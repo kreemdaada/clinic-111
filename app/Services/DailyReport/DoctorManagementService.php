@@ -10,6 +10,7 @@ use App\Models\Treatment;
 use App\Services\Audit\AuditLogService;
 use App\Services\Configuration\Concerns\ScopesConfigurationQueries;
 use App\Services\Configuration\CurrentClinicResolver;
+use App\Services\Configuration\TenantResourceGuard;
 use App\Services\Export\DoctorIncomeExportProfileProvisioner;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -26,6 +27,7 @@ class DoctorManagementService
         private readonly AuditLogService $auditLogService,
         private readonly CurrentClinicResolver $currentClinicResolver,
         private readonly DoctorIncomeExportProfileProvisioner $exportProfileProvisioner,
+        private readonly TenantResourceGuard $tenantResourceGuard,
     ) {}
 
     public function listForAdministration(): Collection
@@ -76,6 +78,10 @@ class DoctorManagementService
      */
     public function create(array $data): Doctor
     {
+        if (isset($data['default_lab_id']) && $data['default_lab_id'] !== null) {
+            $this->tenantResourceGuard->findAccessibleOrAbort(Lab::class, (int) $data['default_lab_id']);
+        }
+
         return DB::transaction(function () use ($data) {
             $doctor = Doctor::query()->create([
                 'clinic_id' => $this->currentClinicId(),
@@ -115,6 +121,10 @@ class DoctorManagementService
     public function update(Doctor $doctor, array $data): Doctor
     {
         $this->assertSameClinic($doctor);
+
+        if (array_key_exists('default_lab_id', $data) && $data['default_lab_id'] !== null) {
+            $this->tenantResourceGuard->findAccessibleOrAbort(Lab::class, (int) $data['default_lab_id']);
+        }
 
         return DB::transaction(function () use ($doctor, $data) {
             $oldValues = $this->auditLogService->doctorSnapshot($doctor);

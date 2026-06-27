@@ -2,10 +2,12 @@
 
 namespace App\Http\Requests\Onboarding;
 
+use App\Services\Security\CaptchaVerificationService;
 use App\Support\ClinicRegistrationOptions;
 use App\Support\SecurePassword;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class RegisterClinicRequest extends FormRequest
 {
@@ -28,7 +30,24 @@ class RegisterClinicRequest extends FormRequest
             'owner_name' => ['required', 'string', 'max:120'],
             'owner_email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'owner_password' => ['required', 'string', 'confirmed', SecurePassword::rule()],
+            'captcha_token' => ['nullable', 'string', 'max:4096'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            /** @var CaptchaVerificationService $captcha */
+            $captcha = app(CaptchaVerificationService::class);
+
+            if (! $captcha->isEnabled()) {
+                return;
+            }
+
+            if (! $captcha->verify($this->input('captcha_token'), $this)) {
+                $validator->errors()->add('captcha_token', 'CAPTCHA verification failed.');
+            }
+        });
     }
 
     /**

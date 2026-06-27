@@ -20,12 +20,17 @@ use Illuminate\Support\Facades\Auth;
  */
 class AuditLogService
 {
+    public function __construct(
+        private readonly PlatformAuditContext $platformAuditContext,
+    ) {}
+
     public function log(
         AuditAction $action,
         ?Model $auditable = null,
         ?array $oldValues = null,
         ?array $newValues = null,
         ?int $clinicId = null,
+        bool $platformContext = false,
     ): AuditLog {
         $auditableType = null;
         $auditableId = null;
@@ -45,13 +50,17 @@ class AuditLogService
         }
 
         return AuditLog::query()->create([
-            'clinic_id' => $clinicId ?? $this->resolveClinicIdForAuditable($auditable),
+            'clinic_id' => $platformContext
+                ? null
+                : ($clinicId ?? $this->resolveClinicIdForAuditable($auditable)),
             'user_id' => Auth::id(),
             'action' => $action,
             'auditable_type' => $auditableType,
             'auditable_id' => $auditableId,
             'old_values' => $oldValues,
-            'new_values' => $newValues,
+            'new_values' => $platformContext
+                ? $this->platformAuditContext->tag($newValues)
+                : $newValues,
             'ip_address' => $ipAddress,
             'user_agent' => $userAgent,
         ]);
@@ -292,23 +301,96 @@ class AuditLogService
 
     public function logLoginFailed(string $email): AuditLog
     {
+        $normalizedEmail = strtolower(trim($email));
+        $user = User::query()->where('email', $normalizedEmail)->first();
+
+        if ($user === null) {
+            return $this->logPlatform(
+                AuditAction::LoginFailed,
+                ['email' => $normalizedEmail],
+            );
+        }
+
         return $this->log(
             AuditAction::LoginFailed,
+            $user,
             null,
-            null,
-            ['email' => strtolower(trim($email))],
-            $this->resolveClinicIdForEmail($email),
+            ['email' => $normalizedEmail],
+            (int) $user->clinic_id,
         );
     }
 
     public function logLoginLockout(string $email): AuditLog
     {
+        $normalizedEmail = strtolower(trim($email));
+        $user = User::query()->where('email', $normalizedEmail)->first();
+
+        if ($user === null) {
+            return $this->logPlatform(
+                AuditAction::LoginLockout,
+                ['email' => $normalizedEmail],
+            );
+        }
+
         return $this->log(
             AuditAction::LoginLockout,
+            $user,
             null,
+            ['email' => $normalizedEmail],
+            (int) $user->clinic_id,
+        );
+    }
+
+    public function logLogout(User $user): AuditLog
+    {
+        return $this->log(
+            AuditAction::Logout,
+            $user,
             null,
-            ['email' => strtolower(trim($email))],
-            $this->resolveClinicIdForEmail($email),
+            ['email' => $user->email],
+        );
+    }
+
+    public function logEmailVerificationSent(User $user): AuditLog
+    {
+        return $this->log(
+            AuditAction::EmailVerificationSent,
+            $user,
+            null,
+            ['email' => $user->email],
+        );
+    }
+
+    public function logEmailVerified(User $user): AuditLog
+    {
+        return $this->log(
+            AuditAction::EmailVerified,
+            $user,
+            null,
+            ['email' => $user->email],
+        );
+    }
+
+    public function logRegistrationAbuse(?string $ipAddress = null): AuditLog
+    {
+        return $this->logPlatform(
+            AuditAction::RegistrationAbuse,
+            ['ip_address' => $ipAddress ?? request()?->ip()],
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $newValues
+     */
+    public function logPlatform(AuditAction $action, array $newValues = [], ?Model $auditable = null): AuditLog
+    {
+        return $this->log(
+            $action,
+            $auditable,
+            null,
+            $newValues,
+            null,
+            platformContext: true,
         );
     }
 
@@ -540,32 +622,6 @@ class AuditLogService
             return (int) $user->clinic_id;
         }
 
-        return $this->legacyFallbackClinicId();
-    }
-
-    private function resolveClinicIdForEmail(string $email): int
-    {
-        $clinicId = User::query()
-            ->where('email', strtolower(trim($email)))
-            ->value('clinic_id');
-
-        if ($clinicId !== null) {
-            return (int) $clinicId;
-        }
-
-        return $this->legacyFallbackClinicId();
-    }
-
-    private function legacyFallbackClinicId(): int
-    {
-        $code = (string) config('accounting.legacy_clinic_code', 'CLINIC_111');
-
-        $clinicId = Clinic::query()->where('code', $code)->value('id');
-
-        if ($clinicId === null) {
-            throw new \RuntimeException("Audit fallback clinic [{$code}] was not found.");
-        }
-
-        return (int) $clinicId;
+        throw new \RuntimeException('Unable to resolve clinic_id for tenant audit log entry.');
     }
 }

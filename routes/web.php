@@ -7,6 +7,7 @@ use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\DailyReportEditorController;
 use App\Http\Controllers\Web\DoctorFixedFeeAdminController;
 use App\Http\Controllers\Web\DoctorAdminController;
+use App\Http\Controllers\Web\EmailVerificationController;
 use App\Http\Controllers\Web\ImportController;
 use App\Http\Controllers\Web\LabAdminController;
 use App\Http\Controllers\Web\LabPriceAdminController;
@@ -19,6 +20,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     if (Auth::check()) {
+        if (! Auth::user()->hasVerifiedEmail()) {
+            return redirect()->route('verification.notice');
+        }
+
         return redirect()->route('imports.index');
     }
 
@@ -36,8 +41,18 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::get('/email/verify', [EmailVerificationController::class, 'notice'])->name('verification.notice');
+    Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+        ->middleware(['signed', 'throttle:6,1'])
+        ->name('verification.verify');
+    Route::post('/email/verification-notification', [EmailVerificationController::class, 'send'])
+        ->middleware('throttle:6,1')
+        ->name('verification.send');
 
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+});
+
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/imports', [ImportController::class, 'index'])
         ->middleware('role:admin,accountant,viewer')
         ->name('imports.index');
@@ -130,9 +145,9 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:admin')->prefix('admin/users')->name('admin.users.')->group(function () {
         Route::get('/', [UserAdminController::class, 'index'])->name('index');
         Route::post('/', [UserAdminController::class, 'store'])->name('store');
-        Route::put('/{user}', [UserAdminController::class, 'update'])->name('update');
-        Route::delete('/{user}', [UserAdminController::class, 'destroy'])->name('destroy');
-        Route::post('/{user}/reset-password', [UserAdminController::class, 'resetPassword'])->name('reset-password');
+        Route::put('/{managedUser}', [UserAdminController::class, 'update'])->name('update');
+        Route::delete('/{managedUser}', [UserAdminController::class, 'destroy'])->name('destroy');
+        Route::post('/{managedUser}/reset-password', [UserAdminController::class, 'resetPassword'])->name('reset-password');
     });
 
     Route::get('/doctors/{doctor}/treatments', [DailyReportEditorController::class, 'doctorTreatments'])

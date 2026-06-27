@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\DailyReports\UnlockDailyReportRequest;
 use App\Models\DailyReport;
 use App\Services\DailyReport\DailyReportLockService;
+use App\Services\DailyReport\DailyReportQueryService;
 use Illuminate\Http\RedirectResponse;
 use RuntimeException;
 
@@ -16,10 +17,13 @@ class ReportLockController extends Controller
 {
     public function __construct(
         private readonly DailyReportLockService $lockService,
+        private readonly DailyReportQueryService $dailyReportQueryService,
     ) {}
 
     public function approve(DailyReport $dailyReport): RedirectResponse
     {
+        $this->dailyReportQueryService->assertAccessible($dailyReport);
+
         try {
             $this->lockService->approve($dailyReport, request()->user());
         } catch (RuntimeException $exception) {
@@ -31,6 +35,8 @@ class ReportLockController extends Controller
 
     public function unlock(UnlockDailyReportRequest $request, DailyReport $dailyReport): RedirectResponse
     {
+        $this->dailyReportQueryService->assertAccessible($dailyReport);
+
         try {
             $this->lockService->unlock($dailyReport, $request->user(), $request->validated('reason'));
         } catch (RuntimeException $exception) {

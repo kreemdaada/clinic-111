@@ -33,7 +33,7 @@ class ClinicOnboardingService
      */
     public function register(array $data): array
     {
-        return DB::transaction(function () use ($data) {
+        $result = DB::transaction(function () use ($data) {
             $clinic = Clinic::query()->create([
                 'name' => trim($data['clinic_name']),
                 'code' => strtoupper(trim($data['clinic_code'])),
@@ -69,6 +69,11 @@ class ClinicOnboardingService
                 'default_lab' => $defaultLab,
             ];
         });
+
+        $result['owner']->sendEmailVerificationNotification();
+        $this->auditLogService->logEmailVerificationSent($result['owner']);
+
+        return $result;
     }
 
     private function createDefaultLab(Clinic $clinic): Lab

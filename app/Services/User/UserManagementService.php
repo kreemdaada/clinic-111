@@ -62,6 +62,7 @@ class UserManagementService
             $user->clinic_id = $this->currentClinicId();
             $user->password = $password;
             $user->is_active = $data['is_active'] ?? true;
+            $user->email_verified_at = now();
             $user->save();
 
             $this->auditLogService->logUserCreated($user);

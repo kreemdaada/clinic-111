@@ -3,6 +3,8 @@
 namespace App\Http\Requests\Doctors;
 
 use App\Enums\CommissionType;
+use App\Models\Lab;
+use App\Rules\BelongsToCurrentClinic;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -28,7 +30,7 @@ class UpdateDoctorRequest extends FormRequest
                 'max:100',
                 'required_if:commission_type,percentage',
             ],
-            'default_lab_id' => ['nullable', 'integer', 'exists:labs,id'],
+            'default_lab_id' => ['nullable', 'integer', new BelongsToCurrentClinic(Lab::class, nullable: true)],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }

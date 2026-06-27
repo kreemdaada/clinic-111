@@ -113,4 +113,16 @@ enum AuditAction: string
 
     /** Public clinic registration completed successfully. */
     case ClinicRegistered = 'clinic_registered';
+
+    /** User signed out. */
+    case Logout = 'logout';
+
+    /** Email verification notification sent. */
+    case EmailVerificationSent = 'email_verification_sent';
+
+    /** Email address verified. */
+    case EmailVerified = 'email_verified';
+
+    /** Registration rate limit exceeded. */
+    case RegistrationAbuse = 'registration_abuse';
 }

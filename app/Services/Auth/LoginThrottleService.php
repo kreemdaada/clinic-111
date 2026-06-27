@@ -15,7 +15,18 @@ class LoginThrottleService
     {
         $normalizedEmail = Str::transliterate(Str::lower(trim($email)));
 
-        return 'login|'.$normalizedEmail.'|'.$request->ip();
+        return 'login|'.$normalizedEmail.'|'.$request->ip().'|'.$this->userAgentFingerprint($request);
+    }
+
+    private function userAgentFingerprint(Request $request): string
+    {
+        $userAgent = $request->userAgent();
+
+        if (! is_string($userAgent) || $userAgent === '') {
+            return 'unknown';
+        }
+
+        return hash('sha256', $userAgent);
     }
 
     public function tooManyAttempts(string $key): bool

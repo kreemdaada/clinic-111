@@ -4,6 +4,8 @@ namespace App\Http\Requests\Doctors;
 
 use App\Enums\CommissionType;
 use App\Http\Requests\Concerns\ValidatesClinicScopedCode;
+use App\Models\Lab;
+use App\Rules\BelongsToCurrentClinic;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -31,7 +33,7 @@ class StoreDoctorRequest extends FormRequest
                 'max:100',
                 'required_if:commission_type,percentage',
             ],
-            'default_lab_id' => ['nullable', 'integer', 'exists:labs,id'],
+            'default_lab_id' => ['nullable', 'integer', new BelongsToCurrentClinic(Lab::class, nullable: true)],
             'seed_full_lab_billing' => ['sometimes', 'boolean'],
         ];
     }

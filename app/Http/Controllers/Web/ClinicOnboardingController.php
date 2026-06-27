@@ -42,7 +42,7 @@ class ClinicOnboardingController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()
-            ->route('configuration.dashboard')
-            ->with('success', "Welcome! Clinic {$result['clinic']->code} is ready to configure.");
+            ->route('verification.notice')
+            ->with('success', "Welcome! Clinic {$result['clinic']->code} is ready — please verify your email to continue.");
     }
 }

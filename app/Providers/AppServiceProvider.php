@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Contracts\Security\CaptchaVerifier;
+use App\Services\Audit\AuditLogService;
+use App\Services\Security\FakeCaptchaVerifier;
 use App\View\Composers\ClinicContextComposer;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -24,7 +27,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(CaptchaVerifier::class, function () {
+            $driver = (string) config('auth_security.captcha.driver', 'fake');
+
+            return match ($driver) {
+                'fake' => $this->app->make(FakeCaptchaVerifier::class),
+                default => $this->app->make(FakeCaptchaVerifier::class),
+            };
+        });
     }
 
     /**
@@ -44,7 +54,11 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('register-clinic', function (Request $request) {
             return Limit::perMinute(
                 (int) config('auth_security.registration.max_attempts', 3)
-            )->by($request->ip());
+            )->by($request->ip())->response(function (Request $request, array $headers) {
+                app(AuditLogService::class)->logRegistrationAbuse($request->ip());
+
+                return response('Too Many Attempts.', 429, $headers);
+            });
         });
 
         View::composer([
