@@ -528,6 +528,38 @@ activeLabs()
 
 ---
 
+### `ConfigurationProgressService`
+
+**Path:** `app/Services/Configuration/ConfigurationProgressService.php`
+
+**Purpose:** Calculate guided business-configuration progress for the current clinic (ADR-031).
+
+**Output:** `{ steps, missing_modules, progress_percentage, current_step, ready_for_import }`
+
+**Completion rules:**
+
+- Doctors — ≥ 1 active
+- Laboratories — ≥ 1 active (default lab from onboarding counts)
+- Treatments — ≥ 1 active
+- Lab Prices — ≥ 1 active
+- Doctor Fixed Fees — required only when active no-commission doctors exist
+
+**Dependencies:** `CurrentClinicResolver`, `ScopesConfigurationQueries` trait
+
+---
+
+### `BusinessConfigurationService`
+
+**Path:** `app/Services/Configuration/BusinessConfigurationService.php`
+
+**Purpose:** Facade for configuration readiness checks used by dashboard, import UI, and API (ADR-031).
+
+**Methods:** `status()`, `canImport()`, `assertReadyForImport()`
+
+**Dependencies:** `ConfigurationProgressService`
+
+---
+
 ### `ClinicOnboardingService`
 
 **Path:** `app/Services/Configuration/ClinicOnboardingService.php`
@@ -734,6 +766,7 @@ Import validation warning and per-row persist result.
 
 **Updated — 2026-06-27**
 
+- Documented `ConfigurationProgressService` and `BusinessConfigurationService` (ADR-031)
 - Documented `LoginThrottleService` and `AuthenticationService` (ADR-032)
 - Documented explicit query isolation: `ScopesConfigurationQueries`, `ReferenceDataService`, clinic-scoped list methods (Milestone 09, ADR-028)
 - Documented `ClinicOnboardingService` (Milestone 11, ADR-030)

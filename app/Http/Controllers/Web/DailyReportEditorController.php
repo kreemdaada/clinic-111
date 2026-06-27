@@ -166,7 +166,7 @@ class DailyReportEditorController extends Controller
             ->whereDate('work_date', $workDate->toDateString())
             ->orderBy('id')
             ->get()
-            ->map(fn (DailyWorkRow $row) => $this->serializeRow($row));
+            ->map(fn(DailyWorkRow $row) => $this->serializeRow($row));
 
         return response()->json([
             'data' => $rows,
@@ -311,7 +311,7 @@ class DailyReportEditorController extends Controller
             'day' => $row->work_date ? $row->work_date->day : null,
             'treatment_text' => $row->treatment_text,
             'treatment_lines' => $row->workItems
-                ->map(fn ($workItem) => [
+                ->map(fn($workItem) => [
                     'code' => $workItem->treatment->code,
                     'quantity' => (int) $workItem->quantity,
                 ])

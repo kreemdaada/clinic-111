@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\DailyReports;
 
+use App\Services\Configuration\BusinessConfigurationService;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -49,5 +51,18 @@ class ImportDailyReportRequest extends FormRequest
             'file.uploaded' => 'Upload failed before PHP received the file. Stop any running server and restart with: ./bin/serve (not php artisan serve). Current PHP limit: upload_max_filesize='.ini_get('upload_max_filesize').', post_max_size='.ini_get('post_max_size').'.',
             'file.max' => 'The file is too large. Maximum allowed size is '.((int) config('accounting.upload.max_kilobytes') / 1024).' MB.',
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
+
+            if (! app(BusinessConfigurationService::class)->canImport()) {
+                $validator->errors()->add('file', BusinessConfigurationService::INCOMPLETE_MESSAGE);
+            }
+        });
     }
 }

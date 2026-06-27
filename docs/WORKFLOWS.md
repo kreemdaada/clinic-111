@@ -635,7 +635,40 @@ sequenceDiagram
 
 ---
 
-## 22. Authentication Security (ADR-032)
+## 22. Business Configuration Wizard (Milestone 12, ADR-031)
+
+```mermaid
+flowchart TD
+    A[Clinic Registration] --> B[Configuration Dashboard]
+    B --> C{Doctors configured?}
+    C -->|No| D[Manage Doctors]
+    C -->|Yes| E{Labs active?}
+    E -->|No| F[Manage Laboratories]
+    E -->|Yes| G{Treatments configured?}
+    G -->|No| H[Manage Treatments]
+    G -->|Yes| I{Lab prices configured?}
+    I -->|No| J[Manage Lab Prices]
+    I -->|Yes| K{Fixed-fee doctors?}
+    K -->|Yes, missing fees| L[Manage Doctor Fixed Fees]
+    K -->|No or complete| M[Import First Report]
+    D --> B
+    F --> B
+    H --> B
+    J --> B
+    L --> B
+```
+
+**Rules:**
+
+- Onboarding creates only clinic, owner, and default lab — no doctors, treatments, or prices
+- Progress is calculated dynamically per clinic (`ConfigurationProgressService`)
+- Import UI and API reject uploads until required configuration exists
+- Doctor fixed fees are optional unless the clinic has active no-commission doctors
+- Clinic 111 remains fully operational with seeded configuration
+
+---
+
+## 23. Authentication Security (ADR-032)
 
 ```mermaid
 sequenceDiagram
@@ -691,6 +724,7 @@ Same pipeline after row creation: `TreatmentImportValidationService` → `LabJob
 
 **Updated — 2026-06-27**
 
+- Business configuration wizard and import readiness guard (Milestone 12, ADR-031)
 - Clinic onboarding workflow (Milestone 11, ADR-030)
 - Accounting ownership and isolation (Milestone 10, ADR-029)
 
