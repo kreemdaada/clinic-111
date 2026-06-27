@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\User;
+use App\Services\Audit\AuditLogService;
 use App\Services\Auth\AuthenticationService;
 use Illuminate\Http\JsonResponse;
 
@@ -16,6 +18,7 @@ class AuthController extends Controller
 {
     public function __construct(
         private readonly AuthenticationService $authenticationService,
+        private readonly AuditLogService $auditLogService,
     ) {}
 
     /**
@@ -56,6 +59,8 @@ class AuthController extends Controller
             if ($accessToken !== null) {
                 $accessToken->delete();
             }
+
+            $this->auditLogService->logLogout($user);
         }
 
         return response()->json(['message' => 'Logged out successfully.']);

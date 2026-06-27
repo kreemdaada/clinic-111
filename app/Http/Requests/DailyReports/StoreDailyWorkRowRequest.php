@@ -3,6 +3,8 @@
 namespace App\Http\Requests\DailyReports;
 
 use App\Models\DailyReport;
+use App\Rules\BelongsToCurrentClinic;
+use App\Models\Doctor;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -22,7 +24,7 @@ class StoreDailyWorkRowRequest extends FormRequest
         $dailyReport = $this->route('dailyReport');
 
         return [
-            'doctor_id' => ['required', 'integer', 'exists:doctors,id'],
+            'doctor_id' => ['required', 'integer', new BelongsToCurrentClinic(Doctor::class)],
             'day' => ['required', 'integer', 'min:1', 'max:31'],
             'work_row_id' => [
                 'nullable',

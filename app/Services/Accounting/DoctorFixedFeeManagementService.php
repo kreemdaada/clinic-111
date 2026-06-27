@@ -2,10 +2,13 @@
 
 namespace App\Services\Accounting;
 
+use App\Models\Doctor;
 use App\Models\DoctorFixedFee;
+use App\Models\Treatment;
 use App\Services\Audit\AuditLogService;
 use App\Services\Configuration\Concerns\ScopesConfigurationQueries;
 use App\Services\Configuration\CurrentClinicResolver;
+use App\Services\Configuration\TenantResourceGuard;
 use App\Support\DoctorFixedFeeOverlapValidator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +25,7 @@ class DoctorFixedFeeManagementService
         private readonly AuditLogService $auditLogService,
         private readonly DoctorFixedFeeOverlapValidator $overlapValidator,
         private readonly CurrentClinicResolver $currentClinicResolver,
+        private readonly TenantResourceGuard $tenantResourceGuard,
     ) {}
 
     public function listQuery(
@@ -78,6 +82,8 @@ class DoctorFixedFeeManagementService
      */
     public function create(array $data): DoctorFixedFee
     {
+        $this->assertRelatedResourcesAccessible((int) $data['doctor_id'], (int) $data['treatment_id']);
+
         return DB::transaction(function () use ($data) {
             $validFrom = $data['valid_from'] ?? null;
             $validTo = $data['valid_to'] ?? null;
@@ -130,6 +136,8 @@ class DoctorFixedFeeManagementService
 
             $doctorId = (int) ($data['doctor_id'] ?? $doctorFixedFee->doctor_id);
             $treatmentId = (int) ($data['treatment_id'] ?? $doctorFixedFee->treatment_id);
+
+            $this->assertRelatedResourcesAccessible($doctorId, $treatmentId);
             $validFrom = array_key_exists('valid_from', $data) ? $data['valid_from'] : $doctorFixedFee->valid_from?->toDateString();
             $validTo = array_key_exists('valid_to', $data) ? $data['valid_to'] : $doctorFixedFee->valid_to?->toDateString();
             $willBeActive = array_key_exists('is_active', $data) ? (bool) $data['is_active'] : $doctorFixedFee->is_active;
@@ -230,5 +238,11 @@ class DoctorFixedFeeManagementService
             'valid_to' => $doctorFixedFee->valid_to?->toDateString(),
             'is_active' => $doctorFixedFee->is_active,
         ];
+    }
+
+    private function assertRelatedResourcesAccessible(int $doctorId, int $treatmentId): void
+    {
+        $this->tenantResourceGuard->findAccessibleOrAbort(Doctor::class, $doctorId);
+        $this->tenantResourceGuard->findAccessibleOrAbort(Treatment::class, $treatmentId);
     }
 }

@@ -140,6 +140,7 @@ class ConfigurationDashboardService
         return AuditLog::query()
             ->with(['user', 'auditable'])
             ->whereIn('action', $actionValues)
+            ->where('clinic_id', $currentClinicId)
             ->where(function ($query) use ($currentClinicId, $clinicMorph) {
                 $query->whereHasMorph(
                     'auditable',

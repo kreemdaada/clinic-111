@@ -2,6 +2,9 @@
 
 namespace App\Http\Requests\DoctorFixedFees;
 
+use App\Models\Doctor;
+use App\Models\Treatment;
+use App\Rules\BelongsToCurrentClinic;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ListDoctorFixedFeesRequest extends FormRequest
@@ -18,8 +21,8 @@ class ListDoctorFixedFeesRequest extends FormRequest
     {
         return [
             'search' => ['nullable', 'string', 'max:120'],
-            'doctor_id' => ['nullable', 'integer', 'exists:doctors,id'],
-            'treatment_id' => ['nullable', 'integer', 'exists:treatments,id'],
+            'doctor_id' => ['nullable', 'integer', new BelongsToCurrentClinic(Doctor::class, nullable: true)],
+            'treatment_id' => ['nullable', 'integer', new BelongsToCurrentClinic(Treatment::class, nullable: true)],
             'status' => ['nullable', 'string', 'in:all,active,inactive'],
             'currency' => ['nullable', 'string', 'size:3'],
         ];

@@ -243,6 +243,8 @@ class DailyReportEditorService
         string $cheque = '0.00',
         string $tabby = '0.00',
     ): array {
+        $this->assertSameClinic($doctor);
+
         $dhs = $this->decimal($dhs);
         $cheque = $this->decimal($cheque);
         $tabby = $this->decimal($tabby);

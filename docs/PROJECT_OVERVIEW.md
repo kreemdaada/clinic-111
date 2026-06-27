@@ -110,20 +110,24 @@ See [WORKFLOWS.md](./WORKFLOWS.md) for step-by-step details.
 
 ---
 
-## Security (ADR-032)
+## Security (ADR-032, ADR-033)
 
-Authentication and public onboarding are hardened before platform launch:
+Authentication, abuse protection, and platform audit context are hardened before public SaaS launch:
 
 | Control | Implementation |
 |---|---|
-| Login brute-force protection | Max 5 failed attempts per email + IP, 5-minute lockout via `LoginThrottleService` |
-| Registration abuse | Max 3 POST `/register-clinic` per minute per IP |
+| Login brute-force protection | Max 5 failed attempts per email + IP + user-agent, 5-minute lockout via `LoginThrottleService` |
+| Registration abuse | Max 3 POST `/register-clinic` per minute per IP; 429 audited as `registration_abuse` |
 | Password policy | Min 12 chars, uppercase, lowercase, number, special character (`Password::defaults()`) |
 | User enumeration | Generic credential errors — never reveal email/account/clinic existence |
 | Session security | Regenerate session ID + CSRF token on login; invalidate on logout |
-| Security audit | `login_succeeded`, `login_failed`, `login_lockout`, `clinic_registered` |
+| Email verification | New clinic owners must verify email; seeded/admin users pre-verified (`verified` middleware) |
+| CAPTCHA | Contract-based `CaptchaVerificationService` + fake driver for local/tests (`config/auth_security.php`) |
+| Security headers | HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, CSP via `SecurityHeadersMiddleware` |
+| Platform audit context | Unknown auth events use `clinic_id = null`, not `CLINIC_111` |
+| Security audit | `login_succeeded`, `login_failed`, `login_lockout`, `logout`, `clinic_registered`, `email_verification_sent`, `email_verified`, `registration_abuse` |
 
-Out of scope for this milestone: CAPTCHA, email verification, 2FA, OAuth.
+Out of scope for Milestone 13A/13B: full tenant authorization review (Milestone 13B), 2FA, OAuth.
 
 ---
 
@@ -179,6 +183,8 @@ Patient name, MRN, and file number are **never stored or exposed** in API respon
 
 **Updated — 2026-06-27**
 
+- Platform security — platform audit context, NAT-aware login throttle, email verification, CAPTCHA abstraction, security headers (Milestone 13A, ADR-033)
+- Tenant authorization review — cross-clinic 404 enforcement, `TenantResourceGuard`, clinic-scoped FK validation (Milestone 13B, ADR-033)
 - Guided business configuration wizard and import readiness guard (Milestone 12, ADR-031)
 - Authentication security hardening — login throttle, registration rate limit, password policy, session regeneration, security audit (ADR-032)
 - Clinic onboarding workflow — public registration creates clinic, owner/admin, and default lab (Milestone 11, ADR-030)

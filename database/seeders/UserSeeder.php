@@ -29,6 +29,7 @@ class UserSeeder extends Seeder
                 'role' => UserRole::Admin,
                 'is_active' => true,
                 'clinic_id' => $clinic->id,
+                'email_verified_at' => now(),
             ],
         );
 
@@ -40,6 +41,7 @@ class UserSeeder extends Seeder
                 'role' => UserRole::Accountant,
                 'is_active' => true,
                 'clinic_id' => $clinic->id,
+                'email_verified_at' => now(),
             ],
         );
 
@@ -51,6 +53,7 @@ class UserSeeder extends Seeder
                 'role' => UserRole::Viewer,
                 'is_active' => true,
                 'clinic_id' => $clinic->id,
+                'email_verified_at' => now(),
             ],
         );
     }

@@ -389,19 +389,29 @@ Every important financial modification must create an Audit Log.
 
 Authentication endpoints must use generic error messages — never reveal whether an email, account, or clinic exists.
 
-Login brute-force protection uses Laravel `RateLimiter` (`LoginThrottleService`) — max 5 failed attempts, 5-minute lockout.
+Login brute-force protection uses Laravel `RateLimiter` (`LoginThrottleService`) — max 5 failed attempts per email + IP + user-agent, 5-minute lockout.
 
-Public registration is rate-limited to 3 attempts per minute per IP.
+Public registration is rate-limited to 3 attempts per minute per IP. Exceeding the limit returns 429 and writes a platform-scoped `registration_abuse` audit entry.
+
+Registration CAPTCHA is validated through `CaptchaVerificationService` when `auth_security.captcha.enabled` is true. Use the fake driver and `test-captcha-token` in tests.
+
+New clinic owners must verify email (`MustVerifyEmail`, `verified` middleware). Seeded and admin-provisioned users are pre-verified.
 
 New passwords (registration, admin user create, password reset) must satisfy `Password::defaults()` — minimum 12 characters with mixed case, number, and symbol.
 
 Session cookies must be `HttpOnly`, `SameSite=lax` (or `strict`), and `Secure` in production (`SESSION_SECURE_COOKIE` / `config/session.php`).
 
-Security events (`login_succeeded`, `login_failed`, `login_lockout`, `clinic_registered`) are audit-logged. Never log passwords, tokens, or session IDs.
+Production HTTP responses may include security headers via `SecurityHeadersMiddleware` (`config/security.php`). Disabled by default outside production.
 
-Business configuration progress is calculated dynamically — never auto-create doctors, treatments, or prices during onboarding (ADR-031).
+Security events (`login_succeeded`, `login_failed`, `login_lockout`, `logout`, `clinic_registered`, `email_verification_sent`, `email_verified`, `registration_abuse`) are audit-logged. Unknown authentication events use platform audit context (`clinic_id = null`, never `CLINIC_111`). Never log passwords, tokens, or session IDs.
 
-Import endpoints must reject uploads when required business configuration is missing.
+Cross-clinic route-model access returns **404** (never 403). Use `TenantResourceGuard::assertAccessible()` or `findAccessibleOrAbort()` at controller boundaries; services use `assertSameClinic()` from scoping traits.
+
+User admin routes use `{managedUser}` integer parameter — not `{user}` — to avoid Laravel auth binding conflicts.
+
+Form-request foreign keys (doctor, lab, treatment, lab price, fixed fee) must use `BelongsToCurrentClinic` validation rule.
+
+Future background jobs processing tenant data must receive explicit `clinic_id`; do not call `CurrentClinicResolver` without authenticated context.
 
 ---
 

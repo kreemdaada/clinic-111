@@ -16,6 +16,7 @@ use App\Support\SecurePassword;
 use App\Services\Audit\AuditLogService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class ClinicOnboardingTest extends TestCase
@@ -44,14 +45,21 @@ class ClinicOnboardingTest extends TestCase
     {
         parent::setUp();
 
+        Notification::fake();
         $this->seedAccountingData();
+    }
+
+    private function registerOwner(): User
+    {
+        $this->post(route('register-clinic.store'), $this->validPayload())
+            ->assertRedirect(route('verification.notice'));
+
+        return User::query()->where('email', 'owner@sunrise.test')->firstOrFail();
     }
 
     public function test_onboarding_creates_clinic(): void
     {
-        $this->post(route('register-clinic.store'), $this->validPayload())
-            ->assertRedirect(route('configuration.dashboard'))
-            ->assertSessionHas('success');
+        $this->registerOwner();
 
         $this->assertDatabaseHas('clinics', [
             'code' => 'SUNRISE',
@@ -65,7 +73,7 @@ class ClinicOnboardingTest extends TestCase
 
     public function test_onboarding_creates_owner_admin_user(): void
     {
-        $this->post(route('register-clinic.store'), $this->validPayload());
+        $this->registerOwner();
 
         $this->assertDatabaseHas('users', [
             'email' => 'owner@sunrise.test',
@@ -77,7 +85,7 @@ class ClinicOnboardingTest extends TestCase
 
     public function test_owner_belongs_to_new_clinic(): void
     {
-        $this->post(route('register-clinic.store'), $this->validPayload());
+        $this->registerOwner();
 
         $clinic = Clinic::query()->where('code', 'SUNRISE')->firstOrFail();
         $owner = User::query()->where('email', 'owner@sunrise.test')->firstOrFail();
@@ -85,23 +93,36 @@ class ClinicOnboardingTest extends TestCase
         $this->assertSame($clinic->id, $owner->clinic_id);
     }
 
-    public function test_owner_can_access_configuration_dashboard_after_onboarding(): void
+    public function test_owner_can_access_configuration_dashboard_after_email_verification(): void
     {
-        $this->post(route('register-clinic.store'), $this->validPayload());
-
-        $owner = User::query()->where('email', 'owner@sunrise.test')->firstOrFail();
+        $owner = $this->registerOwner();
 
         $this->assertTrue(Auth::check());
         $this->assertSame($owner->id, Auth::id());
 
         $this->actingAs($owner)
             ->get(route('configuration.dashboard'))
+            ->assertRedirect(route('verification.notice'));
+
+        $this->verifyUser($owner);
+
+        $this->actingAs($owner)
+            ->get(route('configuration.dashboard'))
             ->assertOk();
+    }
+
+    public function test_unverified_owner_is_redirected_to_verification_notice(): void
+    {
+        $owner = $this->registerOwner();
+
+        $this->actingAs($owner)
+            ->get(route('imports.index'))
+            ->assertRedirect(route('verification.notice'));
     }
 
     public function test_onboarding_does_not_create_accounting_records(): void
     {
-        $this->post(route('register-clinic.store'), $this->validPayload());
+        $this->registerOwner();
 
         $clinic = Clinic::query()->where('code', 'SUNRISE')->firstOrFail();
 
@@ -113,7 +134,7 @@ class ClinicOnboardingTest extends TestCase
 
     public function test_onboarding_does_not_create_doctors_or_treatments(): void
     {
-        $this->post(route('register-clinic.store'), $this->validPayload());
+        $this->registerOwner();
 
         $clinic = Clinic::query()->where('code', 'SUNRISE')->firstOrFail();
 
@@ -123,7 +144,7 @@ class ClinicOnboardingTest extends TestCase
 
     public function test_onboarding_creates_only_default_lab(): void
     {
-        $this->post(route('register-clinic.store'), $this->validPayload());
+        $this->registerOwner();
 
         $clinic = Clinic::query()->where('code', 'SUNRISE')->firstOrFail();
 
@@ -175,9 +196,8 @@ class ClinicOnboardingTest extends TestCase
 
     public function test_new_clinic_cannot_see_clinic_111_data(): void
     {
-        $this->post(route('register-clinic.store'), $this->validPayload());
-
-        $owner = User::query()->where('email', 'owner@sunrise.test')->firstOrFail();
+        $owner = $this->registerOwner();
+        $this->verifyUser($owner);
 
         $this->actingAs($owner)
             ->get(route('labs.index'))
@@ -188,7 +208,7 @@ class ClinicOnboardingTest extends TestCase
 
     public function test_clinic_111_cannot_see_new_clinic_data(): void
     {
-        $this->post(route('register-clinic.store'), $this->validPayload());
+        $this->registerOwner();
 
         $admin111 = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
 
@@ -213,7 +233,8 @@ class ClinicOnboardingTest extends TestCase
                 'user' => ['id', 'name', 'email', 'role'],
             ])
             ->assertJsonPath('clinic.code', 'API_CLINIC')
-            ->assertJsonPath('user.role', UserRole::Admin->value);
+            ->assertJsonPath('user.role', UserRole::Admin->value)
+            ->assertJsonPath('user.email_verified', false);
 
         $this->assertDatabaseHas('clinics', ['code' => 'API_CLINIC']);
     }
@@ -235,7 +256,7 @@ class ClinicOnboardingTest extends TestCase
             'currency' => 'EUR',
             'timezone' => 'Europe/Berlin',
             'owner_email' => 'owner@euro.test',
-        ]))->assertRedirect(route('configuration.dashboard'));
+        ]))->assertRedirect(route('verification.notice'));
 
         $this->assertDatabaseHas('clinics', [
             'code' => 'EURO_CLINIC',

@@ -42,7 +42,7 @@ For drag-and-drop Excel import without curl, use the web interface:
 
 **Role:** Public (no auth required)
 
-**Rate limit:** Credential throttle — max 5 failed attempts per email + IP, then 5-minute lockout (Laravel `RateLimiter`, ADR-032). Successful login clears the counter.
+**Rate limit:** Credential throttle — max 5 failed attempts per email + IP + user-agent, then 5-minute lockout (Laravel `RateLimiter`, ADR-032/ADR-033). Successful login clears the counter.
 
 **Request:**
 
@@ -78,7 +78,11 @@ For drag-and-drop Excel import without curl, use the web interface:
 
 **Error `429`:** Too many failed attempts — lockout message with retry guidance.
 
-**Security audit:** `login_succeeded`, `login_failed`, `login_lockout` (email only — never passwords or tokens).
+**Security audit:** `login_succeeded`, `login_failed`, `login_lockout`, `logout` (email only — never passwords, tokens, or session IDs). Unknown-email failures use platform audit context (`clinic_id = null`).
+
+**Verified access:** Authenticated API routes require verified email (`verified` middleware). Unverified owners receive `403` with verification message.
+
+**Tenant authorization:** Cross-clinic resource access returns **404**. User admin endpoints use `/admin/users/{managedUser}` (integer ID, clinic-scoped via `TenantResourceGuard`).
 
 ---
 
@@ -118,10 +122,13 @@ For drag-and-drop Excel import without curl, use the web interface:
 | `owner_name` | required, string, max 120 |
 | `owner_email` | required, email, unique on `users.email` |
 | `owner_password` | required, confirmed, `Password::defaults()` (min 12, mixed case, number, symbol) |
+| `captcha_token` | required when `auth_security.captcha.enabled` is true |
 
 **Duplicate rejection:** Duplicate clinic codes and emails are rejected with a **generic** message (no enumeration).
 
-**Security audit:** `clinic_registered` plus existing `clinic_created` / `user_created` entries.
+**CAPTCHA:** Validated via `CaptchaVerificationService` when enabled. Disabled by default in local/testing.
+
+**Security audit:** `clinic_registered`, `email_verification_sent`, plus existing `clinic_created` / `user_created` entries. Rate-limit 429 writes `registration_abuse` (platform context).
 
 **Rejected fields:** `clinic_id`, `role`, `is_active`, and all accounting/configuration ownership fields.
 
@@ -142,10 +149,13 @@ For drag-and-drop Excel import without curl, use the web interface:
     "id": 5,
     "name": "Dr Owner",
     "email": "owner@sunrise.test",
-    "role": "admin"
+    "role": "admin",
+    "email_verified": false
   }
 }
 ```
+
+**Note:** Token is issued immediately, but protected API routes require email verification (`email_verified: true`).
 
 **Error `422`:** Validation failure (duplicate clinic code, duplicate email, invalid timezone, etc.).
 

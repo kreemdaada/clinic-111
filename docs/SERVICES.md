@@ -587,7 +587,8 @@ register([
 
 - Runs inside one database transaction — partial clinics are forbidden
 - Does not use `CurrentClinicResolver` (no authenticated user yet)
-- Owner role is always `admin`; `clinic_id` and `is_active` are assigned internally
+- Owner role is always `admin`; `clinic_id` and `is_active` are assigned internally; owner starts with `email_verified_at = null`
+- After transaction commit, sends email verification notification and audits `email_verification_sent`
 - Creates one default lab (`{CLINIC_CODE}_MAIN_LAB`) — no doctors, treatments, prices, or accounting records
 - Clinic 111 is never copied as a template
 - Writes audit logs for clinic, user, lab creation, and `clinic_registered`
@@ -604,9 +605,35 @@ register([
 
 **Purpose:** Brute-force protection for login using Laravel `RateLimiter`.
 
-**Key:** `login|{email}|{ip}` — max 5 attempts, 5-minute decay (`config/auth_security.php`).
+**Key:** `login|{email}|{ip}|{sha256(user-agent)}` — max 5 attempts, 5-minute decay (`config/auth_security.php`). Uses `unknown` when User-Agent is absent.
 
 **Methods:** `throttleKey()`, `tooManyAttempts()`, `hit()`, `clear()`, `availableIn()`
+
+---
+
+### `CaptchaVerificationService`
+
+**Path:** `app/Services/Security/CaptchaVerificationService.php`
+
+**Purpose:** Config-driven CAPTCHA verification for public registration (ADR-033).
+
+**Contract:** `App\Contracts\Security\CaptchaVerifier` — default binding `FakeCaptchaVerifier`.
+
+**Config:** `config/auth_security.php` → `captcha.enabled`, `captcha.driver`, `captcha.fake_token`
+
+**Methods:** `isEnabled()`, `verify(?string $token, Request $request)`
+
+**Rules:** When disabled, verification always passes (local/tests). Controllers and form requests delegate here — no vendor logic in HTTP layer.
+
+---
+
+### `PlatformAuditContext`
+
+**Path:** `app/Services/Audit/PlatformAuditContext.php`
+
+**Purpose:** Tags platform-scoped audit entries with `audit_context: platform` and `clinic_id = null` (ADR-033).
+
+Used by `AuditLogService::logPlatform()` for unknown-email login failures, lockouts, and registration abuse.
 
 ---
 
@@ -625,9 +652,39 @@ register([
 - Generic error for invalid credentials and deactivated accounts (no enumeration)
 - Lockout after max failed attempts (`429` for API, session error for web)
 - Successful login clears throttle counter
-- Writes security audit entries via `AuditLogService`
+- Writes security audit entries via `AuditLogService` (tenant context for known users; platform context for unknown email)
 
 **Dependencies:** `LoginThrottleService`, `AuditLogService`, `User` model
+
+---
+
+## Platform Security (ADR-033 — Milestone 13A)
+
+| Component | Path |
+|---|---|
+| `SecurityHeadersMiddleware` | `app/Http/Middleware/SecurityHeadersMiddleware.php` |
+| Security headers config | `config/security.php` |
+| CAPTCHA contract | `app/Contracts/Security/CaptchaVerifier.php` |
+| Fake CAPTCHA driver | `app/Services/Security/FakeCaptchaVerifier.php` |
+| Email verification controller | `app/Http/Controllers/Web/EmailVerificationController.php` |
+| Audit context helper | `app/Support/AuditContext.php` |
+
+---
+
+## Tenant Authorization (ADR-033 — Milestone 13B)
+
+| Component | Path |
+|---|---|
+| `TenantResourceGuard` | `app/Services/Configuration/TenantResourceGuard.php` |
+| `BelongsToCurrentClinic` rule | `app/Rules/BelongsToCurrentClinic.php` |
+| Configuration scoping trait | `app/Services/Configuration/Concerns/ScopesConfigurationQueries.php` |
+| Accounting scoping trait | `app/Services/Accounting/Concerns/ScopesAccountingQueries.php` |
+
+**Rule:** `resource.clinic_id === CurrentClinicResolver::resolveId()` — cross-clinic access aborts **404**.
+
+**Route model binding:** Controllers receiving bound models call `TenantResourceGuard::assertAccessible()` or resolve IDs via `findAccessibleOrAbort()`. User admin routes use `{managedUser}` int + guard (not `{user}`).
+
+**Background jobs:** Future queued tenant work must receive explicit `clinic_id`; no resolver without auth context.
 
 ---
 
@@ -766,6 +823,8 @@ Import validation warning and per-row persist result.
 
 **Updated — 2026-06-27**
 
+- Documented tenant authorization: `TenantResourceGuard`, `BelongsToCurrentClinic` (ADR-033, Milestone 13B)
+- Documented platform security services: `CaptchaVerificationService`, `PlatformAuditContext`, `SecurityHeadersMiddleware` (ADR-033)
 - Documented `ConfigurationProgressService` and `BusinessConfigurationService` (ADR-031)
 - Documented `LoginThrottleService` and `AuthenticationService` (ADR-032)
 - Documented explicit query isolation: `ScopesConfigurationQueries`, `ReferenceDataService`, clinic-scoped list methods (Milestone 09, ADR-028)

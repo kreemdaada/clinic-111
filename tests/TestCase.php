@@ -63,6 +63,7 @@ abstract class TestCase extends BaseTestCase
         ]);
         $admin->password = 'password';
         $admin->is_active = true;
+        $admin->email_verified_at = now();
         $admin->save();
 
         $lab = \App\Models\Lab::query()->create([
@@ -109,6 +110,7 @@ abstract class TestCase extends BaseTestCase
         ]);
         $viewer->password = 'password';
         $viewer->is_active = true;
+        $viewer->email_verified_at = now();
         $viewer->save();
 
         return compact('clinic', 'admin', 'lab', 'treatment', 'doctor', 'price', 'viewer');
@@ -186,5 +188,14 @@ abstract class TestCase extends BaseTestCase
         $this->actingAs($admin);
 
         return $admin;
+    }
+
+    protected function verifyUser(User $user): User
+    {
+        if ($user->email_verified_at === null) {
+            $user->forceFill(['email_verified_at' => now()])->save();
+        }
+
+        return $user->fresh();
     }
 }

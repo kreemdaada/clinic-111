@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Middleware\SecurityHeadersMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -18,7 +20,17 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->redirectGuestsTo(fn () => route('login'));
-        $middleware->redirectUsersTo(fn () => route('imports.index'));
+        $middleware->redirectUsersTo(function () {
+            $user = Auth::user();
+
+            if ($user !== null && ! $user->hasVerifiedEmail()) {
+                return route('verification.notice');
+            }
+
+            return route('imports.index');
+        });
+
+        $middleware->append(SecurityHeadersMiddleware::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

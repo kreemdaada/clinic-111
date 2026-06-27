@@ -7,6 +7,7 @@ use App\Http\Requests\Users\ResetUserPasswordRequest;
 use App\Http\Requests\Users\StoreUserRequest;
 use App\Http\Requests\Users\UpdateUserRequest;
 use App\Models\User;
+use App\Services\Configuration\TenantResourceGuard;
 use App\Services\User\UserManagementService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -19,6 +20,7 @@ class UserAdminController extends Controller
 {
     public function __construct(
         private readonly UserManagementService $userManagementService,
+        private readonly TenantResourceGuard $tenantResourceGuard,
     ) {}
 
     public function index(): View
@@ -48,36 +50,42 @@ class UserAdminController extends Controller
             ->with('success', $message);
     }
 
-    public function update(UpdateUserRequest $request, User $user): RedirectResponse
+    public function update(UpdateUserRequest $request, int $managedUser): RedirectResponse
     {
+        $account = $this->tenantResourceGuard->findAccessibleOrAbort(User::class, $managedUser);
+
         try {
-            $this->userManagementService->update($user, $request->validated(), $request->user());
+            $this->userManagementService->update($account, $request->validated(), $request->user());
         } catch (RuntimeException $exception) {
             return back()->withInput()->withErrors(['update' => $exception->getMessage()]);
         }
 
         return redirect()
             ->route('admin.users.index')
-            ->with('success', "User {$user->email} updated.");
+            ->with('success', "User {$account->email} updated.");
     }
 
-    public function destroy(User $user): RedirectResponse
+    public function destroy(int $managedUser): RedirectResponse
     {
+        $account = $this->tenantResourceGuard->findAccessibleOrAbort(User::class, $managedUser);
+
         try {
-            $this->userManagementService->deactivate($user, request()->user());
+            $this->userManagementService->deactivate($account, request()->user());
         } catch (RuntimeException $exception) {
             return back()->withErrors(['deactivate' => $exception->getMessage()]);
         }
 
         return redirect()
             ->route('admin.users.index')
-            ->with('success', "User {$user->email} deleted.");
+            ->with('success', "User {$account->email} deleted.");
     }
 
-    public function resetPassword(ResetUserPasswordRequest $request, User $user): RedirectResponse
+    public function resetPassword(ResetUserPasswordRequest $request, int $managedUser): RedirectResponse
     {
+        $account = $this->tenantResourceGuard->findAccessibleOrAbort(User::class, $managedUser);
+
         try {
-            $result = $this->userManagementService->resetPassword($user, $request->validated());
+            $result = $this->userManagementService->resetPassword($account, $request->validated());
         } catch (RuntimeException $exception) {
             return back()->withErrors(['password' => $exception->getMessage()]);
         }

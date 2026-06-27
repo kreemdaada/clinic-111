@@ -8,6 +8,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -19,7 +20,7 @@ use Laravel\Sanctum\HasApiTokens;
  */
 #[Fillable(['name', 'email', 'role', 'clinic_id'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use BelongsToClinic, HasApiTokens, HasFactory, Notifiable;
@@ -61,5 +62,13 @@ class User extends Authenticatable
     public function isViewer(): bool
     {
         return $this->role === UserRole::Viewer;
+    }
+
+    /**
+     * Seeded and admin-provisioned users are treated as verified for legacy compatibility.
+     */
+    public function requiresEmailVerification(): bool
+    {
+        return $this->email_verified_at === null;
     }
 }

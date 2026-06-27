@@ -462,11 +462,14 @@ Templates must be optional.
 Tenant security requires:
 
 * authentication
+* email verification for new clinic owners (Milestone 13A)
 * clinic_id on user
 * explicit clinic-scoped queries
 * authorization checks
-* audit logs
+* audit logs (tenant and platform contexts)
 * cross-clinic leakage tests
+* CAPTCHA on public registration (config-driven)
+* production security headers
 
 A user from Clinic A must never access Clinic B data.
 
@@ -480,28 +483,33 @@ This must be enforced in:
 * Reports
 * Audit views
 
+**Milestone 13A (implemented):** Platform audit context, NAT-aware login throttle, email verification, CAPTCHA abstraction, security headers.
+
+**Milestone 13B (implemented):** Full tenant authorization review — `TenantResourceGuard`, cross-clinic 404 enforcement, clinic-scoped FK validation, user admin `{managedUser}` route fix.
+
 ---
 
 # 19. Audit Logs
 
-Audit logs should eventually belong to a clinic.
+Audit logs belong to a clinic for tenant-scoped events. Platform-scoped events (unknown email login, registration abuse) use `clinic_id = null` and `new_values.audit_context = platform` (Milestone 13A, ADR-033).
 
 Reason:
 
 * Admins should see only their clinic's audit history
 * SaaS operators may later need global audit views
 
-Future approach:
+Current approach:
 
 ```text
-audit_logs.clinic_id
+audit_logs.clinic_id  — NULL for platform events, clinic ID for tenant events
+audit_logs.new_values.audit_context  — "platform" | omitted for tenant events
 ```
 
 Clinic admin sees clinic audit logs.
 
 Platform admin may see global audit logs.
 
-Platform admin is out of scope for current milestones.
+Platform admin UI is out of scope for current milestones.
 
 ---
 

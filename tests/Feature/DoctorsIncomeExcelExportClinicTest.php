@@ -95,6 +95,9 @@ class DoctorsIncomeExcelExportClinicTest extends TestCase
             $sheet->getStyle('A3')->getNumberFormat()->getFormatCode(),
         );
         $this->assertGreaterThan(40000, (float) $sheet->getCell('A3')->getCalculatedValue());
+
+        $spreadsheet->disconnectWorksheets();
+        unset($spreadsheet);
     }
 
     public function test_usd_clinic_new_doctor_export_uses_standard_layout_and_clinic_currency(): void
@@ -217,5 +220,8 @@ class DoctorsIncomeExcelExportClinicTest extends TestCase
             'doctor_id' => $doctor->id,
             'sheet_name' => 'Dr. TestDr',
         ]);
+
+        $spreadsheet->disconnectWorksheets();
+        unset($spreadsheet);
     }
 }

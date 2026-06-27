@@ -21,13 +21,29 @@ class LoginThrottleServiceTest extends TestCase
         $this->loginThrottle = app(LoginThrottleService::class);
     }
 
-    public function test_throttle_key_is_stable_for_email_and_ip(): void
+    public function test_throttle_key_is_stable_for_email_ip_and_user_agent(): void
     {
-        $request = Request::create('/login', 'POST', server: ['REMOTE_ADDR' => '203.0.113.10']);
+        $request = Request::create('/login', 'POST', server: [
+            'REMOTE_ADDR' => '203.0.113.10',
+            'HTTP_USER_AGENT' => 'PHPUnit Test Agent',
+        ]);
 
         $key = $this->loginThrottle->throttleKey('Admin@Clinic.Test', $request);
 
-        $this->assertSame('login|admin@clinic.test|203.0.113.10', $key);
+        $this->assertSame(
+            'login|admin@clinic.test|203.0.113.10|'.hash('sha256', 'PHPUnit Test Agent'),
+            $key,
+        );
+    }
+
+    public function test_throttle_key_uses_unknown_when_user_agent_missing(): void
+    {
+        $request = Request::create('/login', 'POST', server: ['REMOTE_ADDR' => '203.0.113.10']);
+        $request->headers->set('User-Agent', '');
+
+        $key = $this->loginThrottle->throttleKey('user@example.test', $request);
+
+        $this->assertSame('login|user@example.test|203.0.113.10|unknown', $key);
     }
 
     public function test_too_many_attempts_after_max_failures(): void

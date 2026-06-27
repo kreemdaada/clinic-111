@@ -10,6 +10,7 @@ use App\Models\DailyReport;
 use App\Models\DailyWorkRow;
 use App\Models\Doctor;
 use App\Services\Configuration\CurrentClinicResolver;
+use App\Services\Configuration\TenantResourceGuard;
 use App\Services\Configuration\ReferenceDataService;
 use App\Services\DailyReport\DailyReportEditorService;
 use App\Services\DailyReport\DailyReportQueryService;
@@ -36,6 +37,7 @@ class DailyReportEditorController extends Controller
         private readonly DoctorManagementService $doctorManagementService,
         private readonly DailyReportQueryService $dailyReportQueryService,
         private readonly ReferenceDataService $referenceDataService,
+        private readonly TenantResourceGuard $tenantResourceGuard,
         private readonly CurrentClinicResolver $currentClinicResolver,
     ) {}
 
@@ -53,7 +55,7 @@ class DailyReportEditorController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'doctor_id' => ['required', 'integer', 'exists:doctors,id'],
+            'doctor_id' => ['required', 'integer'],
             'date_from' => ['required', 'date'],
             'date_to' => ['required', 'date', 'after_or_equal:date_from'],
             'label' => ['nullable', 'string', 'max:120'],
@@ -69,7 +71,8 @@ class DailyReportEditorController extends Controller
         }
 
         $monthStart = $dateFrom->copy()->startOfMonth();
-        $doctor = Doctor::query()->findOrFail($validated['doctor_id']);
+        /** @var Doctor $doctor */
+        $doctor = $this->tenantResourceGuard->findAccessibleOrAbort(Doctor::class, (int) $validated['doctor_id']);
 
         $label = $validated['label'] ?? sprintf(
             '%s · %s – %s',
@@ -152,9 +155,11 @@ class DailyReportEditorController extends Controller
         $this->dailyReportQueryService->assertAccessible($dailyReport);
 
         $validated = $request->validate([
-            'doctor_id' => ['required', 'integer', 'exists:doctors,id'],
+            'doctor_id' => ['required', 'integer'],
             'day' => ['required', 'integer', 'min:1', 'max:31'],
         ]);
+
+        $this->tenantResourceGuard->findAccessibleOrAbort(Doctor::class, (int) $validated['doctor_id']);
 
         $day = (int) $validated['day'];
         $monthStart = Carbon::parse($dailyReport->report_date)->startOfMonth();
@@ -176,6 +181,8 @@ class DailyReportEditorController extends Controller
 
     public function doctorTreatments(Doctor $doctor, Request $request): JsonResponse
     {
+        $this->tenantResourceGuard->assertAccessible($doctor);
+
         $month = $request->query('month');
         $workDate = $month
             ? Carbon::createFromFormat('Y-m', (string) $month)->startOfMonth()
@@ -201,7 +208,7 @@ class DailyReportEditorController extends Controller
         $this->dailyReportQueryService->assertAccessible($dailyReport);
 
         $validated = $request->validate([
-            'doctor_id' => ['required', 'integer', 'exists:doctors,id'],
+            'doctor_id' => ['required', 'integer'],
             'day' => ['required', 'integer', 'min:1', 'max:31'],
             'dhs_amount' => ['nullable', 'numeric'],
             'cheque_amount' => ['nullable', 'numeric', 'min:0'],
@@ -213,7 +220,8 @@ class DailyReportEditorController extends Controller
             'treatment_lines.*.quantity' => ['required', 'integer', 'min:1'],
         ]);
 
-        $doctor = Doctor::query()->findOrFail($validated['doctor_id']);
+        /** @var Doctor $doctor */
+        $doctor = $this->tenantResourceGuard->findAccessibleOrAbort(Doctor::class, (int) $validated['doctor_id']);
         $monthStart = Carbon::parse($dailyReport->report_date)->startOfMonth();
         $workDate = $monthStart->copy()->day(min((int) $validated['day'], $monthStart->daysInMonth));
 
