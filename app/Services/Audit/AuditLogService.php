@@ -12,7 +12,6 @@ use App\Models\Lab;
 use App\Models\LabPrice;
 use App\Models\Treatment;
 use App\Models\User;
-use App\Services\Configuration\CurrentClinicResolver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 
@@ -21,15 +20,12 @@ use Illuminate\Support\Facades\Auth;
  */
 class AuditLogService
 {
-    public function __construct(
-        private readonly CurrentClinicResolver $currentClinicResolver,
-    ) {}
-
     public function log(
         AuditAction $action,
         ?Model $auditable = null,
         ?array $oldValues = null,
         ?array $newValues = null,
+        ?int $clinicId = null,
     ): AuditLog {
         $auditableType = null;
         $auditableId = null;
@@ -49,7 +45,7 @@ class AuditLogService
         }
 
         return AuditLog::query()->create([
-            'clinic_id' => $this->resolveClinicIdForAuditable($auditable),
+            'clinic_id' => $clinicId ?? $this->resolveClinicIdForAuditable($auditable),
             'user_id' => Auth::id(),
             'action' => $action,
             'auditable_type' => $auditableType,
@@ -284,6 +280,51 @@ class AuditLogService
         );
     }
 
+    public function logLoginSucceeded(User $user): AuditLog
+    {
+        return $this->log(
+            AuditAction::LoginSucceeded,
+            $user,
+            null,
+            ['email' => $user->email],
+        );
+    }
+
+    public function logLoginFailed(string $email): AuditLog
+    {
+        return $this->log(
+            AuditAction::LoginFailed,
+            null,
+            null,
+            ['email' => strtolower(trim($email))],
+            $this->resolveClinicIdForEmail($email),
+        );
+    }
+
+    public function logLoginLockout(string $email): AuditLog
+    {
+        return $this->log(
+            AuditAction::LoginLockout,
+            null,
+            null,
+            ['email' => strtolower(trim($email))],
+            $this->resolveClinicIdForEmail($email),
+        );
+    }
+
+    public function logClinicRegistered(Clinic $clinic, User $owner): AuditLog
+    {
+        return $this->log(
+            AuditAction::ClinicRegistered,
+            $clinic,
+            null,
+            [
+                'clinic_code' => $clinic->code,
+                'owner_email' => $owner->email,
+            ],
+        );
+    }
+
     public function logLabCreated(Lab $lab): AuditLog
     {
         return $this->log(
@@ -485,10 +526,46 @@ class AuditLogService
             return (int) $auditable->id;
         }
 
+        if ($auditable instanceof User && $auditable->clinic_id !== null) {
+            return (int) $auditable->clinic_id;
+        }
+
         if ($auditable !== null && isset($auditable->clinic_id)) {
             return (int) $auditable->clinic_id;
         }
 
-        return $this->currentClinicResolver->resolveId();
+        $user = Auth::user();
+
+        if ($user instanceof User && $user->clinic_id !== null) {
+            return (int) $user->clinic_id;
+        }
+
+        return $this->legacyFallbackClinicId();
+    }
+
+    private function resolveClinicIdForEmail(string $email): int
+    {
+        $clinicId = User::query()
+            ->where('email', strtolower(trim($email)))
+            ->value('clinic_id');
+
+        if ($clinicId !== null) {
+            return (int) $clinicId;
+        }
+
+        return $this->legacyFallbackClinicId();
+    }
+
+    private function legacyFallbackClinicId(): int
+    {
+        $code = (string) config('accounting.legacy_clinic_code', 'CLINIC_111');
+
+        $clinicId = Clinic::query()->where('code', $code)->value('id');
+
+        if ($clinicId === null) {
+            throw new \RuntimeException("Audit fallback clinic [{$code}] was not found.");
+        }
+
+        return (int) $clinicId;
     }
 }

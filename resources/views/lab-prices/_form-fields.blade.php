@@ -32,7 +32,7 @@
     </div>
     <div class="form-group" style="margin:0;">
         <label class="form-label">Currency</label>
-        <input class="form-input" type="text" name="currency" id="lp-{{ $prefix }}-currency" value="{{ old('currency', 'AED') }}" maxlength="3" required>
+        <input class="form-input" type="text" name="currency" id="lp-{{ $prefix }}-currency" value="{{ old('currency', $defaultCurrency ?? 'AED') }}" maxlength="3" required>
     </div>
 </div>
 <div class="lp-grid-2">

@@ -71,7 +71,7 @@
                     <label class="form-label" for="currency">Currency</label>
                     <select class="form-input" id="currency" name="currency" required>
                         @foreach ($currencies as $code => $label)
-                            <option value="{{ $code }}" @selected(old('currency', 'AED') === $code)>{{ $label }}</option>
+                            <option value="{{ $code }}" @selected(old('currency') === $code)>{{ $label }}</option>
                         @endforeach
                     </select>
                 </div>

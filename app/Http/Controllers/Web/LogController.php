@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DailyReport;
 use App\Services\DailyReport\DailyReportQueryService;
 use App\Services\Export\DoctorsIncomeExcelExportService;
+use App\Services\Import\ExtractionLogPresentationService;
 use App\Services\Import\ImportExtractionLogService;
 use App\Support\DoctorCodeResolver;
 use App\Support\ExtractionLogDoctorGrouper;
@@ -22,6 +23,7 @@ class LogController extends Controller
 {
     public function __construct(
         private readonly ImportExtractionLogService $importExtractionLogService,
+        private readonly ExtractionLogPresentationService $extractionLogPresentationService,
         private readonly DoctorsIncomeExcelExportService $incomeExporter,
         private readonly DailyReportQueryService $dailyReportQueryService,
     ) {}
@@ -46,6 +48,9 @@ class LogController extends Controller
     public function extraction(DailyReport $dailyReport): View
     {
         $this->dailyReportQueryService->assertAccessible($dailyReport);
+
+        $dailyReport->loadMissing('clinic');
+        $clinic = $dailyReport->clinic;
 
         $log = $this->importExtractionLogService->loadForReport($dailyReport);
 
@@ -79,10 +84,16 @@ class LogController extends Controller
 
                     return ((int) ($a['excel_row'] ?? 0)) <=> ((int) ($b['excel_row'] ?? 0));
                 });
-                $importedByDoctor[$doctorCode] = $rows;
+                $importedByDoctor[$doctorCode] = array_map(
+                    fn (array $row) => $this->extractionLogPresentationService->presentImportedRow($row, $clinic),
+                    $rows,
+                );
             }
 
-            $doctorTotals = ExtractionLogDoctorGrouper::knownDoctorTotals($log);
+            $doctorTotals = $this->extractionLogPresentationService->presentDoctorTotals(
+                ExtractionLogDoctorGrouper::knownDoctorTotals($log),
+                $clinic,
+            );
             $unknownDoctorErrors = $log['unknown_doctor_errors']
                 ?? ExtractionLogDoctorGrouper::unknownDoctorErrors($log);
         }

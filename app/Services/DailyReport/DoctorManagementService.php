@@ -10,6 +10,7 @@ use App\Models\Treatment;
 use App\Services\Audit\AuditLogService;
 use App\Services\Configuration\Concerns\ScopesConfigurationQueries;
 use App\Services\Configuration\CurrentClinicResolver;
+use App\Services\Export\DoctorIncomeExportProfileProvisioner;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +25,7 @@ class DoctorManagementService
     public function __construct(
         private readonly AuditLogService $auditLogService,
         private readonly CurrentClinicResolver $currentClinicResolver,
+        private readonly DoctorIncomeExportProfileProvisioner $exportProfileProvisioner,
     ) {}
 
     public function listForAdministration(): Collection
@@ -95,6 +97,7 @@ class DoctorManagementService
             }
 
             $this->auditLogService->logDoctorCreated($doctor);
+            $this->exportProfileProvisioner->ensureForDoctor($doctor->fresh());
 
             return $doctor->fresh('defaultLab');
         });

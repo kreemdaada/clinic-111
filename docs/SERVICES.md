@@ -545,7 +545,7 @@ register([
     'timezone' => 'Asia/Dubai',
     'owner_name' => 'Dr Owner',
     'owner_email' => 'owner@sunrise.test',
-    'owner_password' => 'password123',
+    'owner_password' => 'SecurePass1!',
 ])
 ```
 
@@ -558,9 +558,44 @@ register([
 - Owner role is always `admin`; `clinic_id` and `is_active` are assigned internally
 - Creates one default lab (`{CLINIC_CODE}_MAIN_LAB`) — no doctors, treatments, prices, or accounting records
 - Clinic 111 is never copied as a template
-- Writes audit logs for clinic, user, and lab creation
+- Writes audit logs for clinic, user, lab creation, and `clinic_registered`
 
 **Dependencies:** `AuditLogService`, `Clinic`, `User`, `Lab` models
+
+---
+
+## Authentication Services (ADR-032)
+
+### `LoginThrottleService`
+
+**Path:** `app/Services/Auth/LoginThrottleService.php`
+
+**Purpose:** Brute-force protection for login using Laravel `RateLimiter`.
+
+**Key:** `login|{email}|{ip}` — max 5 attempts, 5-minute decay (`config/auth_security.php`).
+
+**Methods:** `throttleKey()`, `tooManyAttempts()`, `hit()`, `clear()`, `availableIn()`
+
+---
+
+### `AuthenticationService`
+
+**Path:** `app/Services/Auth/AuthenticationService.php`
+
+**Purpose:** Shared credential verification for web session and API token login.
+
+**Input:** `authenticate(['email', 'password'], Request)`
+
+**Output:** Authenticated `User` model
+
+**Business rules:**
+
+- Generic error for invalid credentials and deactivated accounts (no enumeration)
+- Lockout after max failed attempts (`429` for API, session error for web)
+- Successful login clears throttle counter
+- Writes security audit entries via `AuditLogService`
+
+**Dependencies:** `LoginThrottleService`, `AuditLogService`, `User` model
 
 ---
 
@@ -667,9 +702,9 @@ log(
 
 **Output:** `AuditLog` model
 
-**Logged actions:** `report_import`, `price_change`, `commission_change`, `report_approval`, `manual_correction`, `lab_created`, `lab_updated`, `lab_deactivated`, `lab_activated`, `lab_price_created`, `lab_price_deactivated`, `lab_price_activated`, `treatment_created`, `treatment_updated`, `treatment_deactivated`, `treatment_activated`, `user_created`, `user_role_changed`, `user_deactivated`, `password_reset`
+**Logged actions:** `report_import`, `price_change`, …, `login_succeeded`, `login_failed`, `login_lockout`, `clinic_registered`
 
-**Dependencies:** `AuditLog` model, authenticated user
+**Dependencies:** `AuditLog` model; `clinic_id` resolved from auditable, authenticated user, or legacy fallback clinic
 
 ---
 
@@ -697,8 +732,9 @@ Import validation warning and per-row persist result.
 
 ## What Changed
 
-**Updated — 2026-06-26**
+**Updated — 2026-06-27**
 
+- Documented `LoginThrottleService` and `AuthenticationService` (ADR-032)
 - Documented explicit query isolation: `ScopesConfigurationQueries`, `ReferenceDataService`, clinic-scoped list methods (Milestone 09, ADR-028)
 - Documented `ClinicOnboardingService` (Milestone 11, ADR-030)
 - Documented `CurrentClinicResolver` (Milestone 08, ADR-027)

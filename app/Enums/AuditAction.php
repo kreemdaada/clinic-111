@@ -101,4 +101,16 @@ enum AuditAction: string
 
     /** A clinic was reactivated. */
     case ClinicActivated = 'clinic_activated';
+
+    /** A user successfully authenticated. */
+    case LoginSucceeded = 'login_succeeded';
+
+    /** A failed login attempt (invalid credentials). */
+    case LoginFailed = 'login_failed';
+
+    /** Login blocked after too many failed attempts. */
+    case LoginLockout = 'login_lockout';
+
+    /** Public clinic registration completed successfully. */
+    case ClinicRegistered = 'clinic_registered';
 }

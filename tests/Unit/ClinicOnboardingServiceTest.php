@@ -14,6 +14,7 @@ use App\Services\Configuration\ClinicOnboardingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use RuntimeException;
+use App\Support\SecurePassword;
 use Tests\TestCase;
 
 class ClinicOnboardingServiceTest extends TestCase
@@ -35,7 +36,7 @@ class ClinicOnboardingServiceTest extends TestCase
             'timezone' => 'America/New_York',
             'owner_name' => 'Harbor Owner',
             'owner_email' => 'owner@harbor.test',
-            'owner_password' => 'password123',
+            'owner_password' => SecurePassword::example(),
         ], $overrides);
     }
 
@@ -58,7 +59,7 @@ class ClinicOnboardingServiceTest extends TestCase
         $this->assertSame(UserRole::Admin, $result['owner']->role);
         $this->assertSame($result['clinic']->id, $result['owner']->clinic_id);
         $this->assertTrue($result['owner']->is_active);
-        $this->assertTrue(Hash::check('password123', $result['owner']->password));
+        $this->assertTrue(Hash::check(SecurePassword::example(), $result['owner']->password));
 
         $this->assertSame('HARBOR_MAIN_LAB', $result['default_lab']->code);
         $this->assertSame($result['clinic']->id, $result['default_lab']->clinic_id);

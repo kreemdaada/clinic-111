@@ -84,7 +84,7 @@
     </div>
     <div class="form-group" style="margin:0;min-width:90px;">
         <label class="form-label">Currency</label>
-        <input class="form-input" type="text" name="currency" value="{{ $currency }}" maxlength="3" placeholder="AED">
+        <input class="form-input" type="text" name="currency" value="{{ $currency }}" maxlength="3" placeholder="{{ $clinicCurrency ?? 'AED' }}">
     </div>
     <div style="display:flex;gap:0.5rem;align-items:center;">
         <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
@@ -189,7 +189,7 @@
             <input type="hidden" name="return_doctor_id" value="{{ $doctorFilter }}">
             <input type="hidden" name="return_status" value="{{ $status }}">
             <input type="hidden" name="return_currency" value="{{ $currency }}">
-            @include('lab-prices._form-fields', ['prefix' => 'create'])
+            @include('lab-prices._form-fields', ['prefix' => 'create', 'defaultCurrency' => $clinicCurrency])
             <div class="lp-modal-actions">
                 <button type="button" class="btn btn-ghost btn-sm" data-close-modal>Cancel</button>
                 <button type="submit" class="btn btn-primary btn-sm">Create</button>
@@ -217,7 +217,7 @@
             <input type="hidden" name="return_status" value="{{ $status }}">
             <input type="hidden" name="return_currency" value="{{ $currency }}">
             <input type="hidden" name="return_page" value="{{ request('page') }}">
-            @include('lab-prices._form-fields', ['prefix' => 'edit'])
+            @include('lab-prices._form-fields', ['prefix' => 'edit', 'defaultCurrency' => $clinicCurrency])
             <div class="form-group">
                 <label class="form-label">Status</label>
                 <select class="form-input" name="is_active" id="lp-edit-is-active">

@@ -12,6 +12,7 @@ use App\Models\WorkItem;
 use App\Services\Accounting\Concerns\ScopesAccountingQueries;
 use App\Services\Accounting\WaelFixedFeeCalculator;
 use App\Services\Configuration\CurrentClinicResolver;
+use App\Support\ClinicCurrencySupport;
 use App\Support\MoneyCalculator;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -95,6 +96,7 @@ class MonthlyIncomeCalculationService
             $monthEnd,
         );
         $clinicIncomeAed = MoneyCalculator::subtract($netTotalAed, $doctorIncomeAed);
+        $clinicCurrency = ClinicCurrencySupport::baseCurrency($this->currentClinicResolver->resolve());
 
         return new MonthlyIncomeSummaryDto(
             doctorId: $doctor->id,
@@ -109,6 +111,7 @@ class MonthlyIncomeCalculationService
             doctorIncomeAed: $doctorIncomeAed,
             clinicIncomeAed: $clinicIncomeAed,
             treatmentCounts: $this->calculateTreatmentCounts($doctor, $monthStart, $monthEnd),
+            currency: $clinicCurrency,
         );
     }
 

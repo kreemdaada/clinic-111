@@ -27,12 +27,116 @@ class DailyReportEditorCurrencyTest extends TestCase
         $this->assertSame('100.00', MoneyCalculator::convertBetween('365.00', 'AED', 'USD', '3.65'));
     }
 
+    public function test_convert_between_eur_and_aed(): void
+    {
+        config(['accounting.currency_to_aed_rates.EUR' => '3.97']);
+
+        $this->assertSame('397.00', MoneyCalculator::convertToAed('100.00', 'EUR'));
+        $this->assertSame('100.00', MoneyCalculator::convertFromAed('397.00', 'EUR'));
+        $this->assertSame('100.00', MoneyCalculator::convertBetween('397.00', 'AED', 'EUR'));
+    }
+
+    public function test_eur_clinic_preview_uses_eur_for_lab_and_payments(): void
+    {
+        config(['accounting.currency_to_aed_rates.EUR' => '3.97']);
+
+        $clinic = Clinic::query()->create([
+            'name' => 'Berlin Clinic',
+            'code' => 'BERLIN',
+            'currency' => 'EUR',
+            'timezone' => 'Europe/Berlin',
+            'country' => 'Germany',
+        ]);
+        $clinic->is_active = true;
+        $clinic->save();
+
+        $user = new User;
+        $user->fill([
+            'name' => 'Berlin Admin',
+            'email' => 'berlin@test.local',
+            'role' => 'admin',
+            'clinic_id' => $clinic->id,
+        ]);
+        $user->password = 'password';
+        $user->is_active = true;
+        $user->save();
+
+        $lab = Lab::query()->create([
+            'clinic_id' => $clinic->id,
+            'name' => 'Main Lab',
+            'code' => 'MAIN',
+        ]);
+        $lab->is_active = true;
+        $lab->save();
+
+        $zir = Treatment::query()->create([
+            'clinic_id' => $clinic->id,
+            'code' => 'ZIR',
+            'name' => 'Zircon Crown',
+        ]);
+        $zir->has_lab_cost = true;
+        $zir->is_active = true;
+        $zir->save();
+
+        LabPrice::query()->create([
+            'clinic_id' => $clinic->id,
+            'lab_id' => $lab->id,
+            'treatment_id' => $zir->id,
+            'unit_cost' => '120.00',
+            'currency' => 'EUR',
+            'is_active' => true,
+        ]);
+
+        $doctor = Doctor::query()->create([
+            'clinic_id' => $clinic->id,
+            'name' => 'Dr Schmidt',
+            'code' => 'SCHMIDT',
+            'commission_type' => CommissionType::Percentage,
+            'commission_percentage' => 40,
+            'default_lab_id' => $lab->id,
+            'is_active' => true,
+        ]);
+
+        DoctorLabBilling::query()->create([
+            'doctor_id' => $doctor->id,
+            'treatment_id' => $zir->id,
+            'bill_lab_job' => true,
+        ]);
+
+        $this->actingAs($user);
+
+        $preview = app(DailyReportEditorService::class)->previewRow(
+            $doctor,
+            [['code' => 'ZIR', 'quantity' => 1]],
+            '500.00',
+            '0.00',
+            '0.00',
+            Carbon::parse('2026-06-15'),
+        );
+
+        $this->assertSame('EUR', $preview['currency']);
+        $this->assertSame('500.00', $preview['paid_total_aed']);
+        $this->assertSame('120.00', $preview['lab_total_aed']);
+        $this->assertSame('380.00', $preview['net_total_aed']);
+        $this->assertSame('152.00', $preview['doctor_income_aed']);
+    }
+
     public function test_usd_clinic_primary_payments_stay_in_usd(): void
     {
+        $clinic = Clinic::query()->create([
+            'name' => 'Syria Clinic',
+            'code' => 'SYRIA_PAY',
+            'currency' => 'USD',
+            'timezone' => 'Asia/Damascus',
+            'country' => 'Syria',
+        ]);
+        $clinic->is_active = true;
+        $clinic->save();
+
         $service = app(PaymentCalculationService::class);
 
         $result = $service->calculateTotalCollected(
-            clinicCurrency: 'USD',
+            $clinic,
             dhsAmount: '500.00',
             usdAmount: '0.00',
             visaAmount: '100.00',

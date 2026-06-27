@@ -38,7 +38,8 @@ class ClinicOnboardingController extends Controller
         $result = $this->clinicOnboardingService->register($request->validated());
 
         Auth::login($result['owner']);
-        $request->session()->regenerate();
+        $request->session()->regenerate(true);
+        $request->session()->regenerateToken();
 
         return redirect()
             ->route('configuration.dashboard')

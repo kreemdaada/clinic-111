@@ -628,6 +628,46 @@ sequenceDiagram
 - Owner role, `clinic_id`, and `is_active` are never accepted from the client
 - After onboarding, owner sees only their clinic via existing query isolation (ADR-028)
 - API equivalent: `POST /api/register-clinic` returns Sanctum token (201)
+- Rate limited: 3 POST attempts per minute per IP (ADR-032)
+- Duplicate clinic code or owner email returns a **generic** validation message (no enumeration)
+- Owner password must meet `Password::defaults()` (min 12, mixed case, number, symbol)
+- Security audit: `clinic_registered` on success
+
+---
+
+## 22. Authentication Security (ADR-032)
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Web as AuthController
+    participant Auth as AuthenticationService
+    participant RL as LoginThrottleService
+    participant Audit as AuditLogService
+
+    User->>Web: POST /login
+    Web->>Auth: authenticate(credentials)
+    Auth->>RL: tooManyAttempts(email+ip)?
+    alt locked out
+        Auth->>Audit: login_lockout
+        Auth-->>Web: 429 / generic lockout message
+    else credentials invalid
+        Auth->>RL: hit(email+ip)
+        Auth->>Audit: login_failed
+        Auth-->>Web: generic invalid credentials
+    else success
+        Auth->>RL: clear(email+ip)
+        Auth->>Audit: login_succeeded
+        Web->>Web: session regenerate + CSRF token
+        Web->>User: redirect / token
+```
+
+**Rules:**
+
+- Same generic message for wrong email, wrong password, and deactivated account
+- Successful login clears failed-attempt counter
+- Logout invalidates session and regenerates CSRF token
+- No CAPTCHA, email verification, or 2FA in this milestone
 
 ---
 

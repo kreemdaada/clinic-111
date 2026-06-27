@@ -104,9 +104,26 @@ See [WORKFLOWS.md](./WORKFLOWS.md) for step-by-step details.
 |---|---|
 | Framework | Laravel 13 |
 | Database | SQLite (dev) / MySQL or PostgreSQL (production) |
-| Auth | Laravel Sanctum (API tokens) |
+| Auth | Laravel Sanctum (API tokens) + session (web UI) |
 | Excel parsing | PhpSpreadsheet |
 | Money math | PHP `bcmath` via `MoneyCalculator` |
+
+---
+
+## Security (ADR-032)
+
+Authentication and public onboarding are hardened before platform launch:
+
+| Control | Implementation |
+|---|---|
+| Login brute-force protection | Max 5 failed attempts per email + IP, 5-minute lockout via `LoginThrottleService` |
+| Registration abuse | Max 3 POST `/register-clinic` per minute per IP |
+| Password policy | Min 12 chars, uppercase, lowercase, number, special character (`Password::defaults()`) |
+| User enumeration | Generic credential errors — never reveal email/account/clinic existence |
+| Session security | Regenerate session ID + CSRF token on login; invalidate on logout |
+| Security audit | `login_succeeded`, `login_failed`, `login_lockout`, `clinic_registered` |
+
+Out of scope for this milestone: CAPTCHA, email verification, 2FA, OAuth.
 
 ---
 
@@ -152,6 +169,7 @@ Patient name, MRN, and file number are **never stored or exposed** in API respon
 
 **Updated — 2026-06-27**
 
+- Authentication security hardening — login throttle, registration rate limit, password policy, session regeneration, security audit (ADR-032)
 - Clinic onboarding workflow — public registration creates clinic, owner/admin, and default lab (Milestone 11, ADR-030)
 - Accounting tables are clinic-owned; all accounting services filter by `clinic_id` (Milestone 10, ADR-029)
 - Explicit query isolation for all configuration reads (Milestone 09, ADR-028)

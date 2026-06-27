@@ -42,7 +42,7 @@ For drag-and-drop Excel import without curl, use the web interface:
 
 **Role:** Public (no auth required)
 
-**Rate limit:** 10 requests/minute
+**Rate limit:** Credential throttle — max 5 failed attempts per email + IP, then 5-minute lockout (Laravel `RateLimiter`, ADR-032). Successful login clears the counter.
 
 **Request:**
 
@@ -74,7 +74,11 @@ For drag-and-drop Excel import without curl, use the web interface:
 }
 ```
 
-**Error `422`:** Invalid credentials.
+**Error `422`:** Generic message — `The provided credentials are invalid.` (never distinguishes wrong email vs wrong password).
+
+**Error `429`:** Too many failed attempts — lockout message with retry guidance.
+
+**Security audit:** `login_succeeded`, `login_failed`, `login_lockout` (email only — never passwords or tokens).
 
 ---
 
@@ -84,7 +88,7 @@ For drag-and-drop Excel import without curl, use the web interface:
 
 **Role:** Public (no auth required)
 
-**Rate limit:** 10 requests/minute
+**Rate limit:** 3 requests/minute per IP (`throttle:register-clinic`, ADR-032)
 
 **Request:**
 
@@ -97,8 +101,8 @@ For drag-and-drop Excel import without curl, use the web interface:
   "timezone": "Asia/Dubai",
   "owner_name": "Dr Owner",
   "owner_email": "owner@sunrise.test",
-  "owner_password": "password123",
-  "owner_password_confirmation": "password123"
+  "owner_password": "SecurePass1!",
+  "owner_password_confirmation": "SecurePass1!"
 }
 ```
 
@@ -113,7 +117,11 @@ For drag-and-drop Excel import without curl, use the web interface:
 | `timezone` | required, valid IANA timezone |
 | `owner_name` | required, string, max 120 |
 | `owner_email` | required, email, unique on `users.email` |
-| `owner_password` | required, confirmed, `Password::defaults()` |
+| `owner_password` | required, confirmed, `Password::defaults()` (min 12, mixed case, number, symbol) |
+
+**Duplicate rejection:** Duplicate clinic codes and emails are rejected with a **generic** message (no enumeration).
+
+**Security audit:** `clinic_registered` plus existing `clinic_created` / `user_created` entries.
 
 **Rejected fields:** `clinic_id`, `role`, `is_active`, and all accounting/configuration ownership fields.
 

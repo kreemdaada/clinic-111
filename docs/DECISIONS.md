@@ -1992,6 +1992,185 @@ Clinic 111 must not be copied as a template.
 
 ---
 
+## ADR-031
+
+### Title
+
+Clinic Business Configuration
+
+### Status
+
+Proposed
+
+### Milestone
+
+Milestone 12
+
+---
+
+## Context
+
+A newly registered clinic contains only infrastructure:
+
+* Clinic
+* Owner
+* Default laboratory
+
+The accounting engine cannot operate until the clinic defines its own business configuration.
+
+Each clinic must independently configure its accounting rules.
+
+---
+
+## Decision
+
+Every clinic owns its business configuration.
+
+Business configuration is never shared between clinics.
+
+The accounting engine remains identical for every tenant.
+
+Only the configuration changes.
+
+---
+
+## Configuration Modules
+
+Each clinic manages:
+
+* Doctors
+* Laboratories
+* Treatments
+* Lab Prices
+* Doctor Fixed Fees
+* Currency
+* Timezone
+* Export Profiles (future)
+
+---
+
+## Configuration Rules
+
+Clinic administrators configure the business.
+
+Developers never edit business rules directly in production.
+
+Configuration changes require no deployment.
+
+---
+
+## Guided Setup
+
+After onboarding, the administrator is redirected to a setup checklist.
+
+Suggested order:
+
+1. Doctors
+2. Laboratories
+3. Treatments
+4. Lab Prices
+5. Doctor Fixed Fees
+6. Import First Report
+
+---
+
+## Consequences
+
+Advantages:
+
+* Self-service onboarding
+* No developer involvement
+* Consistent accounting engine
+* Independent tenant configuration
+
+---
+
+## Success Criteria
+
+A clinic can configure its complete accounting environment without developer assistance.
+
+---
+
+## ADR-032
+
+### Title
+
+Tenant Security
+
+### Status
+
+Proposed
+
+### Milestone
+
+Milestone 13
+
+---
+
+## Context
+
+The platform now supports public clinic registration.
+
+Public access introduces new security risks.
+
+The platform must resist common attacks before public SaaS deployment.
+
+---
+
+## Decision
+
+Security becomes a first-class architectural concern.
+
+Authentication, authorization and abuse prevention are treated as platform infrastructure.
+
+---
+
+## Security Areas
+
+* Login Rate Limiting
+* Registration Rate Limiting
+* Strong Password Policy
+* Email Verification
+* CAPTCHA / Cloudflare Turnstile
+* Session Security
+* CSRF Protection
+* Audit Logging
+* Abuse Detection
+* Secure Cookies
+* HTTPS-only deployment
+* Security Headers
+
+---
+
+## Principles
+
+Never expose:
+
+* Account existence
+* Clinic existence
+* Internal errors
+* Sensitive configuration
+
+Every authentication action must be auditable.
+
+---
+
+## Consequences
+
+Advantages:
+
+* Reduced attack surface
+* SaaS-ready authentication
+* Better compliance
+* Strong tenant protection
+
+---
+
+## Success Criteria
+
+The platform is protected against brute-force attacks, automated registration abuse, credential stuffing and common authentication attacks.
+---
+
 ## Ownership Rules
 
 All created records must belong to the newly created clinic.
@@ -2167,7 +2346,7 @@ Implemented 2026-06-27 on branch `feature/clinic-onboarding`:
 
 Depends on ADR-029 (Accounting Ownership and Isolation).
 
-Tenant security hardening (ADR-032) should follow or run in parallel before public launch.
+Authentication security hardening (ADR-032) is implemented. Additional tenant isolation hardening should follow before public launch.
 
 ---
 
@@ -2206,6 +2385,55 @@ Tenant security hardening (ADR-032) should follow or run in parallel before publ
 | ADR-028 | Explicit Query Isolation               | Accepted |
 | ADR-029 | Accounting Ownership and Isolation     | Accepted |
 | ADR-030 | Clinic Onboarding Workflow             | Accepted |
+| ADR-032 | Authentication Security Hardening      | Accepted |
+
+---
+
+## ADR-032
+
+### Title
+
+Authentication Security Hardening
+
+### Status
+
+Accepted
+
+### Date
+
+2026-06-27
+
+### Milestone
+
+Pre–Milestone 12 (Security)
+
+### Context
+
+Public clinic registration (`/register-clinic`) and login endpoints are exposed before multi-tenant SaaS launch. The platform must mitigate brute-force attacks, registration abuse, user enumeration, and weak passwords without changing accounting or business logic.
+
+### Decision
+
+- Login: Laravel `RateLimiter` via `LoginThrottleService` — max 5 failed attempts per email + IP, 5-minute lockout; successful login clears counter.
+- Registration: named rate limiter `register-clinic` — max 3 POST attempts per minute per IP.
+- Password policy: `Password::defaults()` — minimum 12 characters, uppercase, lowercase, number, special character.
+- User enumeration: generic credential and duplicate-registration messages only.
+- Sessions: regenerate session ID and CSRF token on login; invalidate session on logout.
+- Security audit: `login_succeeded`, `login_failed`, `login_lockout`, `clinic_registered` — never log passwords, tokens, or session IDs.
+
+### Out of Scope
+
+CAPTCHA, email verification, two-factor authentication, OAuth, subscription, billing.
+
+### Implementation
+
+- `app/Services/Auth/LoginThrottleService.php`
+- `app/Services/Auth/AuthenticationService.php`
+- `config/auth_security.php`
+- Web + API auth controllers delegate to `AuthenticationService`
+- `AppServiceProvider` configures `Password::defaults()` and `register-clinic` rate limiter
+- Tests: `tests/Feature/AuthenticationSecurityTest.php`, `tests/Unit/LoginThrottleServiceTest.php`, `tests/Unit/PasswordPolicyTest.php`
+
+Tenant isolation hardening beyond authentication remains a separate follow-up before public launch.
 
 ---
 
@@ -2214,8 +2442,6 @@ Tenant security hardening (ADR-032) should follow or run in parallel before publ
 The following architectural topics are expected to receive future ADRs.
 
 **ADR-031** — Clinic Business Configuration
-
-**ADR-032** — Tenant Security
 
 **ADR-033** — Multi-Currency Strategy
 

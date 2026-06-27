@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Services\Auth\AuthenticationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -16,6 +18,10 @@ use Illuminate\View\View;
  */
 class AuthController extends Controller
 {
+    public function __construct(
+        private readonly AuthenticationService $authenticationService,
+    ) {}
+
     /**
      * Show login form or redirect authenticated users to import page.
      *
@@ -40,29 +46,18 @@ class AuthController extends Controller
      */
     public function login(LoginRequest $request): RedirectResponse
     {
-        $credentials = $request->validated();
-
-        if (! Auth::attempt([
-            'email' => $credentials['email'],
-            'password' => $credentials['password'],
-        ])) {
+        try {
+            $user = $this->authenticationService->authenticate($request->validated(), $request);
+        } catch (ValidationException $exception) {
             return back()
                 ->withInput($request->only('email'))
-                ->withErrors(['email' => 'Invalid email or password.']);
+                ->withErrors($exception->errors());
         }
 
-        /** @var \App\Models\User|null $user */
-        $user = Auth::user();
+        Auth::login($user);
 
-        if ($user !== null && ! $user->is_active) {
-            Auth::logout();
-
-            return back()
-                ->withInput($request->only('email'))
-                ->withErrors(['email' => 'This account has been deactivated.']);
-        }
-
-        $request->session()->regenerate();
+        $request->session()->regenerate(true);
+        $request->session()->regenerateToken();
 
         return redirect()->intended(route('imports.index'));
     }

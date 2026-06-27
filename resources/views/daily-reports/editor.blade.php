@@ -144,10 +144,10 @@
             </div>
 
             <div class="dr-preview" style="margin-top:0.75rem;" id="dr-preview" hidden>
-                <div class="dr-preview-box"><div class="dr-preview-label">Paid</div><div class="dr-preview-value" id="dr-preview-paid">0.00</div></div>
-                <div class="dr-preview-box"><div class="dr-preview-label">Lab cost</div><div class="dr-preview-value" id="dr-preview-lab">0.00</div></div>
-                <div class="dr-preview-box"><div class="dr-preview-label">Net</div><div class="dr-preview-value" id="dr-preview-net">0.00</div></div>
-                <div class="dr-preview-box"><div class="dr-preview-label">Doctor income</div><div class="dr-preview-value" id="dr-preview-income">0.00</div></div>
+                <div class="dr-preview-box"><div class="dr-preview-label">Paid ({{ $clinicCurrency }})</div><div class="dr-preview-value" id="dr-preview-paid">0.00</div></div>
+                <div class="dr-preview-box"><div class="dr-preview-label">Lab cost ({{ $clinicCurrency }})</div><div class="dr-preview-value" id="dr-preview-lab">0.00</div></div>
+                <div class="dr-preview-box"><div class="dr-preview-label">Net ({{ $clinicCurrency }})</div><div class="dr-preview-value" id="dr-preview-net">0.00</div></div>
+                <div class="dr-preview-box"><div class="dr-preview-label">Doctor income ({{ $clinicCurrency }})</div><div class="dr-preview-value" id="dr-preview-income">0.00</div></div>
             </div>
 
             <div style="margin-top:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
@@ -214,6 +214,7 @@
         'month' => $monthStart->format('Y-m'),
         'readOnly' => $readOnly,
         'clinicCurrency' => $clinicCurrency,
+        'foreignCashCurrency' => $foreignCashCurrency,
         'initialDoctorId' => request()->integer('doctor') ?: null,
         'initialDay' => request()->filled('from')
             ? (int) \Carbon\Carbon::parse((string) request('from'))->day
@@ -225,7 +226,7 @@
 <script type="application/json" id="dr-editor-config">@json($editorConfig)</script>
 <script>
 (function () {
-    const { reportId, month, readOnly, clinicCurrency, initialDoctorId, initialDay, dateFrom, dateTo } =
+    const { reportId, month, readOnly, clinicCurrency, foreignCashCurrency, initialDoctorId, initialDay, dateFrom, dateTo } =
         JSON.parse(document.getElementById('dr-editor-config').textContent);
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
 
@@ -408,7 +409,7 @@
                 </div>
                 <div class="extraction-muted" style="margin:0.35rem 0;">
                     Paid ${r.paid_total_aed} ${clinicCurrency} · Lab ${r.lab_total_aed} ${clinicCurrency}
-                    · DHS ${r.dhs_amount} · Visa ${r.visa_amount}
+                    · Cash ${r.dhs_amount} ${clinicCurrency}${foreignCashCurrency && Number(r.usd_amount) > 0 ? ` · ${foreignCashCurrency} ${r.usd_amount}` : ''} · Visa ${r.visa_amount} ${clinicCurrency}
                 </div>
                 <div class="dr-row-actions">
                     ${readOnly ? '' : `<button type="button" class="btn btn-primary btn-sm" data-edit-row="${r.id}">Edit</button>`}

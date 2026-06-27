@@ -129,8 +129,13 @@
             <input class="form-input" type="text" name="code" value="{{ old('code') }}" placeholder="CLINIC_111" required>
         </div>
         <div class="form-group" style="margin:0;">
-            <label class="form-label">Currency</label>
-            <input class="form-input" type="text" name="currency" value="{{ old('currency', 'AED') }}" maxlength="3" required>
+            <label class="form-label">Base currency</label>
+            <select class="form-input" name="currency" required>
+                @foreach ($currencies as $code => $label)
+                <option value="{{ $code }}" @selected(old('currency') === $code)>{{ $label }}</option>
+                @endforeach
+            </select>
+            <p class="extraction-muted" style="font-size:0.75rem;margin:0.35rem 0 0;">Daily report labels and payment totals use this currency.</p>
         </div>
         <div class="form-group" style="margin:0;">
             <label class="form-label">Timezone</label>
@@ -180,8 +185,13 @@
                 <input class="form-input" type="text" name="code" value="{{ old('code.'.$clinic->id, $clinic->code) }}" required>
             </div>
             <div class="form-group" style="margin:0;">
-                <label class="form-label">Currency</label>
-                <input class="form-input" type="text" name="currency" value="{{ old('currency.'.$clinic->id, $clinic->currency) }}" maxlength="3" required>
+                <label class="form-label">Base currency</label>
+                <select class="form-input" name="currency" required>
+                    @foreach ($currencies as $code => $label)
+                    <option value="{{ $code }}" @selected(old('currency.'.$clinic->id, $clinic->currency) === $code)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                <p class="extraction-muted" style="font-size:0.75rem;margin:0.35rem 0 0;">Controls Cash/Cheque/Visa labels in the daily report editor.</p>
             </div>
             <div class="form-group" style="margin:0;">
                 <label class="form-label">Timezone</label>

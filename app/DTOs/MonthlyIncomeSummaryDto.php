@@ -2,6 +2,8 @@
 
 namespace App\DTOs;
 
+use App\Support\ClinicCurrencySupport;
+
 /**
  * Immutable monthly income summary for one doctor.
  *
@@ -37,6 +39,7 @@ readonly class MonthlyIncomeSummaryDto
         public string $doctorIncomeAed,
         public string $clinicIncomeAed,
         public array $treatmentCounts,
+        public string $currency = 'AED',
     ) {}
 
     /**
@@ -59,18 +62,29 @@ readonly class MonthlyIncomeSummaryDto
      */
     public function toArray(): array
     {
+        $convert = fn (string $amount): string => ClinicCurrencySupport::fromStoredAedEquivalent(
+            $amount,
+            $this->currency,
+        );
+
         return [
             'doctor_id' => $this->doctorId,
             'doctor_name' => $this->doctorName,
             'month' => $this->month,
+            'currency' => $this->currency,
             'total_dhs' => $this->totalDhs,
             'total_usd_to_aed' => $this->totalUsdToAed,
             'total_visa' => $this->totalVisa,
             'total_collected_aed' => $this->totalCollectedAed,
+            'total_collected' => $convert($this->totalCollectedAed),
             'lab_cost_aed' => $this->labCostAed,
+            'lab_cost' => $convert($this->labCostAed),
             'net_total_aed' => $this->netTotalAed,
+            'net_total' => $convert($this->netTotalAed),
             'doctor_income_aed' => $this->doctorIncomeAed,
+            'doctor_income' => $convert($this->doctorIncomeAed),
             'clinic_income_aed' => $this->clinicIncomeAed,
+            'clinic_income' => $convert($this->clinicIncomeAed),
             'treatment_counts' => $this->treatmentCounts,
         ];
     }

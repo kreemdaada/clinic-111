@@ -3,9 +3,9 @@
 namespace App\Http\Requests\Onboarding;
 
 use App\Support\ClinicRegistrationOptions;
+use App\Support\SecurePassword;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 
 class RegisterClinicRequest extends FormRequest
 {
@@ -27,7 +27,20 @@ class RegisterClinicRequest extends FormRequest
             'timezone' => ['required', 'string', 'max:64', Rule::in(ClinicRegistrationOptions::timezoneIdentifiers())],
             'owner_name' => ['required', 'string', 'max:120'],
             'owner_email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'owner_password' => ['required', 'string', 'confirmed', Password::defaults()],
+            'owner_password' => ['required', 'string', 'confirmed', SecurePassword::rule()],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        $genericRegistrationFailure = 'Registration could not be completed. Please check your details and try again.';
+
+        return [
+            'clinic_code.unique' => $genericRegistrationFailure,
+            'owner_email.unique' => $genericRegistrationFailure,
         ];
     }
 
