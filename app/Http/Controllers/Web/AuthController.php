@@ -33,7 +33,8 @@ class AuthController extends Controller
     public function showLogin(): View|RedirectResponse
     {
         if (Auth::check()) {
-            if (! Auth::user()->hasVerifiedEmail()) {
+            $user = Auth::user();
+            if ($user instanceof User && ! $user->hasVerifiedEmail()) {
                 return redirect()->route('verification.notice');
             }
 

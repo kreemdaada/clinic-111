@@ -15,12 +15,14 @@ use App\Http\Controllers\Web\LogController;
 use App\Http\Controllers\Web\ReportLockController;
 use App\Http\Controllers\Web\TreatmentAdminController;
 use App\Http\Controllers\Web\UserAdminController;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     if (Auth::check()) {
-        if (! Auth::user()->hasVerifiedEmail()) {
+        $user = Auth::user();
+        if ($user instanceof User && ! $user->hasVerifiedEmail()) {
             return redirect()->route('verification.notice');
         }
 
