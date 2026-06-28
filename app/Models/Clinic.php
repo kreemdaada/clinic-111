@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Domain\Currency\Currency;
+use App\Domain\Currency\CurrencyCatalog;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -59,5 +61,18 @@ class Clinic extends Model
     public function doctorFixedFees(): HasMany
     {
         return $this->hasMany(DoctorFixedFee::class);
+    }
+
+    public function baseCurrency(): Currency
+    {
+        return CurrencyCatalog::resolve($this->currency);
+    }
+
+    /**
+     * @return array{code: string, name: string, symbol: string, precision: int}
+     */
+    public function currencyMetadata(): array
+    {
+        return $this->baseCurrency()->toArray();
     }
 }

@@ -181,6 +181,10 @@ Patient name, MRN, and file number are **never stored or exposed** in API respon
 
 ## What Changed
 
+**Updated — 2026-06-28**
+
+- Multi-currency foundation — currency catalog (AED, EUR, USD, SAR, GBP), `Money` value object, centralized formatting, clinic currency validation; no accounting behaviour changes (Milestone 14, ADR-034)
+
 **Updated — 2026-06-27**
 
 - Platform security — platform audit context, NAT-aware login throttle, email verification, CAPTCHA abstraction, security headers (Milestone 13A, ADR-033)

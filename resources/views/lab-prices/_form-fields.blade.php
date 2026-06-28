@@ -32,7 +32,11 @@
     </div>
     <div class="form-group" style="margin:0;">
         <label class="form-label">Currency</label>
-        <input class="form-input" type="text" name="currency" id="lp-{{ $prefix }}-currency" value="{{ old('currency', $defaultCurrency ?? 'AED') }}" maxlength="3" required>
+        <select class="form-input" name="currency" id="lp-{{ $prefix }}-currency" required>
+            @foreach (\App\Support\ClinicRegistrationOptions::currencyCodes() as $code)
+            <option value="{{ $code }}" @selected(old('currency', $defaultCurrency ?? 'AED') === $code)>{{ $code }}</option>
+            @endforeach
+        </select>
     </div>
 </div>
 <div class="lp-grid-2">

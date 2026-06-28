@@ -115,7 +115,7 @@
                 <td><strong>{{ $price->lab?->code }}</strong></td>
                 <td>{{ $price->treatment?->code }}</td>
                 <td>{{ $price->doctor?->code ?? '—' }}</td>
-                <td>{{ $price->unit_cost }} {{ $price->currency }}</td>
+                <td>{{ $currencyFormatter->format((string) $price->unit_cost, $price->currency) }}</td>
                 <td class="lp-meta">
                     @if ($price->valid_from || $price->valid_to)
                         {{ $price->valid_from?->format('Y-m-d') ?? '…' }} → {{ $price->valid_to?->format('Y-m-d') ?? '…' }}

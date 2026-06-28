@@ -7,6 +7,7 @@ use App\Models\Lab;
 use App\Models\LabPrice;
 use App\Models\Treatment;
 use App\Rules\BelongsToCurrentClinic;
+use App\Rules\SupportedCurrency;
 use App\Support\LabPriceOverlapValidator;
 use App\Services\Configuration\CurrentClinicResolver;
 use Illuminate\Foundation\Http\FormRequest;
@@ -40,7 +41,7 @@ class UpdateLabPriceRequest extends FormRequest
             'treatment_id' => ['sometimes', 'required', 'integer', new BelongsToCurrentClinic(Treatment::class)],
             'doctor_id' => ['nullable', 'integer', new BelongsToCurrentClinic(Doctor::class, nullable: true)],
             'unit_cost' => ['sometimes', 'required', 'numeric', 'min:0.01'],
-            'currency' => ['sometimes', 'required', 'string', 'size:3'],
+            'currency' => ['sometimes', 'required', 'string', 'size:3', new SupportedCurrency],
             'valid_from' => ['nullable', 'date'],
             'valid_to' => ['nullable', 'date', 'after_or_equal:valid_from'],
             'is_active' => ['sometimes', 'boolean'],

@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Contracts\Security\CaptchaVerifier;
 use App\Services\Audit\AuditLogService;
+use App\Services\Currency\CurrencyFormatter;
 use App\Services\Security\FakeCaptchaVerifier;
 use App\View\Composers\ClinicContextComposer;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -27,6 +28,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->singleton(CurrencyFormatter::class);
+
         $this->app->bind(CaptchaVerifier::class, function () {
             $driver = (string) config('auth_security.captcha.driver', 'fake');
 

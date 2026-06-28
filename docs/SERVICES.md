@@ -688,6 +688,26 @@ Used by `AuditLogService::logPlatform()` for unknown-email login failures, locko
 
 ---
 
+## Multi-Currency (ADR-034 — Milestone 14)
+
+| Component | Path |
+|---|---|
+| Currency catalog config | `config/currencies.php` |
+| `Currency` value object | `app/Domain/Currency/Currency.php` |
+| `CurrencyCatalog` | `app/Domain/Currency/CurrencyCatalog.php` |
+| `Money` value object | `app/Domain/Currency/Money.php` |
+| `CurrencyFormatter` | `app/Services/Currency/CurrencyFormatter.php` |
+| `SupportedCurrency` rule | `app/Rules/SupportedCurrency.php` |
+| `ClinicApiPresenter` | `app/Support/ClinicApiPresenter.php` |
+| `ExchangeRateProvider` (contract only) | `app/Contracts/Currency/ExchangeRateProvider.php` |
+| `CurrencyConversionService` (contract only) | `app/Contracts/Currency/CurrencyConversionService.php` |
+
+**Rules:** Each clinic has one base currency (`clinics.currency`). All accounting runs in that currency. Format display via `CurrencyFormatter` — not in Blade. No implicit conversion inside accounting services. Legacy Clinic 111 foreign-cash helpers unchanged.
+
+**Precision:** `MoneyCalculator::roundToPrecision()` uses ISO 4217 precision from catalog (currently all 2 decimals for supported codes).
+
+---
+
 ### `ClinicManagementService`
 
 **Path:** `app/Services/Configuration/ClinicManagementService.php`

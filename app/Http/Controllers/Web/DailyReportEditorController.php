@@ -9,6 +9,7 @@ use App\Http\Requests\Doctors\StoreDoctorRequest;
 use App\Models\DailyReport;
 use App\Models\DailyWorkRow;
 use App\Models\Doctor;
+use App\Models\User;
 use App\Services\Configuration\CurrentClinicResolver;
 use App\Services\Configuration\TenantResourceGuard;
 use App\Services\Configuration\ReferenceDataService;
@@ -122,7 +123,7 @@ class DailyReportEditorController extends Controller
             ->with('status', 'Report deleted.');
     }
 
-    public function edit(DailyReport $dailyReport): View
+    public function edit(Request $request, DailyReport $dailyReport): View
     {
         $this->dailyReportQueryService->assertAccessible($dailyReport);
 
@@ -136,6 +137,7 @@ class DailyReportEditorController extends Controller
             ->get();
 
         $clinicCurrency = $this->clinicCurrency($dailyReport);
+        $user = $request->user();
 
         return view('daily-reports.editor', [
             'dailyReport' => $dailyReport,
@@ -144,7 +146,7 @@ class DailyReportEditorController extends Controller
             'doctors' => $doctors,
             'labs' => $this->referenceDataService->activeLabs(),
             'rows' => $rows,
-            'readOnly' => $dailyReport->isLocked(),
+            'readOnly' => $dailyReport->isLocked() || ($user instanceof User && $user->isViewer()),
             'clinicCurrency' => $clinicCurrency,
             'foreignCashCurrency' => ClinicCurrencySupport::foreignCashCurrency($clinicCurrency),
         ]);
@@ -156,10 +158,19 @@ class DailyReportEditorController extends Controller
 
         $validated = $request->validate([
             'doctor_id' => ['required', 'integer'],
-            'day' => ['required', 'integer', 'min:1', 'max:31'],
+            'day' => ['nullable', 'integer', 'min:1', 'max:31'],
         ]);
 
         $this->tenantResourceGuard->findAccessibleOrAbort(Doctor::class, (int) $validated['doctor_id']);
+
+        $dayCounts = $this->editorService->dayCountsForDoctor($dailyReport, (int) $validated['doctor_id']);
+
+        if (! isset($validated['day'])) {
+            return response()->json([
+                'data' => [],
+                'day_counts' => $dayCounts,
+            ]);
+        }
 
         $day = (int) $validated['day'];
         $monthStart = Carbon::parse($dailyReport->report_date)->startOfMonth();
@@ -175,7 +186,7 @@ class DailyReportEditorController extends Controller
 
         return response()->json([
             'data' => $rows,
-            'day_counts' => $this->editorService->dayCountsForDoctor($dailyReport, (int) $validated['doctor_id']),
+            'day_counts' => $dayCounts,
         ]);
     }
 

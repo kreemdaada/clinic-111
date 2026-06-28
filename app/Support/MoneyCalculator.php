@@ -81,11 +81,27 @@ class MoneyCalculator
      */
     public static function roundToTwoDecimals(string $amount): string
     {
-        if (bccomp($amount, '0', 6) >= 0) {
-            return bcadd($amount, '0.005', 2);
+        return self::roundToPrecision($amount, 2);
+    }
+
+    /**
+     * Round a decimal string to the given scale using half-up rounding.
+     */
+    public static function roundToPrecision(string $amount, int $precision): string
+    {
+        if ($precision <= 0) {
+            $adjustment = bccomp($amount, '0', 6) >= 0 ? '0.5' : '-0.5';
+
+            return bcadd($amount, $adjustment, 0);
         }
 
-        return bcsub($amount, '0.005', 2);
+        $half = '0.'.str_repeat('0', $precision).'5';
+
+        if (bccomp($amount, '0', 6) >= 0) {
+            return bcadd($amount, $half, $precision);
+        }
+
+        return bcsub($amount, $half, $precision);
     }
 
     /**

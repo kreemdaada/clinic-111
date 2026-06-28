@@ -2485,7 +2485,7 @@ Multi-Currency Strategy
 
 ### Status
 
-Proposed
+Accepted
 
 ### Date
 
@@ -2670,6 +2670,49 @@ Examples:
 * Money precision is preserved
 * The architecture is ready for future exchange-rate support
 
+### Milestone 14 Implementation Notes
+
+Implemented 2026-06-28 on branch `feature/multi-currency-foundation`:
+
+**Currency catalog**
+
+* `config/currencies.php` — ISO code, symbol, precision, display format for AED, EUR, USD, SAR, GBP
+* `CurrencyCatalog` — single registry; no hardcoded currency lists in controllers
+* `ClinicRegistrationOptions::currencies()` delegates to catalog
+
+**Money value object**
+
+* `App\Domain\Currency\Money` — amount + currency; BCMath via `MoneyCalculator::roundToPrecision()`
+* Cross-currency math rejected at the value-object layer
+
+**Formatting**
+
+* `CurrencyFormatter` — centralized display (`AED 1250.00`, `€890.00`, `$150.00`)
+* Shared with authenticated views via `ClinicContextComposer`
+
+**Clinic base currency**
+
+* Existing `clinics.currency` column retained (ISO code)
+* Symbol and precision resolved from catalog at runtime (`Clinic::baseCurrency()`, `currencyMetadata()`)
+* `SupportedCurrency` validation rule on clinic onboarding, clinic admin, lab prices, doctor fixed fees
+
+**Extension points (not implemented)**
+
+* `ExchangeRateProvider` contract
+* `CurrencyConversionService` contract
+* No live rates, no conversion service binding, no scheduled jobs
+
+**Accounting behaviour**
+
+* No changes to calculation outputs — legacy Clinic 111 layout and foreign-cash conversion unchanged
+* `ClinicCurrencySupport` documented as presentation/legacy import only; engine stays in clinic base currency
+
+**API**
+
+* `ClinicApiPresenter` adds `currency_name`, `currency_symbol`, `currency_precision` alongside existing `currency` field
+
+**Tests:** `CurrencyCatalogTest`, `MoneyTest`, `CurrencyFormatterTest`, `MultiCurrencyFoundationTest`
+
 ---
 
 # ADR Index
@@ -2709,7 +2752,7 @@ Examples:
 | ADR-031 | Clinic Business Configuration          | Accepted |
 | ADR-032 | Platform Authentication Security       | Accepted |
 | ADR-033 | Tenant Security                        | Accepted |
-| ADR-034 | Multi-Currency Strategy              | Proposed |
+| ADR-034 | Multi-Currency Strategy              | Accepted |
 
 ---
 

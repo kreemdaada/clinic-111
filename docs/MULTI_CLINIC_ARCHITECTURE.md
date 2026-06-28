@@ -402,30 +402,24 @@ Hard rules (ADR-029):
 
 ---
 
-# 16. Currency Strategy
+# 16. Currency Strategy (ADR-034)
 
-Each clinic has one base currency.
+Each clinic has one base currency stored as `clinics.currency` (ISO code).
 
-Example:
+Supported codes (Milestone 14): AED, EUR, USD, SAR, GBP — defined in `config/currencies.php` via `CurrencyCatalog`.
 
-Clinic 111
+Symbol and precision are resolved at runtime from the catalog (not duplicated on the clinic row).
 
-```text
-AED
-```
+**Accounting rule:** All calculations run in the clinic base currency. No implicit conversion inside the accounting engine.
 
-Clinic 222
+**Display:** `CurrencyFormatter` centralizes UI formatting.
 
-```text
-EUR
-```
+**Future (not Milestone 14):**
 
-Future strategy:
-
-* Rename AED-specific normalized fields where necessary
-* Use `amount_base_currency`
-* Store original amount and original currency
-* Store exchange rate used at transaction time
+* Versioned exchange rates (`ExchangeRateProvider` contract)
+* Cross-clinic SaaS reporting (`CurrencyConversionService` contract)
+* Rename AED-specific normalized storage columns where necessary
+* Store original amount, original currency, and exchange rate at transaction time
 
 Do not perform this refactor until a dedicated Multi-Currency milestone.
 
@@ -486,6 +480,8 @@ This must be enforced in:
 **Milestone 13A (implemented):** Platform audit context, NAT-aware login throttle, email verification, CAPTCHA abstraction, security headers.
 
 **Milestone 13B (implemented):** Full tenant authorization review — `TenantResourceGuard`, cross-clinic 404 enforcement, clinic-scoped FK validation, user admin `{managedUser}` route fix.
+
+**Milestone 14 (implemented):** Multi-currency foundation — currency catalog, `Money` value object, centralized formatting, clinic currency validation; accounting behaviour unchanged (ADR-034).
 
 ---
 

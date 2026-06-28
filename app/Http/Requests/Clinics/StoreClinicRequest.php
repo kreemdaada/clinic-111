@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Clinics;
 
+use App\Rules\SupportedCurrency;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreClinicRequest extends FormRequest
@@ -19,7 +20,7 @@ class StoreClinicRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:120'],
             'code' => ['required', 'string', 'max:32', 'regex:/^[A-Za-z0-9_\-]+$/', 'unique:clinics,code'],
-            'currency' => ['required', 'string', 'size:3', 'regex:/^[A-Za-z]{3}$/'],
+            'currency' => ['required', 'string', 'size:3', new SupportedCurrency],
             'timezone' => ['required', 'string', 'max:64', 'timezone:all'],
             'country' => ['required', 'string', 'max:120'],
         ];

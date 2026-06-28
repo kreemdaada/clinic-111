@@ -103,7 +103,7 @@
             <tr @class(['is-inactive' => ! $fee->is_active])>
                 <td><strong>{{ $fee->doctor?->code }}</strong></td>
                 <td>{{ $fee->treatment?->code }}</td>
-                <td>{{ $fee->fee_amount }} {{ $fee->currency }}</td>
+                <td>{{ $currencyFormatter->format((string) $fee->fee_amount, $fee->currency) }}</td>
                 <td class="dff-meta">
                     @if ($fee->valid_from || $fee->valid_to)
                         {{ $fee->valid_from?->format('Y-m-d') ?? '…' }} → {{ $fee->valid_to?->format('Y-m-d') ?? '…' }}

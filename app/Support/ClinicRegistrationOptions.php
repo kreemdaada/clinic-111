@@ -2,8 +2,10 @@
 
 namespace App\Support;
 
+use App\Domain\Currency\CurrencyCatalog;
+
 /**
- * Allowed currency and timezone choices for clinic registration (ADR-030).
+ * Allowed currency and timezone choices for clinic registration (ADR-030, ADR-034).
  */
 class ClinicRegistrationOptions
 {
@@ -12,20 +14,7 @@ class ClinicRegistrationOptions
      */
     public static function currencies(): array
     {
-        return [
-            'AED' => 'AED — UAE Dirham',
-            'USD' => 'USD — US Dollar',
-            'EUR' => 'EUR — Euro',
-            'GBP' => 'GBP — British Pound',
-            'SAR' => 'SAR — Saudi Riyal',
-            'QAR' => 'QAR — Qatari Riyal',
-            'OMR' => 'OMR — Omani Rial',
-            'KWD' => 'KWD — Kuwaiti Dinar',
-            'BHD' => 'BHD — Bahraini Dinar',
-            'INR' => 'INR — Indian Rupee',
-            'PKR' => 'PKR — Pakistani Rupee',
-            'EGP' => 'EGP — Egyptian Pound',
-        ];
+        return CurrencyCatalog::labels();
     }
 
     /**
@@ -59,7 +48,7 @@ class ClinicRegistrationOptions
      */
     public static function currencyCodes(): array
     {
-        return array_keys(self::currencies());
+        return CurrencyCatalog::codes();
     }
 
     /**
