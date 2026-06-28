@@ -759,7 +759,36 @@ Same pipeline after row creation: `TreatmentImportValidationService` → `LabJob
 
 ---
 
+## 26. Multi-Currency Foundation (Milestone 14, ADR-034)
+
+```mermaid
+sequenceDiagram
+    participant UI as Configuration UI
+    participant Cat as CurrencyCatalog
+    participant Clinic as clinics.currency
+    participant Fmt as CurrencyFormatter
+    participant Eng as Accounting Engine
+
+    UI->>Cat: Validate supported ISO code
+    Cat->>Clinic: Persist base currency
+    Eng->>Clinic: Calculate in base currency only
+    UI->>Fmt: Format amounts for display
+```
+
+**Rules:**
+
+1. Clinic registration and admin store one validated base currency.
+2. Catalog defines code, symbol, precision — not duplicated in controllers.
+3. Accounting engine never converts currencies internally (legacy Clinic 111 import layout excepted).
+4. Conversion contracts exist for future milestones — not bound or called.
+
+---
+
 ## What Changed
+
+**Updated — 2026-06-28**
+
+- Multi-currency foundation workflow — catalog, Money value object, centralized formatting (Milestone 14, ADR-034)
 
 **Updated — 2026-06-27**
 

@@ -413,6 +413,18 @@ Form-request foreign keys (doctor, lab, treatment, lab price, fixed fee) must us
 
 Future background jobs processing tenant data must receive explicit `clinic_id`; do not call `CurrentClinicResolver` without authenticated context.
 
+## Multi-Currency (ADR-034 — Milestone 14)
+
+Each clinic has exactly one base currency (`clinics.currency`). Supported codes live in `config/currencies.php` — use `CurrencyCatalog`, never hardcode lists in controllers.
+
+Use `App\Domain\Currency\Money` for amount + currency pairs in new code. Use `CurrencyFormatter` for all UI display — never format money inline in Blade.
+
+Accounting calculations remain in the clinic base currency. Do not add implicit currency conversion inside accounting services. Legacy Clinic 111 foreign-cash conversion via `ClinicCurrencySupport` is unchanged.
+
+Extension points only (not implemented): `ExchangeRateProvider`, `CurrencyConversionService`.
+
+Validate currency fields with `SupportedCurrency` rule.
+
 ---
 
 # Naming Rules

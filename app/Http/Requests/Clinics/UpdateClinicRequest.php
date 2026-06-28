@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Clinics;
 
 use App\Models\Clinic;
+use App\Rules\SupportedCurrency;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -30,7 +31,7 @@ class UpdateClinicRequest extends FormRequest
                 'regex:/^[A-Za-z0-9_\-]+$/',
                 Rule::unique('clinics', 'code')->ignore($clinic->id),
             ],
-            'currency' => ['required', 'string', 'size:3', 'regex:/^[A-Za-z]{3}$/'],
+            'currency' => ['required', 'string', 'size:3', new SupportedCurrency],
             'timezone' => ['required', 'string', 'max:64', 'timezone:all'],
             'country' => ['required', 'string', 'max:120'],
             'is_active' => ['sometimes', 'boolean'],

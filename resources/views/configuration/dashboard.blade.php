@@ -249,7 +249,7 @@
     <p class="page-subtitle">
         Central dashboard for doctors, laboratories, treatments, prices, fee rules, and users.
         @isset($currentClinic)
-        <strong>{{ $currentClinic->name }}</strong> · base currency <strong>{{ $clinicCurrency }}</strong>.
+        <strong>{{ $currentClinic->name }}</strong> · base currency <strong>{{ $clinicCurrencyMetadata['name'] ?? $clinicCurrency }} ({{ $clinicCurrency }})</strong>.
         @endisset
     </p>
 </div>

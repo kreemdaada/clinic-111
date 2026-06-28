@@ -795,7 +795,7 @@ Admin management uses `/api/admin/doctor-fixed-fees` and web `/doctor-fixed-fees
 
 **Response `201`:** `{ message, data }`
 
-**Validation:** Doctor must have `commission_type = fixed`; `fee_amount` > 0; currency `AED` or `USD`; no overlapping active validity.
+**Validation:** Doctor must have `commission_type = fixed`; `fee_amount` > 0; currency must be a supported ISO code (AED, EUR, USD, SAR, GBP); no overlapping active validity.
 
 ---
 
@@ -1072,6 +1072,9 @@ Clinic administration uses `/api/admin/clinics` and web `/clinics`. Configuratio
       "name": "Clinic 111",
       "code": "CLINIC_111",
       "currency": "AED",
+      "currency_name": "UAE Dirham",
+      "currency_symbol": "AED ",
+      "currency_precision": 2,
       "timezone": "Asia/Dubai",
       "country": "United Arab Emirates",
       "is_active": true
@@ -1106,7 +1109,7 @@ Clinic administration uses `/api/admin/clinics` and web `/clinics`. Configuratio
 }
 ```
 
-**Validation (`StoreClinicRequest`):** `name` required; `code` required, unique, alphanumeric/underscore/dash; `currency` 3-letter; `timezone` valid IANA; `country` required.
+**Validation (`StoreClinicRequest`):** `name` required; `code` required, unique, alphanumeric/underscore/dash; `currency` must be a supported ISO code (AED, EUR, USD, SAR, GBP); `timezone` valid IANA; `country` required.
 
 **Response `201`:** Created clinic + audit `clinic_created`.
 

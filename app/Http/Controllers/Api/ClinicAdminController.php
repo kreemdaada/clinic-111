@@ -8,6 +8,7 @@ use App\Http\Requests\Clinics\StoreClinicRequest;
 use App\Http\Requests\Clinics\UpdateClinicRequest;
 use App\Models\Clinic;
 use App\Services\Configuration\ClinicManagementService;
+use App\Support\ClinicApiPresenter;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -87,14 +88,6 @@ class ClinicAdminController extends Controller
      */
     private function formatClinic(Clinic $clinic): array
     {
-        return [
-            'id' => $clinic->id,
-            'name' => $clinic->name,
-            'code' => $clinic->code,
-            'currency' => $clinic->currency,
-            'timezone' => $clinic->timezone,
-            'country' => $clinic->country,
-            'is_active' => $clinic->is_active,
-        ];
+        return ClinicApiPresenter::format($clinic);
     }
 }

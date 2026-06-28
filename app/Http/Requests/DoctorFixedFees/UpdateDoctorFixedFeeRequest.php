@@ -7,6 +7,7 @@ use App\Models\Doctor;
 use App\Models\DoctorFixedFee;
 use App\Models\Treatment;
 use App\Rules\BelongsToCurrentClinic;
+use App\Rules\SupportedCurrency;
 use App\Support\DoctorFixedFeeOverlapValidator;
 use App\Services\Configuration\CurrentClinicResolver;
 use Illuminate\Foundation\Http\FormRequest;
@@ -44,7 +45,7 @@ class UpdateDoctorFixedFeeRequest extends FormRequest
             ],
             'treatment_id' => ['sometimes', 'required', 'integer', new BelongsToCurrentClinic(Treatment::class)],
             'fee_amount' => ['sometimes', 'required', 'numeric', 'min:0.01'],
-            'currency' => ['sometimes', 'required', 'string', 'size:3', Rule::in(['AED', 'USD'])],
+            'currency' => ['sometimes', 'required', 'string', 'size:3', new SupportedCurrency],
             'valid_from' => ['nullable', 'date'],
             'valid_to' => ['nullable', 'date', 'after_or_equal:valid_from'],
             'is_active' => ['sometimes', 'boolean'],

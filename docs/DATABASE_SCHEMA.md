@@ -15,7 +15,7 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 | `id` | bigint PK | |
 | `name` | string | Display name |
 | `code` | string unique | e.g. `CLINIC_111` |
-| `currency` | string(3) | ISO currency code, default `AED` |
+| `currency` | string(3) | ISO base currency code (ADR-034). Supported: AED, EUR, USD, SAR, GBP. Symbol and precision resolved from `config/currencies.php` at runtime — not stored on the row. |
 | `timezone` | string(64) | IANA timezone, default `Asia/Dubai` |
 | `country` | string | Country name |
 | `is_active` | boolean | Inactive clinics reserved for future tenant scoping |

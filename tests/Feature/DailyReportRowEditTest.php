@@ -111,6 +111,47 @@ class DailyReportRowEditTest extends TestCase
         $response->assertJsonPath('data.0.source', 'import');
     }
 
+    public function test_rows_endpoint_returns_day_counts_without_day_parameter(): void
+    {
+        $this->seed();
+
+        $user = User::query()->where('email', 'accountant@clinic.test')->firstOrFail();
+        $doctor = Doctor::query()->where('code', 'JACK')->firstOrFail();
+
+        $report = $this->createDailyReport([
+            'report_date' => '2026-06-01',
+            'source_type' => ReportSourceType::ManualEntry,
+            'source_file_name' => 'JACK · 1 Jun – 30 Jun 2026',
+            'status' => ReportStatus::NeedsReview,
+        ]);
+
+        $this->createDailyWorkRow($report, [
+            'doctor_id' => $doctor->id,
+            'work_date' => '2026-06-09',
+            'treatment_text' => 'MC x 1',
+            'dhs_amount' => '100.00',
+            'paid_total_aed' => '100.00',
+        ]);
+
+        $this->createDailyWorkRow($report, [
+            'doctor_id' => $doctor->id,
+            'work_date' => '2026-06-12',
+            'treatment_text' => 'ZIR x 1',
+            'dhs_amount' => '200.00',
+            'paid_total_aed' => '200.00',
+        ]);
+
+        $response = $this->actingAs($user)->getJson(route('daily-report.rows', [
+            'dailyReport' => $report,
+            'doctor_id' => $doctor->id,
+        ]));
+
+        $response->assertOk()
+            ->assertJsonPath('data', [])
+            ->assertJsonPath('day_counts.9', 1)
+            ->assertJsonPath('day_counts.12', 1);
+    }
+
     public function test_accountant_can_open_editor_for_excel_import_report(): void
     {
         $this->seed();
@@ -128,5 +169,69 @@ class DailyReportRowEditTest extends TestCase
             ->get(route('daily-report.edit', $report))
             ->assertOk()
             ->assertSee('Daily Report');
+    }
+
+    public function test_accountant_editor_hides_add_doctor_and_commission_percentages(): void
+    {
+        $this->seed();
+
+        $accountant = User::query()->where('email', 'accountant@clinic.test')->firstOrFail();
+
+        $report = $this->createDailyReport([
+            'report_date' => '2026-06-01',
+            'source_type' => ReportSourceType::ManualEntry,
+            'source_file_name' => 'JACK · 1 Jun – 30 Jun 2026',
+            'status' => ReportStatus::NeedsReview,
+        ]);
+
+        $this->actingAs($accountant)
+            ->get(route('daily-report.edit', $report))
+            ->assertOk()
+            ->assertDontSee('id="dr-add-doctor-open"', false)
+            ->assertDontSee('Add doctor', false)
+            ->assertSee('JACK', false)
+            ->assertDontSee('>35%<', false)
+            ->assertSee('Save entry', false);
+    }
+
+    public function test_admin_editor_shows_add_doctor_and_commission_percentages(): void
+    {
+        $this->seed();
+
+        $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+
+        $report = $this->createDailyReport([
+            'report_date' => '2026-06-01',
+            'source_type' => ReportSourceType::ManualEntry,
+            'source_file_name' => 'JACK · 1 Jun – 30 Jun 2026',
+            'status' => ReportStatus::NeedsReview,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('daily-report.edit', $report))
+            ->assertOk()
+            ->assertSee('id="dr-add-doctor-open"', false)
+            ->assertSee('35%', false);
+    }
+
+    public function test_viewer_editor_is_read_only(): void
+    {
+        $this->seed();
+
+        $viewer = User::query()->where('email', 'viewer@clinic.test')->firstOrFail();
+
+        $report = $this->createDailyReport([
+            'report_date' => '2026-06-01',
+            'source_type' => ReportSourceType::ManualEntry,
+            'source_file_name' => 'JACK · 1 Jun – 30 Jun 2026',
+            'status' => ReportStatus::NeedsReview,
+        ]);
+
+        $this->actingAs($viewer)
+            ->get(route('daily-report.edit', $report))
+            ->assertOk()
+            ->assertSee('View-only access', false)
+            ->assertDontSee('id="dr-add-doctor-open"', false)
+            ->assertDontSee('35%', false);
     }
 }

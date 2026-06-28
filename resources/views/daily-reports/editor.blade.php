@@ -85,6 +85,24 @@
         padding: 0.5rem;
     }
 
+    .dr-entry-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.25rem;
+    }
+
+    .dr-entry-header .card-title {
+        margin: 0;
+    }
+
+    .dr-treatment-search {
+        width: min(280px, 100%);
+        flex: 0 1 280px;
+    }
+
     .dr-treatment-item {
         display: grid;
         grid-template-columns: 1fr 72px;
@@ -220,7 +238,13 @@
 @endif
 
 @if ($readOnly)
-<div class="alert alert-error" style="margin-bottom:1rem;">This report is approved or locked — entries are read-only until an admin unlocks it with a reason.</div>
+<div class="alert alert-error" style="margin-bottom:1rem;">
+    @if (auth()->user()->isViewer())
+    View-only access — you can browse reports but cannot create or edit entries.
+    @else
+    This report is approved or locked — entries are read-only until an admin unlocks it with a reason.
+    @endif
+</div>
 @endif
 
 <div class="dr-layout">
@@ -228,15 +252,19 @@
         <div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
                 <strong style="font-size:0.875rem;">Doctors</strong>
+                @if (auth()->user()->isAdmin())
                 <button type="button" class="btn btn-secondary btn-sm" id="dr-add-doctor-open">+ Add</button>
+                @endif
             </div>
             <div class="dr-doctor-list" id="dr-doctor-list">
                 @foreach ($doctors as $doctor)
                 <button type="button" class="dr-doctor-btn" data-doctor-id="{{ $doctor->id }}"
                     data-commission-type="{{ $doctor->commission_type->value }}"
-                    data-commission-pct="{{ $doctor->commission_percentage }}">
+                    @if (auth()->user()->isAdmin())
+                    data-commission-pct="{{ $doctor->commission_percentage }}"
+                    @endif>
                     <strong>{{ $doctor->code }}</strong>
-                    @if ($doctor->commission_type->value === 'percentage' && $doctor->commission_percentage !== null)
+                    @if (auth()->user()->isAdmin() && $doctor->commission_type->value === 'percentage' && $doctor->commission_percentage !== null)
                     <span style="font-size:0.75rem;color:var(--accent);">{{ rtrim(rtrim(number_format((float) $doctor->commission_percentage, 2, '.', ''), '0'), '.') }}%</span><br>
                     @endif
                     <span style="font-size:0.75rem;color:var(--text-muted);">{{ $doctor->name }}</span>
@@ -256,7 +284,10 @@
 
     <div class="dr-panel">
         <div class="card" id="dr-entry-card">
-            <h2 class="card-title" id="dr-entry-title">New entry</h2>
+            <div class="dr-entry-header">
+                <h2 class="card-title" id="dr-entry-title">New entry</h2>
+                <input class="form-input dr-treatment-search" type="search" id="dr-treatment-search" placeholder="Search treatments…" hidden @if($readOnly) disabled @endif>
+            </div>
             <p class="card-description" id="dr-selection-hint">Select a doctor and a calendar day — or click <strong>Edit</strong> on an imported row below.</p>
 
             <div class="dr-treatment-grid" id="dr-treatment-grid" hidden>
@@ -322,6 +353,7 @@
     </div>
 </div>
 
+@if (auth()->user()->isAdmin())
 <div class="dr-modal-backdrop" id="dr-add-doctor-modal">
     <div class="dr-modal">
         <h2 class="card-title">Add doctor</h2>
@@ -362,6 +394,7 @@
         </form>
     </div>
 </div>
+@endif
 @endsection
 
 @push('scripts')
@@ -370,6 +403,8 @@ $editorConfig = [
 'reportId' => $dailyReport->id,
 'month' => $monthStart->format('Y-m'),
 'readOnly' => $readOnly,
+'canManageDoctors' => auth()->user()->isAdmin(),
+'canViewCommission' => auth()->user()->isAdmin(),
 'clinicCurrency' => $clinicCurrency,
 'foreignCashCurrency' => $foreignCashCurrency,
 'initialDoctorId' => request()->integer('doctor') ?: null,
@@ -389,6 +424,8 @@ $editorConfig = [
             reportId,
             month,
             readOnly,
+            canManageDoctors,
+            canViewCommission,
             clinicCurrency,
             foreignCashCurrency,
             initialDoctorId,
@@ -403,11 +440,13 @@ $editorConfig = [
         let selectedDay = null;
         let editingRowId = null;
         let treatments = [];
+        let treatmentSearchQuery = '';
         let previewTimer = null;
 
         const doctorButtons = document.querySelectorAll('.dr-doctor-btn');
         const dayButtons = document.querySelectorAll('.dr-day-btn');
         const treatmentGrid = document.getElementById('dr-treatment-grid');
+        const treatmentSearch = document.getElementById('dr-treatment-search');
         const rowList = document.getElementById('dr-row-list');
         const saveBtn = document.getElementById('dr-save-row');
         const cancelEditBtn = document.getElementById('dr-cancel-edit');
@@ -422,6 +461,14 @@ $editorConfig = [
                     quantity: qty
                 };
             }).filter(l => l.quantity > 0);
+        }
+
+        function currentQuantities() {
+            const quantities = {};
+            treatmentGrid.querySelectorAll('[data-treatment-code]').forEach(row => {
+                quantities[row.dataset.treatmentCode] = parseInt(row.querySelector('[data-qty]')?.value, 10) || 0;
+            });
+            return quantities;
         }
 
         async function api(url, options = {}) {
@@ -452,6 +499,7 @@ $editorConfig = [
         async function loadTreatments() {
             if (!selectedDoctorId || !selectedDay) return;
             treatmentGrid.hidden = false;
+            treatmentSearch.hidden = false;
             treatmentGrid.innerHTML = '<p class="extraction-muted">Loading treatments…</p>';
             try {
                 const body = await api(`/doctors/${selectedDoctorId}/treatments?month=${month}&day=${selectedDay}`);
@@ -482,16 +530,40 @@ $editorConfig = [
         }
 
         function renderTreatmentGrid() {
-            treatmentGrid.innerHTML = treatments.map(t => `
+            const query = treatmentSearchQuery.trim().toLowerCase();
+            const quantities = currentQuantities();
+            const orphans = Array.from(treatmentGrid.querySelectorAll('[data-orphan]')).map(row => ({
+                code: row.dataset.treatmentCode,
+                quantity: quantities[row.dataset.treatmentCode] || 0,
+            }));
+
+            const visible = treatments.filter(t => {
+                const qty = quantities[t.code] || 0;
+                if (qty > 0) return true;
+                if (!query) return true;
+                return `${t.code} ${t.name}`.toLowerCase().includes(query);
+            }).sort((a, b) => (quantities[b.code] || 0) - (quantities[a.code] || 0));
+
+            if (!visible.length) {
+                treatmentGrid.innerHTML = '<p class="extraction-muted" style="margin:0;">No treatments match your search.</p>';
+            } else {
+                treatmentGrid.innerHTML = visible.map(t => `
             <label class="dr-treatment-item" data-treatment-code="${t.code}">
                 <span>
                     <strong>${t.code}</strong> — ${t.name}
                     <div class="dr-treatment-meta">${formatTreatmentMeta(t)}</div>
                 </span>
-                <input class="form-input" type="number" min="0" max="50" value="0" data-qty ${readOnly ? 'disabled' : ''}>
+                <input class="form-input" type="number" min="0" max="50" value="${quantities[t.code] || 0}" data-qty ${readOnly ? 'disabled' : ''}>
             </label>
         `).join('');
-            treatmentGrid.querySelectorAll('[data-qty]').forEach(input => input.addEventListener('input', schedulePreview));
+                treatmentGrid.querySelectorAll('[data-qty]').forEach(input => input.addEventListener('input', schedulePreview));
+            }
+
+            orphans.forEach(({ code, quantity }) => {
+                if (quantity > 0 && !treatmentGrid.querySelector(`[data-treatment-code="${code}"]`)) {
+                    appendOrphanTreatmentRow(code, quantity);
+                }
+            });
         }
 
         function appendOrphanTreatmentRow(code, quantity) {
@@ -538,9 +610,15 @@ $editorConfig = [
             saveBtn.textContent = 'Save entry';
             cancelEditBtn.hidden = true;
             setPaymentInputs(null);
+            treatmentSearchQuery = '';
+            if (treatmentSearch) {
+                treatmentSearch.value = '';
+            }
             if (treatmentGrid.querySelectorAll('[data-qty]').length) {
                 treatmentGrid.querySelectorAll('[data-qty]').forEach(i => i.value = 0);
                 treatmentGrid.querySelectorAll('[data-orphan]').forEach(el => el.remove());
+            } else if (treatments.length) {
+                renderTreatmentGrid();
             }
             rowList.querySelectorAll('.dr-row-card').forEach(card => card.classList.remove('is-editing'));
             schedulePreview();
@@ -549,9 +627,13 @@ $editorConfig = [
         async function startEditRow(row) {
             if (readOnly) return;
             editingRowId = row.id;
-            entryTitle.textContent = `Edit entry #${row.id}`;
+            entryTitle.textContent = 'Edit entry';
             saveBtn.textContent = 'Save changes';
             cancelEditBtn.hidden = false;
+            treatmentSearchQuery = '';
+            if (treatmentSearch) {
+                treatmentSearch.value = '';
+            }
             setPaymentInputs(row);
             rowList.querySelectorAll('.dr-row-card').forEach(card => {
                 card.classList.toggle('is-editing', card.dataset.rowId === String(row.id));
@@ -560,11 +642,67 @@ $editorConfig = [
                 behavior: 'smooth',
                 block: 'start'
             });
-            if (!treatmentGrid.querySelector('[data-treatment-code]')) {
+            if (!treatments.length) {
                 await loadTreatments();
             }
             applyTreatmentLines(row.treatment_lines || []);
             schedulePreview();
+        }
+
+        function firstDayWithRows(dayCounts) {
+            return Object.entries(dayCounts)
+                .filter(([, count]) => Number(count) > 0)
+                .map(([day]) => parseInt(day, 10))
+                .sort((a, b) => a - b)[0] ?? null;
+        }
+
+        function dayHasRows(dayCounts, day) {
+            if (day === null) {
+                return false;
+            }
+
+            return Number(dayCounts[day] ?? dayCounts[String(day)] ?? 0) > 0;
+        }
+
+        function selectCalendarDay(day) {
+            selectedDay = day;
+            dayButtons.forEach(btn => {
+                btn.classList.toggle('is-active', parseInt(btn.dataset.day, 10) === day);
+            });
+        }
+
+        async function refreshDoctorCalendar(preferredDay = null) {
+            if (!selectedDoctorId) {
+                return;
+            }
+
+            const body = await api(`/daily-report/${reportId}/rows?doctor_id=${selectedDoctorId}`);
+            const dayCounts = body.day_counts || {};
+            updateDayMarkers(dayCounts);
+
+            let dayToSelect = preferredDay ?? selectedDay;
+            if (dayToSelect !== null && !dayHasRows(dayCounts, dayToSelect)) {
+                dayToSelect = null;
+            }
+            if (dayToSelect === null) {
+                dayToSelect = firstDayWithRows(dayCounts);
+            }
+
+            if (dayToSelect === null) {
+                selectedDay = null;
+                dayButtons.forEach(btn => btn.classList.remove('is-active'));
+                rowList.innerHTML = '<p class="extraction-muted">No entries for this doctor yet — pick a day to add one.</p>';
+                treatmentGrid.hidden = true;
+                treatmentSearch.hidden = true;
+                saveBtn.disabled = true;
+                refreshSelectionHint();
+                return;
+            }
+
+            selectCalendarDay(dayToSelect);
+            refreshSelectionHint();
+            await loadTreatments();
+            await loadRows();
         }
 
         async function loadRows() {
@@ -654,7 +792,7 @@ $editorConfig = [
             document.getElementById('dr-preview-paid').textContent = p.paid_total_aed + ' ' + clinicCurrency;
             document.getElementById('dr-preview-lab').textContent = p.lab_total_aed + ' ' + clinicCurrency;
             document.getElementById('dr-preview-net').textContent = p.net_total_aed + ' ' + clinicCurrency;
-            const pct = p.commission_percentage ? ` (${p.commission_percentage}%)` : '';
+            const pct = canViewCommission && p.commission_percentage ? ` (${p.commission_percentage}%)` : '';
             document.getElementById('dr-preview-income').textContent = p.doctor_income_aed + ' ' + clinicCurrency + pct;
         }
 
@@ -683,12 +821,10 @@ $editorConfig = [
                 doctorButtons.forEach(b => b.classList.remove('is-active'));
                 btn.classList.add('is-active');
                 selectedDoctorId = parseInt(btn.dataset.doctorId, 10);
+                selectedDay = null;
+                dayButtons.forEach(b => b.classList.remove('is-active'));
                 clearForm();
-                refreshSelectionHint();
-                if (selectedDay) {
-                    await loadTreatments();
-                    await loadRows();
-                }
+                await refreshDoctorCalendar();
             });
         });
 
@@ -708,6 +844,11 @@ $editorConfig = [
 
         ['dr-dhs', 'dr-cheque', 'dr-tabby', 'dr-usd', 'dr-visa'].forEach(id => {
             document.getElementById(id).addEventListener('input', schedulePreview);
+        });
+
+        treatmentSearch.addEventListener('input', () => {
+            treatmentSearchQuery = treatmentSearch.value;
+            renderTreatmentGrid();
         });
 
         saveBtn.addEventListener('click', async () => {
@@ -735,6 +876,7 @@ $editorConfig = [
 
         cancelEditBtn.addEventListener('click', () => clearForm());
 
+        if (canManageDoctors) {
         const modal = document.getElementById('dr-add-doctor-modal');
         document.getElementById('dr-add-doctor-open').addEventListener('click', () => modal.classList.add('is-open'));
         document.getElementById('dr-add-doctor-cancel').addEventListener('click', () => modal.classList.remove('is-open'));
@@ -757,23 +899,28 @@ $editorConfig = [
             btn.className = 'dr-doctor-btn';
             btn.dataset.doctorId = d.id;
             btn.dataset.commissionType = d.commission_type;
-            btn.dataset.commissionPct = d.commission_percentage || '';
-            btn.innerHTML = `<strong>${d.code}</strong><br><span style="font-size:0.75rem;color:var(--text-muted);">${d.name}</span>`;
+            if (canViewCommission) {
+                btn.dataset.commissionPct = d.commission_percentage || '';
+            }
+            const pctHtml = canViewCommission && d.commission_type === 'percentage' && d.commission_percentage
+                ? `<span style="font-size:0.75rem;color:var(--accent);">${d.commission_percentage}%</span><br>`
+                : '';
+            btn.innerHTML = `<strong>${d.code}</strong>${pctHtml}<span style="font-size:0.75rem;color:var(--text-muted);">${d.name}</span>`;
             btn.addEventListener('click', async () => {
                 document.querySelectorAll('.dr-doctor-btn').forEach(b => b.classList.remove('is-active'));
                 btn.classList.add('is-active');
                 selectedDoctorId = d.id;
-                refreshSelectionHint();
-                if (selectedDay) {
-                    await loadTreatments();
-                    await loadRows();
-                }
+                selectedDay = null;
+                dayButtons.forEach(b => b.classList.remove('is-active'));
+                clearForm();
+                await refreshDoctorCalendar();
             });
             document.getElementById('dr-doctor-list').appendChild(btn);
             modal.classList.remove('is-open');
             e.target.reset();
             btn.click();
         });
+        }
 
         markDateRange(dateFrom, dateTo);
 
@@ -785,19 +932,7 @@ $editorConfig = [
                 doctorButtons.forEach(b => b.classList.remove('is-active'));
                 doctorBtn.classList.add('is-active');
                 selectedDoctorId = initialDoctorId;
-                refreshSelectionHint();
-            }
-
-            if (!initialDay) return;
-
-            const dayBtn = document.querySelector(`[data-day="${initialDay}"]`);
-            if (dayBtn) {
-                dayButtons.forEach(b => b.classList.remove('is-active'));
-                dayBtn.classList.add('is-active');
-                selectedDay = initialDay;
-                refreshSelectionHint();
-                await loadTreatments();
-                await loadRows();
+                await refreshDoctorCalendar(initialDay);
             }
         })();
     })();

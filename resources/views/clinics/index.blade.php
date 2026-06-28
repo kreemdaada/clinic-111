@@ -159,7 +159,7 @@
                 <h2 class="clinic-admin-code">{{ $clinic->code }}</h2>
                 <div class="clinic-admin-meta">
                     {{ $clinic->name }}
-                    · {{ $clinic->currency }}
+                    · {{ $clinic->currency }} ({{ $clinic->baseCurrency()->name }})
                     · {{ $clinic->timezone }}
                     · {{ $clinic->country }}
                 </div>

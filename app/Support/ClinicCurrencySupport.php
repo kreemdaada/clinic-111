@@ -5,10 +5,11 @@ namespace App\Support;
 use App\Models\Clinic;
 
 /**
- * Clinic-scoped currency rules.
+ * Clinic-scoped currency rules (ADR-034).
  *
  * Each clinic has one fixed base currency (`clinics.currency`), set at registration.
- * Amounts already in that currency are used as-is; other currencies convert via AED rates.
+ * All accounting calculations run in that base currency — no implicit conversion inside the engine.
+ * Legacy import/payment conversion helpers remain for Clinic 111 foreign-cash columns only.
  *
  * Clinic 111 (`CLINIC_111`) keeps the legacy DHS + USD + VISA Excel layout unchanged.
  */

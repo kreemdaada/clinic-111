@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Onboarding\RegisterClinicRequest;
 use App\Services\Configuration\ClinicOnboardingService;
+use App\Support\ClinicApiPresenter;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -26,14 +27,7 @@ class ClinicOnboardingController extends Controller
 
         return response()->json([
             'token' => $token,
-            'clinic' => [
-                'id' => $result['clinic']->id,
-                'name' => $result['clinic']->name,
-                'code' => $result['clinic']->code,
-                'currency' => $result['clinic']->currency,
-                'timezone' => $result['clinic']->timezone,
-                'country' => $result['clinic']->country,
-            ],
+            'clinic' => ClinicApiPresenter::format($result['clinic']),
             'user' => [
                 'id' => $result['owner']->id,
                 'name' => $result['owner']->name,
