@@ -2477,6 +2477,201 @@ Builds on ADR-028 (Explicit Query Isolation), ADR-029 (Accounting Ownership), an
 
 ---
 
+## ADR-034
+
+### Title
+
+Multi-Currency Strategy
+
+### Status
+
+Proposed
+
+### Date
+
+2026-06-28
+
+### Milestone
+
+Milestone 14 — Multi-Currency Foundation
+
+### Context
+
+The platform has evolved into a secure multi-tenant SaaS accounting system.
+
+Every clinic owns its own accounting configuration.
+
+Future clinics may operate in different countries using different currencies.
+
+Examples:
+
+* AED
+* EUR
+* USD
+* SAR
+* GBP
+
+The accounting engine must support multiple currencies without duplicating business logic.
+
+Financial correctness has priority over convenience.
+
+### Decision
+
+Each clinic owns exactly one **Base Currency**.
+
+All accounting calculations inside a clinic are performed exclusively in that base currency.
+
+The accounting engine never mixes currencies internally.
+
+Currency conversion is a presentation concern unless explicitly required by business rules.
+
+### Base Currency
+
+Every clinic stores:
+
+* `currency_code`
+* `currency_symbol`
+* `currency_precision`
+
+Examples:
+
+| Clinic | Base currency |
+| --- | --- |
+| Clinic 111 | AED |
+| Clinic Germany | EUR |
+| Clinic USA | USD |
+
+### Money Object
+
+Every monetary value shall conceptually consist of:
+
+* Amount
+* Currency
+
+Example:
+
+```text
+1250.00 AED
+890.00 EUR
+150.00 USD
+```
+
+Currency is part of the value.
+
+Money without currency is invalid.
+
+### Accounting Rules
+
+Calculations never convert currencies.
+
+Examples:
+
+* Doctor commission
+* Lab costs
+* Income
+* Expenses
+* Monthly reports
+
+All remain inside the clinic base currency.
+
+### Currency Conversion
+
+Currency conversion is isolated.
+
+Possible future uses:
+
+* Management dashboards
+* Global SaaS reporting
+* Cross-country analytics
+* Exchange rate history
+
+It is never part of the accounting engine itself.
+
+### Exchange Rates
+
+Future exchange rates are versioned.
+
+Each rate contains:
+
+* `from_currency`
+* `to_currency`
+* `rate`
+* `valid_from`
+* `provider`
+
+Historical reports always use historical rates.
+
+Rates are immutable.
+
+### Precision
+
+Never use floating point arithmetic.
+
+Continue using `MoneyCalculator` with BCMath.
+
+Currency precision follows ISO 4217.
+
+Examples:
+
+* JPY → 0 decimals
+* EUR → 2 decimals
+* KWD → 3 decimals
+
+### Alternatives Considered
+
+**Convert everything to USD** — Rejected. Introduces rounding errors and breaks local accounting.
+
+**Per-transaction currency conversion** — Rejected. Unnecessary complexity and financial inconsistencies.
+
+**Base currency per clinic** — Accepted. Simple, deterministic, and accounting remains stable.
+
+### Consequences
+
+**Advantages**
+
+* Stable accounting engine
+* Country-independent platform
+* Future exchange-rate support
+* Easy SaaS reporting
+
+**Disadvantages**
+
+* Exchange-rate subsystem required later
+* Global financial reports require conversion
+
+### Affected Components
+
+**Database:** `clinics`, future `exchange_rates`
+
+**Services:** `MoneyCalculator`, future `CurrencyConversionService`, future `ExchangeRateService`
+
+**API:** Configuration, reporting
+
+**UI:** Currency formatting
+
+**Tests:** Money precision, currency validation, historical exchange-rate tests
+
+### Related Documentation
+
+* PROJECT_OVERVIEW.md
+* DATABASE_SCHEMA.md
+* SERVICES.md
+* WORKFLOWS.md
+* DEVELOPMENT_GUIDE.md
+* MULTI_CLINIC_ARCHITECTURE.md
+
+### Notes
+
+**Success criteria — Milestone 14 is complete only when:**
+
+* Every clinic has exactly one base currency
+* Every money value belongs to one currency
+* No accounting calculation performs implicit currency conversion
+* Money precision is preserved
+* The architecture is ready for future exchange-rate support
+
+---
+
 # ADR Index
 
 | ADR     | Title                                  | Status   |
@@ -2514,14 +2709,13 @@ Builds on ADR-028 (Explicit Query Isolation), ADR-029 (Accounting Ownership), an
 | ADR-031 | Clinic Business Configuration          | Accepted |
 | ADR-032 | Platform Authentication Security       | Accepted |
 | ADR-033 | Tenant Security                        | Accepted |
+| ADR-034 | Multi-Currency Strategy              | Proposed |
 
 ---
 
 # Future ADR Roadmap
 
 The following architectural topics are expected to receive future ADRs.
-
-**ADR-034** — Multi-Currency Strategy (Proposed)
 
 **ADR-035** — Subscription & Licensing (Proposed)
 
