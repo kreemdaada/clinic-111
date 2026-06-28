@@ -2752,7 +2752,7 @@ Implemented 2026-06-28 on branch `feature/multi-currency-foundation`:
 | ADR-031 | Clinic Business Configuration          | Accepted |
 | ADR-032 | Platform Authentication Security       | Accepted |
 | ADR-033 | Tenant Security                        | Accepted |
-| ADR-034 | Multi-Currency Strategy              | Accepted |
+| ADR-034 | Multi-Currency Strategy                | Accepted |
 
 ---
 
