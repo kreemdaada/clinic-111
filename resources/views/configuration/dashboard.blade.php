@@ -253,7 +253,7 @@
         background: var(--surface-subtle);
         border-radius: 999px;
         overflow: hidden;
-        margin-bottom: 1.25rem;
+        margin-bottom: 1.35rem;
     }
 
     .cfg-setup-bar-fill {
@@ -268,46 +268,50 @@
         background: linear-gradient(90deg, #22c55e, #4ade80);
     }
 
+    .cfg-setup-steps-wrap {
+        overflow-x: auto;
+        margin: 0 -0.25rem;
+        padding: 0 0.25rem 0.35rem;
+        -webkit-overflow-scrolling: touch;
+    }
+
     .cfg-setup-steps {
         list-style: none;
-        display: grid;
+        display: flex;
         gap: 0;
         margin: 0;
         padding: 0;
+        min-width: 100%;
     }
 
     .cfg-setup-step {
-        display: grid;
-        grid-template-columns: 2rem 1fr auto;
-        gap: 0.85rem;
-        align-items: start;
-        padding: 0.85rem 0.65rem;
-        border-radius: var(--radius);
-        position: relative;
-        transition: background 0.15s ease;
+        flex: 1 1 0;
+        min-width: 9.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
     }
 
-    .cfg-setup-step:not(:last-child)::after {
-        content: '';
-        position: absolute;
-        left: 1.28rem;
-        top: 2.35rem;
-        bottom: -0.35rem;
-        width: 2px;
+    .cfg-setup-step-rail {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        margin-bottom: 0.65rem;
+    }
+
+    .cfg-setup-rail-line {
+        flex: 1;
+        height: 2px;
         background: var(--border);
+        transition: background 0.2s ease;
     }
 
-    .cfg-setup-step.is-done:not(:last-child)::after {
+    .cfg-setup-rail-line.is-done {
         background: #86efac;
     }
 
-    .cfg-setup-step.is-current {
-        background: var(--accent-soft);
-        box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.15);
-    }
-
-    .cfg-setup-step.is-current:not(:last-child)::after {
-        background: linear-gradient(180deg, #86efac 0%, var(--border) 100%);
+    .cfg-setup-rail-line.is-spacer {
+        background: transparent;
     }
 
     .cfg-setup-marker {
@@ -319,8 +323,6 @@
         font-size: 0.75rem;
         font-weight: 700;
         flex-shrink: 0;
-        position: relative;
-        z-index: 1;
         background: var(--surface);
         border: 2px solid var(--border-strong);
         color: var(--text-muted);
@@ -344,34 +346,82 @@
         height: 0.95rem;
     }
 
+    .cfg-setup-step-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 0.35rem;
+        padding: 0.75rem 0.55rem;
+        margin: 0 0.3rem;
+        min-height: 100%;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+        transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .cfg-setup-step.is-done .cfg-setup-step-card {
+        border-color: #bbf7d0;
+        background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
+    }
+
+    .cfg-setup-step.is-current .cfg-setup-step-card {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+        box-shadow: 0 0 0 1px rgba(15, 118, 110, 0.12);
+    }
+
+    .cfg-setup-step-num {
+        font-size: 0.6875rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-subtle);
+    }
+
+    .cfg-setup-step.is-current .cfg-setup-step-num {
+        color: var(--accent);
+    }
+
+    .cfg-setup-step.is-done .cfg-setup-step-num {
+        color: var(--success);
+    }
+
     .cfg-setup-step-title {
         font-weight: 600;
-        font-size: 0.9375rem;
+        font-size: 0.875rem;
         letter-spacing: -0.01em;
-        margin-bottom: 0.1rem;
+        line-height: 1.25;
     }
 
     .cfg-setup-step-desc {
-        font-size: 0.8125rem;
+        font-size: 0.75rem;
         color: var(--text-muted);
-        line-height: 1.45;
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        min-height: 2.1rem;
     }
 
     .cfg-setup-step-tags {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.35rem;
-        margin-top: 0.35rem;
+        justify-content: center;
+        gap: 0.3rem;
     }
 
     .cfg-setup-tag {
         display: inline-flex;
         align-items: center;
-        font-size: 0.6875rem;
+        font-size: 0.625rem;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.04em;
-        padding: 0.15rem 0.45rem;
+        padding: 0.12rem 0.4rem;
         border-radius: 999px;
         background: var(--surface-subtle);
         color: var(--text-subtle);
@@ -393,6 +443,7 @@
     }
 
     .cfg-setup-step-action {
+        margin-top: auto;
         padding-top: 0.15rem;
     }
 
@@ -400,10 +451,26 @@
         display: inline-flex;
         align-items: center;
         gap: 0.25rem;
-        font-size: 0.8125rem;
+        font-size: 0.75rem;
         font-weight: 600;
         color: var(--success);
-        padding: 0.35rem 0.55rem;
+    }
+
+    .cfg-setup-done-badge svg {
+        width: 0.85rem;
+        height: 0.85rem;
+    }
+
+    @media (max-width: 720px) {
+        .cfg-setup-step {
+            min-width: 8.75rem;
+        }
+
+        .cfg-setup-step-desc {
+            -webkit-line-clamp: 3;
+            line-clamp: 3;
+            min-height: 3.15rem;
+        }
     }
 
     .cfg-setup-footer {
@@ -546,51 +613,59 @@
             <div class="cfg-setup-bar-fill"></div>
         </div>
 
-        <ul class="cfg-setup-steps">
-            @foreach ($setupSteps as $index => $step)
-                @php
-                    $isCurrent = ($configurationStatus['current_step'] ?? null) === $step['key'];
-                    $stepNumber = $index + 1;
-                @endphp
-                <li class="cfg-setup-step {{ $step['completed'] ? 'is-done' : '' }} {{ $isCurrent ? 'is-current' : '' }}">
-                    <div class="cfg-setup-marker" aria-hidden="true">
-                        @if ($step['completed'])
-                            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M5 10.5 8.5 14 15 6.5"></path>
-                            </svg>
-                        @else
-                            {{ $stepNumber }}
-                        @endif
-                    </div>
-                    <div>
-                        <div class="cfg-setup-step-title">{{ $step['label'] }}</div>
-                        <div class="cfg-setup-step-desc">{{ $step['description'] }}</div>
-                        <div class="cfg-setup-step-tags">
-                            @if ($step['required'])
-                                <span class="cfg-setup-tag is-required">Required</span>
-                            @else
-                                <span class="cfg-setup-tag is-optional">Optional</span>
-                            @endif
-                            @if ($isCurrent)
-                                <span class="cfg-setup-tag is-next">Next step</span>
-                            @endif
+        <div class="cfg-setup-steps-wrap">
+            <ul class="cfg-setup-steps">
+                @foreach ($setupSteps as $index => $step)
+                    @php
+                        $isCurrent = ($configurationStatus['current_step'] ?? null) === $step['key'];
+                        $stepNumber = $index + 1;
+                        $prevCompleted = $index > 0 ? (bool) $setupSteps[$index - 1]['completed'] : false;
+                    @endphp
+                    <li class="cfg-setup-step {{ $step['completed'] ? 'is-done' : '' }} {{ $isCurrent ? 'is-current' : '' }}">
+                        <div class="cfg-setup-step-rail" aria-hidden="true">
+                            <div class="cfg-setup-rail-line {{ $index === 0 ? 'is-spacer' : ($prevCompleted ? 'is-done' : '') }}"></div>
+                            <div class="cfg-setup-marker">
+                                @if ($step['completed'])
+                                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M5 10.5 8.5 14 15 6.5"></path>
+                                    </svg>
+                                @else
+                                    {{ $stepNumber }}
+                                @endif
+                            </div>
+                            <div class="cfg-setup-rail-line {{ $loop->last ? 'is-spacer' : ($step['completed'] ? 'is-done' : '') }}"></div>
                         </div>
-                    </div>
-                    <div class="cfg-setup-step-action">
-                        @if ($step['completed'])
-                            <span class="cfg-setup-done-badge">
-                                <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <path d="M5 10.5 8.5 14 15 6.5"></path>
-                                </svg>
-                                Done
-                            </span>
-                        @else
-                            <a href="{{ route($step['index_route']) }}" class="btn btn-primary btn-sm">Configure</a>
-                        @endif
-                    </div>
-                </li>
-            @endforeach
-        </ul>
+                        <div class="cfg-setup-step-card">
+                            <div class="cfg-setup-step-num">Step {{ $stepNumber }}</div>
+                            <div class="cfg-setup-step-title">{{ $step['label'] }}</div>
+                            <div class="cfg-setup-step-desc">{{ $step['description'] }}</div>
+                            <div class="cfg-setup-step-tags">
+                                @if ($step['required'])
+                                    <span class="cfg-setup-tag is-required">Required</span>
+                                @else
+                                    <span class="cfg-setup-tag is-optional">Optional</span>
+                                @endif
+                                @if ($isCurrent)
+                                    <span class="cfg-setup-tag is-next">Next step</span>
+                                @endif
+                            </div>
+                            <div class="cfg-setup-step-action">
+                                @if ($step['completed'])
+                                    <span class="cfg-setup-done-badge">
+                                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M5 10.5 8.5 14 15 6.5"></path>
+                                        </svg>
+                                        Done
+                                    </span>
+                                @else
+                                    <a href="{{ route($step['index_route']) }}" class="btn btn-primary btn-sm">Configure</a>
+                                @endif
+                            </div>
+                        </div>
+                    </li>
+                @endforeach
+            </ul>
+        </div>
 
         <div class="cfg-setup-footer {{ $setupComplete ? 'is-ready' : '' }}">
             <div class="cfg-setup-ready">

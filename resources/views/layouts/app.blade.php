@@ -323,6 +323,102 @@
             margin: 0;
         }
 
+        .pg-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .pg-summary {
+            margin: 0;
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+        }
+
+        .pg-summary strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .pg-controls {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .pg-pages {
+            display: inline-flex;
+            align-items: stretch;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            background: var(--surface);
+        }
+
+        .pg-btn,
+        .pg-link,
+        .pg-current,
+        .pg-ellipsis {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 2rem;
+            height: 2rem;
+            padding: 0 0.45rem;
+            font-size: 0.8125rem;
+            line-height: 1;
+            border: none;
+            background: var(--surface);
+            color: var(--text-muted);
+            text-decoration: none;
+        }
+
+        .pg-btn {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+        }
+
+        .pg-btn:hover:not(.is-disabled) {
+            background: var(--surface-subtle);
+            color: var(--text);
+        }
+
+        .pg-btn.is-disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .pg-link {
+            border-right: 1px solid var(--border);
+        }
+
+        .pg-link:last-child {
+            border-right: none;
+        }
+
+        .pg-link:hover {
+            background: var(--surface-subtle);
+            color: var(--text);
+        }
+
+        .pg-current {
+            background: var(--accent-soft);
+            color: var(--accent);
+            font-weight: 600;
+            border-right: 1px solid var(--border);
+        }
+
+        .pg-ellipsis {
+            border-right: 1px solid var(--border);
+            cursor: default;
+        }
+
+        .pg-pages > :last-child {
+            border-right: none;
+        }
+
         .badge {
             display: inline-flex;
             align-items: center;
