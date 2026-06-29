@@ -98,9 +98,10 @@ class BusinessConfigurationTest extends TestCase
         $this->actingAs($owner)
             ->get(route('configuration.dashboard'))
             ->assertOk()
-            ->assertSee('100%', false)
-            ->assertSee('Ready for Import', false)
-            ->assertSee('Import first report', false);
+            ->assertSee('Configuration complete', false)
+            ->assertSee('ready for import', false)
+            ->assertSee('Import report', false)
+            ->assertDontSee('Business Configuration', false);
 
         $this->actingAs($owner)
             ->get(route('imports.index'))

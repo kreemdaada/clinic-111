@@ -12,6 +12,7 @@ use App\Http\Controllers\Web\ImportController;
 use App\Http\Controllers\Web\LabAdminController;
 use App\Http\Controllers\Web\LabPriceAdminController;
 use App\Http\Controllers\Web\LandingController;
+use App\Http\Controllers\Web\LegalPageController;
 use App\Http\Controllers\Web\LogController;
 use App\Http\Controllers\Web\ReportLockController;
 use App\Http\Controllers\Web\TreatmentAdminController;
@@ -19,6 +20,9 @@ use App\Http\Controllers\Web\UserAdminController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingController::class, 'index'])->name('landing');
+
+Route::get('/impressum', [LegalPageController::class, 'imprint'])->name('legal.imprint');
+Route::get('/datenschutz', [LegalPageController::class, 'privacy'])->name('legal.privacy');
 
 Route::get('/register-clinic', [ClinicOnboardingController::class, 'create'])->name('register-clinic.create');
 

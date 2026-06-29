@@ -7,10 +7,11 @@ use App\Services\Audit\AuditLogService;
 use App\Services\Currency\CurrencyFormatter;
 use App\Services\Security\FakeCaptchaVerifier;
 use App\View\Composers\ClinicContextComposer;
+use App\View\Composers\PublicContactComposer;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -78,6 +79,12 @@ class AppServiceProvider extends ServiceProvider
             'treatments.*',
             'clinics.*',
         ], ClinicContextComposer::class);
+
+        View::composer([
+            'landing.*',
+            'layouts.legal',
+            'legal.*',
+        ], PublicContactComposer::class);
 
         Paginator::defaultView('vendor.pagination.clinic');
         Paginator::defaultSimpleView('vendor.pagination.clinic');

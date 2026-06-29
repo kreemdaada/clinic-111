@@ -1162,7 +1162,7 @@
         </section>
     </main>
 
-    <footer class="lp-footer" id="contact">
+    <footer class="lp-footer">
         <div class="lp-container">
             <div class="lp-footer-grid">
                 <div>
@@ -1183,9 +1183,11 @@
                 <div>
                     <h3>Legal &amp; access</h3>
                     <ul class="lp-footer-links">
-                        <li><a href="#contact">Contact</a></li>
-                        <li><span class="lp-footer-placeholder" title="Legal page pending">Imprint (coming soon)</span></li>
-                        <li><span class="lp-footer-placeholder" title="Legal page pending">Privacy policy (coming soon)</span></li>
+                        @if ($publicContactMailto)
+                            <li><a href="{{ $publicContactMailto }}">Contact</a></li>
+                        @endif
+                        <li><a href="{{ route('legal.imprint') }}">Impressum</a></li>
+                        <li><a href="{{ route('legal.privacy') }}">Datenschutz</a></li>
                         <li><a href="{{ route('login') }}">Sign in</a></li>
                     </ul>
                 </div>
