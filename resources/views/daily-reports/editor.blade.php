@@ -197,6 +197,27 @@
         width: min(480px, 100%);
         border: 1px solid var(--border);
     }
+
+    .dr-status-strip {
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+        background: var(--surface-muted);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 0.45rem 0.75rem;
+        margin-bottom: 1rem;
+        line-height: 1.4;
+    }
+
+    .dr-status-strip.is-locked {
+        border-left: 3px solid var(--text-subtle);
+    }
+
+    .dr-status-strip.is-success {
+        color: var(--success);
+        background: var(--success-soft);
+        border-color: #bbf7d0;
+    }
 </style>
 @endpush
 
@@ -228,7 +249,7 @@
 </div>
 
 @if (session('success'))
-<div class="alert alert-success" style="margin-bottom:1rem;">{{ session('success') }}</div>
+<p class="dr-status-strip is-success" role="status">{{ session('success') }}</p>
 @endif
 
 @if ($errors->has('approve') || $errors->has('unlock'))
@@ -237,14 +258,10 @@
 </div>
 @endif
 
-@if ($readOnly)
-<div class="alert alert-error" style="margin-bottom:1rem;">
-    @if (auth()->user()->isViewer())
-    View-only access — you can browse reports but cannot create or edit entries.
-    @else
-    This report is approved or locked — entries are read-only until an admin unlocks it with a reason.
-    @endif
-</div>
+@if ($dailyReport->isLocked())
+<p class="dr-status-strip is-locked" role="status">Locked — read-only. Only an admin can unlock this report with a reason.</p>
+@elseif (auth()->user()->isViewer())
+<p class="dr-status-strip" role="status">View-only — you can browse entries but cannot edit them.</p>
 @endif
 
 <div class="dr-layout">
@@ -363,11 +380,11 @@
         <form id="dr-add-doctor-form" style="margin-top:1rem;display:grid;gap:0.75rem;">
             <div class="form-group" style="margin:0;">
                 <label class="form-label">Name</label>
-                <input class="form-input" name="name" required placeholder="Dr Smith">
+                <input class="form-input" name="name" required placeholder="Dr Name">
             </div>
             <div class="form-group" style="margin:0;">
                 <label class="form-label">Code</label>
-                <input class="form-input" name="code" required placeholder="SMITH" style="text-transform:uppercase;">
+                <input class="form-input" name="code" required placeholder="DRNAME" style="text-transform:uppercase;">
             </div>
             <div class="form-group" style="margin:0;">
                 <label class="form-label">Commission type</label>

@@ -54,6 +54,7 @@ class ClinicFinancialOverviewService
         $revenueTrend = $this->buildRevenueTrend($period, $currency);
         $topTreatments = $this->buildTopTreatments($period);
         $reportMeta = $this->reportMetadata($period);
+        $needsReviewCount = $this->countNeedsReviewReports($period);
 
         $hasData = bccomp($revenueCurrent, '0', 2) !== 0
             || bccomp($labCurrent, '0', 2) !== 0
@@ -71,6 +72,7 @@ class ClinicFinancialOverviewService
             reportCount: $reportMeta['count'],
             latestImportFileName: $reportMeta['latest_file'],
             dataStandLabel: $this->dataStandLabel($reportMeta),
+            needsReviewReportCount: $needsReviewCount,
         );
     }
 
@@ -146,7 +148,7 @@ class ClinicFinancialOverviewService
         $rows = DB::table('daily_work_rows as dwr')
             ->join('daily_reports as dr', 'dwr.daily_report_id', '=', 'dr.id')
             ->where('dwr.clinic_id', $this->currentClinicId())
-            ->where('dr.status', '!=', ReportStatus::Failed->value)
+            ->whereIn('dr.status', $this->includedReportStatuses())
             ->whereBetween('dwr.work_date', [
                 $period->start->toDateString(),
                 $period->end->toDateString(),
@@ -240,7 +242,7 @@ class ClinicFinancialOverviewService
 
         $reports = $this->forCurrentClinic(DailyReport::class)
             ->where('report_date', $monthAnchor)
-            ->where('status', '!=', ReportStatus::Failed)
+            ->whereIn('status', $this->includedReportStatuses())
             ->orderByDesc('updated_at')
             ->get(['source_file_name', 'updated_at']);
 
@@ -270,13 +272,40 @@ class ClinicFinancialOverviewService
         return sprintf('Based on %d imported report(s)', $meta['count']);
     }
 
+    private function countNeedsReviewReports(FinancialPeriod $period): int
+    {
+        return $this->forCurrentClinic(DailyReport::class)
+            ->where('status', ReportStatus::NeedsReview->value)
+            ->whereHas('dailyWorkRows', function ($query) use ($period): void {
+                $query->whereBetween('work_date', [
+                    $period->start->toDateString(),
+                    $period->end->toDateString(),
+                ]);
+            })
+            ->count();
+    }
+
+    /**
+     * Report statuses included in financial KPIs (ADR-036 variant B).
+     *
+     * @return list<string>
+     */
+    private function includedReportStatuses(): array
+    {
+        return [
+            ReportStatus::Calculated->value,
+            ReportStatus::Approved->value,
+            ReportStatus::Locked->value,
+        ];
+    }
+
     private function paymentsInPeriodQuery(FinancialPeriod $period)
     {
         return Payment::query()
             ->where('payments.clinic_id', $this->currentClinicId())
             ->join('daily_work_rows as dwr', 'payments.daily_work_row_id', '=', 'dwr.id')
             ->join('daily_reports as dr', 'dwr.daily_report_id', '=', 'dr.id')
-            ->where('dr.status', '!=', ReportStatus::Failed->value)
+            ->whereIn('dr.status', $this->includedReportStatuses())
             ->whereBetween('dwr.work_date', [
                 $period->start->toDateString(),
                 $period->end->toDateString(),
@@ -290,7 +319,7 @@ class ClinicFinancialOverviewService
             ->join('work_items as wi', 'lab_jobs.work_item_id', '=', 'wi.id')
             ->join('daily_work_rows as dwr', 'wi.daily_work_row_id', '=', 'dwr.id')
             ->join('daily_reports as dr', 'dwr.daily_report_id', '=', 'dr.id')
-            ->where('dr.status', '!=', ReportStatus::Failed->value)
+            ->whereIn('dr.status', $this->includedReportStatuses())
             ->whereIn('lab_jobs.status', [
                 LabJobStatus::Calculated->value,
                 LabJobStatus::Adjusted->value,

@@ -23,5 +23,6 @@ readonly class ClinicFinancialOverviewData
         public int $reportCount,
         public ?string $latestImportFileName,
         public ?string $dataStandLabel,
+        public int $needsReviewReportCount,
     ) {}
 }
