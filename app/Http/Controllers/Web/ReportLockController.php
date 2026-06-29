@@ -30,7 +30,7 @@ class ReportLockController extends Controller
             return back()->withErrors(['approve' => $exception->getMessage()]);
         }
 
-        return back()->with('success', 'Report approved and locked.');
+        return back();
     }
 
     public function unlock(UnlockDailyReportRequest $request, DailyReport $dailyReport): RedirectResponse
@@ -43,6 +43,6 @@ class ReportLockController extends Controller
             return back()->withErrors(['unlock' => $exception->getMessage()]);
         }
 
-        return back()->with('success', 'Report unlocked for editing.');
+        return back()->with('success', 'Unlocked for editing.');
     }
 }

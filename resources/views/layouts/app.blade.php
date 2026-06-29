@@ -218,6 +218,12 @@
             border: 1px solid #fecaca;
         }
 
+        .alert-warning {
+            background: var(--warning-soft);
+            color: var(--warning);
+            border: 1px solid #fde68a;
+        }
+
         .btn {
             display: inline-flex;
             align-items: center;

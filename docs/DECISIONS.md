@@ -2786,6 +2786,7 @@ The public landing page shows a practice overview mockup with KPIs, trends, and 
 * **Data stand:** show count of non-failed `daily_reports` for the selected month and latest import filename when present — do not claim “month complete”.
 * **No** analytics snapshots, materialized views, cache layer, or new chart libraries in v1. CSS bar chart + accessible text values.
 * Exclude `daily_reports` with status `failed` from aggregates.
+* Include only reports with status **`calculated`**, **`approved`**, or **`locked`** in all financial KPIs (variant B). Exclude **`needs_review`**, **`parsed`**, **`uploaded`**, and **`failed`**. When `needs_review` reports exist for the selected month, the UI shows an explicit warning — unreviewed data must not silently inflate figures.
 
 **Alternatives Considered:**
 
@@ -2825,8 +2826,10 @@ Implemented 2026-06-29 on branch `feature/clinic-financial-overview`:
 
 Tests:
 
-* `tests/Feature/ClinicFinancialOverviewTest.php` — access control, tenant isolation, KPI calculation, MoM comparison, top treatments, timezone default, empty/invalid month, navigation (14 tests).
-* Full suite: 468 tests passing.
+* `tests/Feature/ClinicFinancialOverviewTest.php` — access control, tenant isolation, KPI calculation, MoM comparison, top treatments, timezone default, empty/invalid month, navigation, report status filter (17 tests).
+* Full suite: 471 tests passing.
+
+**Pre-merge refinement:** Financial KPIs include only `calculated`, `approved`, and `locked` reports (variant B). `needs_review` data is excluded with an explicit UI warning. Top treatments labeled “allocated revenue”.
 
 **Notes:**
 

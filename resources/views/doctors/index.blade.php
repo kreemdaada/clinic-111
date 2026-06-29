@@ -99,11 +99,11 @@
         @csrf
         <div class="form-group" style="margin:0;">
             <label class="form-label">Code</label>
-            <input class="form-input" type="text" name="code" value="{{ old('code') }}" placeholder="CODE-NAME" required>
+            <input class="form-input" type="text" name="code" value="{{ old('code') }}" placeholder="DRNAME" required style="text-transform:uppercase;">
         </div>
         <div class="form-group" style="margin:0;">
             <label class="form-label">Name</label>
-            <input class="form-input" type="text" name="name" value="{{ old('name') }}" placeholder="NAME" required>
+            <input class="form-input" type="text" name="name" value="{{ old('name') }}" placeholder="Dr Name" required>
         </div>
         <div class="form-group" style="margin:0;">
             <label class="form-label">Commission type</label>

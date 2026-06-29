@@ -11,7 +11,7 @@ Display **real** KPIs from imported accounting data:
 - Calculated result (revenue − lab costs)
 - Month-over-month comparison
 - Six-month revenue trend
-- Top 5 treatments by allocated revenue
+- Top 5 treatments by **allocated** revenue (quantity-weighted, not payment-level)
 
 This is operational reporting — not tax advice or full P&L.
 
@@ -27,11 +27,12 @@ Optional query: `?month=YYYY-MM`
 
 | KPI | Source | Rule |
 |---|---|---|
-| Revenue | `payments.amount_aed` | Join `daily_work_rows` where `work_date` in month; exclude `failed` reports (ADR-001) |
-| Lab cost | `lab_jobs.total_cost_aed` | Status `calculated` or `adjusted`; linked work row in month (ADR-002) |
+| Revenue | `payments.amount_aed` | Join `daily_work_rows` where `work_date` in month; reports with status **`calculated`**, **`approved`**, or **`locked`** only (ADR-001, ADR-036 variant B) |
+| Lab cost | `lab_jobs.total_cost_aed` | Status `calculated` or `adjusted`; linked work row in month; same report status filter as revenue (ADR-002) |
 | Calculated result | Service | Revenue − lab cost (BCMath) |
-| Top treatments | `work_items` + row `paid_total_aed` | Quantity-weighted allocation per row |
-| Data stand | `daily_reports` | Count + latest `source_file_name` for report month |
+| Top treatments | `work_items` + row `paid_total_aed` | Quantity-weighted allocation per row (displayed as **allocated revenue**) |
+| Data stand | `daily_reports` | Count + latest `source_file_name` for included report statuses in report month |
+| Excluded | `needs_review` reports | Shown as warning banner; figures omit unreviewed imports |
 
 ## Period & timezone
 

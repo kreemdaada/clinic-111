@@ -158,6 +158,39 @@ class ClinicFinancialOverviewTest extends TestCase
         $this->get(route('register-clinic.create'))->assertOk();
     }
 
+    public function test_needs_review_reports_are_excluded_from_revenue(): void
+    {
+        $this->seedMonthlyAccounting('2026-06', revenue: '5000.00', labCost: '0.00', status: ReportStatus::NeedsReview);
+
+        $this->actingAs($this->authenticateAdmin())
+            ->get(route('clinic.financial-overview', ['month' => '2026-06']))
+            ->assertOk()
+            ->assertSee('No accounting data', false)
+            ->assertSee('awaiting review are excluded', false)
+            ->assertDontSee('AED 5000.00', false);
+    }
+
+    public function test_approved_reports_are_included_in_revenue(): void
+    {
+        $this->seedMonthlyAccounting('2026-06', revenue: '750.00', labCost: '0.00', status: ReportStatus::Approved);
+
+        $this->actingAs($this->authenticateAdmin())
+            ->get(route('clinic.financial-overview', ['month' => '2026-06']))
+            ->assertOk()
+            ->assertSee('AED 750.00', false);
+    }
+
+    public function test_top_treatments_heading_uses_allocated_revenue_wording(): void
+    {
+        $this->seedMonthlyAccounting('2026-06', revenue: '100.00', labCost: '0.00');
+
+        $this->actingAs($this->authenticateAdmin())
+            ->get(route('clinic.financial-overview', ['month' => '2026-06']))
+            ->assertOk()
+            ->assertSee('Top treatments by allocated revenue', false)
+            ->assertSee('Allocated revenue', false);
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -166,6 +199,7 @@ class ClinicFinancialOverviewTest extends TestCase
         string $revenue,
         string $labCost,
         string $treatmentCode = 'BG',
+        ReportStatus $status = ReportStatus::Calculated,
     ): array {
         $clinic = $this->clinic111();
         $doctor = Doctor::query()->where('clinic_id', $clinic->id)->firstOrFail();
@@ -178,7 +212,7 @@ class ClinicFinancialOverviewTest extends TestCase
         $report = $this->createDailyReport([
             'report_date' => $month.'-01',
             'source_type' => ReportSourceType::ExcelUpload,
-            'status' => ReportStatus::Calculated,
+            'status' => $status,
             'source_file_name' => "Clinic 111 {$month}.xlsx",
         ]);
 

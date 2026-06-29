@@ -221,6 +221,12 @@
         @if ($overview->dataStandLabel)
             <p class="pov-data-stand">{{ $overview->dataStandLabel }}</p>
         @endif
+        @if ($overview->needsReviewReportCount > 0)
+            <p class="pov-data-stand" style="color:var(--warning);">
+                {{ $overview->needsReviewReportCount }} report(s) awaiting review are excluded from these figures.
+                <a href="{{ route('imports.index') }}">Review in Import</a>
+            </p>
+        @endif
     </div>
     <form method="GET" action="{{ route('clinic.financial-overview') }}" class="pov-filter">
         <label for="month">Period</label>
@@ -279,15 +285,15 @@
         </section>
 
         <section class="pov-panel" aria-labelledby="pov-treatments-heading">
-            <h2 id="pov-treatments-heading">Top treatments by revenue</h2>
+            <h2 id="pov-treatments-heading">Top treatments by allocated revenue</h2>
             @if (count($overview->topTreatments) === 0)
-                <p style="font-size:0.875rem;color:var(--text-muted);">No treatment revenue allocated for this period.</p>
+                <p style="font-size:0.875rem;color:var(--text-muted);">No allocated treatment revenue for this period.</p>
             @else
                 <table class="pov-table">
                     <thead>
                         <tr>
                             <th scope="col">Treatment</th>
-                            <th scope="col">Revenue</th>
+                            <th scope="col">Allocated revenue</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -309,7 +315,7 @@
     <p class="pov-note">
         <strong>Calculated result</strong> = total collected revenue minus lab costs (JOB) only.
         Doctor commissions, overhead, taxes, and other operating costs are not included.
-        Treatment revenue uses quantity-weighted allocation from row-level payments when multiple treatments appear on one line.
+        Treatment allocated revenue uses quantity-weighted allocation from row-level payments when multiple treatments appear on one line — not payment-level totals per treatment.
     </p>
 @endif
 @endsection
