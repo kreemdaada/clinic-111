@@ -108,8 +108,8 @@
         <div class="form-group" style="margin:0;">
             <label class="form-label">Commission type</label>
             <select class="form-input" name="commission_type" data-commission-type>
-                <option value="percentage" @selected(old('commission_type', 'percentage') === 'percentage')>Percentage</option>
-                <option value="fixed" @selected(old('commission_type') === 'fixed')>Without commission (per treatment)</option>
+                <option value="percentage" @selected(old('commission_type', 'percentage' )==='percentage' )>Percentage</option>
+                <option value="fixed" @selected(old('commission_type')==='fixed' )>Without commission (per treatment)</option>
             </select>
         </div>
         <div class="form-group" style="margin:0;" data-commission-pct-wrap>
@@ -122,7 +122,7 @@
             <select class="form-input" name="default_lab_id">
                 <option value="">—</option>
                 @foreach ($labs as $lab)
-                <option value="{{ $lab->id }}" @selected((string) old('default_lab_id') === (string) $lab->id)>{{ $lab->name }}</option>
+                <option value="{{ $lab->id }}" @selected((string) old('default_lab_id')===(string) $lab->id)>{{ $lab->name }}</option>
                 @endforeach
             </select>
         </div>
@@ -214,25 +214,25 @@
 
 @push('scripts')
 <script>
-(function () {
-    function syncPctWrap(select) {
-        const form = select.closest('form');
-        const wrap = form.querySelector('[data-commission-pct-wrap]');
-        if (wrap) wrap.hidden = select.value !== 'percentage';
-    }
-
-    document.querySelectorAll('[data-commission-type]').forEach(select => {
-        syncPctWrap(select);
-        select.addEventListener('change', () => syncPctWrap(select));
-    });
-
-    const createForm = document.getElementById('doctor-create-form');
-    if (createForm) {
-        const createSelect = createForm.querySelector('[data-commission-type]');
-        if (createSelect) {
-            syncPctWrap(createSelect);
+    (function() {
+        function syncPctWrap(select) {
+            const form = select.closest('form');
+            const wrap = form.querySelector('[data-commission-pct-wrap]');
+            if (wrap) wrap.hidden = select.value !== 'percentage';
         }
-    }
-})();
+
+        document.querySelectorAll('[data-commission-type]').forEach(select => {
+            syncPctWrap(select);
+            select.addEventListener('change', () => syncPctWrap(select));
+        });
+
+        const createForm = document.getElementById('doctor-create-form');
+        if (createForm) {
+            const createSelect = createForm.querySelector('[data-commission-type]');
+            if (createSelect) {
+                syncPctWrap(createSelect);
+            }
+        }
+    })();
 </script>
 @endpush
