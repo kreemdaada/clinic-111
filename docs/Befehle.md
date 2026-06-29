@@ -328,6 +328,44 @@ composer dev                      # Logs live via Pail
 
 ---
 
+## PostgreSQL Production (ADR-035)
+
+### Backup vor Migration (Pflicht)
+
+```bash
+cp database/database.sqlite database/database.sqlite.backup-$(date +%Y%m%d-%H%M%S)
+pg_dump clinic_accounting > backup.sql   # nach PostgreSQL-Setup
+```
+
+### SQLite → PostgreSQL Daten migrieren
+
+```bash
+# Schema auf PostgreSQL
+php artisan migrate --force
+
+# Dry-run (nur Zählung, keine Writes)
+php artisan app:migrate-sqlite-to-pgsql \
+  --sqlite=database/database.sqlite \
+  --pgsql=pgsql \
+  --dry-run
+
+# Import (SQLite-Datei wird NICHT gelöscht)
+php artisan app:migrate-sqlite-to-pgsql \
+  --sqlite=database/database.sqlite \
+  --pgsql=pgsql
+```
+
+### Tests gegen PostgreSQL (optional)
+
+```bash
+DB_CONNECTION=pgsql DB_DATABASE=clinic_accounting_test php artisan migrate:fresh --seed --force
+DB_CONNECTION=pgsql DB_DATABASE=clinic_accounting_test php artisan test
+```
+
+Standard-Tests bleiben auf `database/testing.sqlite` (`php artisan test`).
+
+---
+
 ## Schnell-Checkliste
 
 | Aufgabe | Befehl |
@@ -338,7 +376,7 @@ composer dev                      # Logs live via Pail
 | Test-DB reset | `migrate:fresh --env=testing --force` |
 | Production deploy | `migrate --force` + `optimize` |
 | Neue echte Clinic | `/register-clinic` (nicht Seed) |
-| Import Excel | `artisan daily-report:import "..."` |
+| SQLite → PostgreSQL | `app:migrate-sqlite-to-pgsql --dry-run` dann import |
 
 ---
 

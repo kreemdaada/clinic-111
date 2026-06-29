@@ -286,7 +286,7 @@
         <div class="card" id="dr-entry-card">
             <div class="dr-entry-header">
                 <h2 class="card-title" id="dr-entry-title">New entry</h2>
-                <input class="form-input dr-treatment-search" type="search" id="dr-treatment-search" placeholder="Search treatments…" hidden @if($readOnly) disabled @endif>
+                <input class="form-input dr-treatment-search" type="search" id="dr-treatment-search" placeholder="Search by treatment code or name…" hidden @if($readOnly) disabled @endif>
             </div>
             <p class="card-description" id="dr-selection-hint">Select a doctor and a calendar day — or click <strong>Edit</strong> on an imported row below.</p>
 

@@ -48,3 +48,9 @@ Patient identifiers are read in memory during Excel import only. Never stored as
 ## Status values (`daily_reports.status`)
 
 `uploaded` → `parsed` → `calculated` or `needs_review` → `approved` | `failed`
+
+## PostgreSQL production (ADR-035)
+
+Migrations are written for **SQLite (dev/test)** and **PostgreSQL (production)**. Migrations using `->change()` may require `doctrine/dbal` when running on PostgreSQL.
+
+Customer data migration from `database/database.sqlite` to PostgreSQL: `php artisan app:migrate-sqlite-to-pgsql` (see `docs/DEVELOPMENT_GUIDE.md`).

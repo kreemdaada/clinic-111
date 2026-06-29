@@ -100,7 +100,7 @@
 <form method="GET" action="{{ route('labs.index') }}" class="labs-toolbar card" style="padding:1rem;">
     <div class="form-group" style="margin:0;min-width:200px;">
         <label class="form-label">Search</label>
-        <input class="form-input" type="search" name="search" value="{{ $search }}" placeholder="Name or code">
+        <input class="form-input" type="search" name="search" value="{{ $search }}" placeholder="Search by laboratory name or code">
     </div>
     <div class="form-group" style="margin:0;">
         <label class="form-label">Status</label>

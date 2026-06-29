@@ -263,6 +263,56 @@ php artisan test
 
 All tests must pass. Tests use **`database/testing.sqlite`** (see `.env.testing` / `phpunit.xml`), not your dev file `database/database.sqlite`. Never run `migrate:fresh` against dev data unless you intend to wipe local clinics and users.
 
+---
+
+# PostgreSQL production (ADR-035)
+
+**Local / tests:** keep `DB_CONNECTION=sqlite`.
+
+**Production:** set `DB_CONNECTION=pgsql` and PostgreSQL credentials in `.env` (see `.env.example`).
+
+### First-time production setup
+
+```bash
+# 1. Backup existing SQLite customer data
+cp database/database.sqlite database/database.sqlite.backup-$(date +%Y%m%d-%H%M%S)
+
+# 2. Create PostgreSQL database and user (on server)
+
+# 3. Configure .env for pgsql, then run schema migrations
+php artisan migrate --force
+
+# 4. Dry-run: compare row counts (no writes)
+php artisan app:migrate-sqlite-to-pgsql \
+  --sqlite=database/database.sqlite \
+  --pgsql=pgsql \
+  --dry-run
+
+# 5. Import business data (preserves primary keys)
+php artisan app:migrate-sqlite-to-pgsql \
+  --sqlite=database/database.sqlite \
+  --pgsql=pgsql
+```
+
+The import command validates row counts and payment/lab totals after import. It **never** deletes or modifies the SQLite source file.
+
+### Optional: run tests against PostgreSQL
+
+```bash
+DB_CONNECTION=pgsql DB_DATABASE=clinic_accounting_test php artisan migrate:fresh --seed --force
+DB_CONNECTION=pgsql DB_DATABASE=clinic_accounting_test php artisan test
+```
+
+Default CI and local `composer test` remain on SQLite (`phpunit.xml`).
+
+### Migration compatibility notes
+
+* Migrations use Laravel schema builder — compatible with SQLite and PostgreSQL.
+* Migrations that call `->change()` require `doctrine/dbal` when running on PostgreSQL: `composer require doctrine/dbal --dev`
+* Boolean columns are normalized during SQLite → PostgreSQL data import.
+
+---
+
 Commit
 
 Push

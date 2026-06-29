@@ -103,7 +103,7 @@ See [WORKFLOWS.md](./WORKFLOWS.md) for step-by-step details.
 | Component | Choice |
 |---|---|
 | Framework | Laravel 13 |
-| Database | SQLite (dev) / MySQL or PostgreSQL (production) |
+| Database | SQLite (local dev & tests) / PostgreSQL (production) — ADR-035 |
 | Auth | Laravel Sanctum (API tokens) + session (web UI) |
 | Excel parsing | PhpSpreadsheet |
 | Money math | PHP `bcmath` via `MoneyCalculator` |

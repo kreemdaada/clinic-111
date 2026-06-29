@@ -2715,6 +2715,48 @@ Implemented 2026-06-28 on branch `feature/multi-currency-foundation`:
 
 ---
 
+## ADR-035
+
+**Title:** PostgreSQL Production Readiness and SQLite Data Migration
+
+**Status:** Accepted
+
+**Date:** 2026-06-29
+
+**Context:**
+
+Clinic 111 customer data currently lives in `database/database.sqlite` during development. Production on Hetzner (or any VPS) should use PostgreSQL for concurrency, backups, and operational tooling — without changing business logic, accounting rules, or tenant isolation.
+
+**Decision:**
+
+* **Local dev and automated tests** remain on SQLite (`database/database.sqlite` / `database/testing.sqlite`).
+* **Production** uses PostgreSQL via `DB_CONNECTION=pgsql`.
+* **Schema** is shared — same Laravel migrations for both engines.
+* **Data migration** uses `php artisan app:migrate-sqlite-to-pgsql`:
+  * Read-only access to source SQLite — never delete or overwrite the source file
+  * Import preserves primary keys where possible
+  * Ordered import respecting foreign keys
+  * `--dry-run` for row-count preview
+  * Post-import validation (row counts + payment/lab aggregates)
+* **No business logic changes** in this milestone.
+
+**Alternatives rejected:**
+
+* Separate database per clinic — already rejected in ADR-026
+* MySQL instead of PostgreSQL — PostgreSQL chosen for production readiness milestone scope
+* Manual CSV export — error-prone; loses FK integrity
+
+**Implementation:**
+
+* `SqliteToPostgresMigrationService`, `PostgresMigrationValidationService`, `SqliteToPostgresTableRegistry`
+* Command: `app:migrate-sqlite-to-pgsql`
+* `.env.example` documents both SQLite and PostgreSQL
+* Migrations reviewed for PostgreSQL compatibility; `->change()` migrations may require `doctrine/dbal` on PostgreSQL
+
+**Tests:** `SqliteToPostgresTableRegistryTest`, `PostgresMigrationValidationServiceTest`, `MigrateSqliteToPgsqlCommandTest`
+
+---
+
 # ADR Index
 
 | ADR     | Title                                  | Status   |
@@ -2753,6 +2795,7 @@ Implemented 2026-06-28 on branch `feature/multi-currency-foundation`:
 | ADR-032 | Platform Authentication Security       | Accepted |
 | ADR-033 | Tenant Security                        | Accepted |
 | ADR-034 | Multi-Currency Strategy                | Accepted |
+| ADR-035 | PostgreSQL Production Readiness        | Accepted |
 
 ---
 

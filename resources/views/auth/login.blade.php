@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Login — Clinic 111')
+@section('title', 'Sign in')
 
 @push('styles')
 <style>
@@ -20,8 +20,8 @@
 @section('content')
 <div class="login-wrap">
     <div class="card login-card">
-        <h1>Clinic 111 Accounting</h1>
-        <p>Sign in to import daily Excel reports.</p>
+        <h1>Clinic Accounting</h1>
+        <p>Sign in to manage daily reports and clinic configuration.</p>
 
         @if ($errors->any())
             <div class="alert alert-error">
@@ -48,10 +48,6 @@
 
         <p style="margin-top:1rem;font-size:0.85rem;color:#64748b;text-align:center;">
             <a href="{{ route('register-clinic.create') }}">Register a new clinic</a>
-        </p>
-
-        <p style="margin-top:0.75rem;font-size:0.8rem;color:#94a3b8;text-align:center;">
-            Demo: accountant@clinic.test / password
         </p>
     </div>
 </div>

@@ -43,7 +43,7 @@
 <form method="GET" action="{{ route('treatments.index') }}" class="tx-toolbar card" style="padding:1rem;">
     <div class="form-group" style="margin:0;min-width:200px;">
         <label class="form-label">Search</label>
-        <input class="form-input" type="search" name="search" value="{{ $search }}" placeholder="Code, name, description">
+        <input class="form-input" type="search" name="search" value="{{ $search }}" placeholder="Search by treatment code or name">
     </div>
     <div class="form-group" style="margin:0;">
         <label class="form-label">Status</label>

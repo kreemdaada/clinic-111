@@ -483,6 +483,8 @@ This must be enforced in:
 
 **Milestone 14 (implemented):** Multi-currency foundation — currency catalog, `Money` value object, centralized formatting, clinic currency validation; accounting behaviour unchanged (ADR-034).
 
+**PostgreSQL production (ADR-035):** One shared PostgreSQL database in production; tenant isolation remains via `clinic_id`. Local dev and tests stay on SQLite. Data migration from SQLite uses `app:migrate-sqlite-to-pgsql` without changing tenant boundaries.
+
 ---
 
 # 19. Audit Logs

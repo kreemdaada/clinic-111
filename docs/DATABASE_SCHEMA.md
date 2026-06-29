@@ -4,6 +4,25 @@ All money columns use `decimal(12, 2)`. Foreign keys use cascade or null-on-dele
 
 ---
 
+## Supported database engines (ADR-035)
+
+| Environment | Engine | File / connection |
+|---|---|---|
+| Local development | SQLite | `database/database.sqlite` |
+| Automated tests | SQLite | `database/testing.sqlite` (isolated — see `phpunit.xml`) |
+| Production | PostgreSQL | `DB_CONNECTION=pgsql` in `.env` |
+
+Business data is identical across engines — one shared schema via Laravel migrations. Production deployment copies existing SQLite customer data with `php artisan app:migrate-sqlite-to-pgsql` (never deletes the source file).
+
+**Before any migration:** backup SQLite and PostgreSQL:
+
+```bash
+cp database/database.sqlite database/database.sqlite.backup-$(date +%Y%m%d-%H%M%S)
+pg_dump clinic_accounting > backup.sql
+```
+
+---
+
 ## Reference Tables
 
 ### `clinics`
