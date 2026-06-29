@@ -319,6 +319,8 @@
                 </div>
             </div>
 
+            <div class="alert alert-error" id="dr-lab-price-notice" hidden style="margin-top:0.75rem;margin-bottom:0;"></div>
+
             <div class="dr-preview" style="margin-top:0.75rem;" id="dr-preview" hidden>
                 <div class="dr-preview-box">
                     <div class="dr-preview-label">Paid ({{ $clinicCurrency }})</div>
@@ -455,10 +457,10 @@ $editorConfig = [
 
         function selectedLines() {
             return Array.from(treatmentGrid.querySelectorAll('[data-treatment-code]')).map(row => {
-                const qty = parseInt(row.querySelector('input').value, 10) || 0;
+                const qty = parseInt(row.querySelector('[data-qty]')?.value, 10) || 0;
                 return {
                     code: row.dataset.treatmentCode,
-                    quantity: qty
+                    quantity: qty,
                 };
             }).filter(l => l.quantity > 0);
         }
@@ -469,6 +471,18 @@ $editorConfig = [
                 quantities[row.dataset.treatmentCode] = parseInt(row.querySelector('[data-qty]')?.value, 10) || 0;
             });
             return quantities;
+        }
+
+        function paymentValue(id) {
+            const field = document.getElementById(id);
+            return field ? (field.value || 0) : 0;
+        }
+
+        function bindTreatmentQtyInputs(root = treatmentGrid) {
+            root.querySelectorAll('[data-qty]').forEach(input => {
+                input.addEventListener('input', schedulePreview);
+                input.addEventListener('change', schedulePreview);
+            });
         }
 
         async function api(url, options = {}) {
@@ -504,7 +518,8 @@ $editorConfig = [
             try {
                 const body = await api(`/doctors/${selectedDoctorId}/treatments?month=${month}&day=${selectedDay}`);
                 treatments = body.data || [];
-                renderTreatmentGrid();
+                renderTreatmentGrid({ preserveQuantities: !!editingRowId });
+                updateLabPriceNotice();
                 if (!readOnly) saveBtn.disabled = false;
                 schedulePreview();
             } catch (error) {
@@ -529,13 +544,41 @@ $editorConfig = [
             return 'No lab';
         }
 
-        function renderTreatmentGrid() {
-            const query = treatmentSearchQuery.trim().toLowerCase();
+        function missingLabPriceTreatments() {
             const quantities = currentQuantities();
-            const orphans = Array.from(treatmentGrid.querySelectorAll('[data-orphan]')).map(row => ({
-                code: row.dataset.treatmentCode,
-                quantity: quantities[row.dataset.treatmentCode] || 0,
-            }));
+            return treatments.filter(t => {
+                const qty = quantities[t.code] || 0;
+                return qty > 0 && t.bills_lab_job && !t.lab_price;
+            });
+        }
+
+        function updateLabPriceNotice() {
+            const notice = document.getElementById('dr-lab-price-notice');
+            if (!notice) {
+                return;
+            }
+
+            const missing = missingLabPriceTreatments();
+            if (readOnly || !missing.length) {
+                notice.hidden = true;
+                notice.textContent = '';
+                return;
+            }
+
+            notice.textContent = 'Treatment date does not match this daily report entry.';
+            notice.hidden = false;
+        }
+
+        function renderTreatmentGrid(options = {}) {
+            const preserveQuantities = options.preserveQuantities ?? !!editingRowId;
+            const query = treatmentSearchQuery.trim().toLowerCase();
+            const quantities = preserveQuantities ? currentQuantities() : {};
+            const orphans = preserveQuantities
+                ? Array.from(treatmentGrid.querySelectorAll('[data-orphan]')).map(row => ({
+                    code: row.dataset.treatmentCode,
+                    quantity: quantities[row.dataset.treatmentCode] || 0,
+                }))
+                : [];
 
             const visible = treatments.filter(t => {
                 const qty = quantities[t.code] || 0;
@@ -544,7 +587,11 @@ $editorConfig = [
                 return `${t.code} ${t.name}`.toLowerCase().includes(query);
             }).sort((a, b) => (quantities[b.code] || 0) - (quantities[a.code] || 0));
 
-            if (!visible.length) {
+            const selectedNotInCatalog = Object.entries(quantities)
+                .filter(([code, qty]) => qty > 0 && !treatments.some(t => t.code === code))
+                .map(([code, quantity]) => ({ code, quantity }));
+
+            if (!visible.length && !selectedNotInCatalog.length) {
                 treatmentGrid.innerHTML = '<p class="extraction-muted" style="margin:0;">No treatments match your search.</p>';
             } else {
                 treatmentGrid.innerHTML = visible.map(t => `
@@ -553,17 +600,25 @@ $editorConfig = [
                     <strong>${t.code}</strong> — ${t.name}
                     <div class="dr-treatment-meta">${formatTreatmentMeta(t)}</div>
                 </span>
-                <input class="form-input" type="number" min="0" max="50" value="${quantities[t.code] || 0}" data-qty ${readOnly ? 'disabled' : ''}>
+                <input class="form-input" type="number" min="0" max="50" step="1" value="${quantities[t.code] || 0}" data-qty ${readOnly ? 'disabled' : ''}>
             </label>
         `).join('');
-                treatmentGrid.querySelectorAll('[data-qty]').forEach(input => input.addEventListener('input', schedulePreview));
+                bindTreatmentQtyInputs(treatmentGrid);
             }
+
+            selectedNotInCatalog.forEach(({ code, quantity }) => {
+                if (!treatmentGrid.querySelector(`[data-treatment-code="${code}"]`)) {
+                    appendOrphanTreatmentRow(code, quantity);
+                }
+            });
 
             orphans.forEach(({ code, quantity }) => {
                 if (quantity > 0 && !treatmentGrid.querySelector(`[data-treatment-code="${code}"]`)) {
                     appendOrphanTreatmentRow(code, quantity);
                 }
             });
+
+            updateLabPriceNotice();
         }
 
         function appendOrphanTreatmentRow(code, quantity) {
@@ -577,18 +632,24 @@ $editorConfig = [
                 <strong>${code}</strong>
                 <div class="dr-treatment-meta">From import — not in default catalog</div>
             </span>
-            <input class="form-input" type="number" min="0" max="50" value="${quantity}" data-qty ${readOnly ? 'disabled' : ''}>
+            <input class="form-input" type="number" min="0" max="50" step="1" value="${quantity}" data-qty ${readOnly ? 'disabled' : ''}>
         `;
-            label.querySelector('[data-qty]').addEventListener('input', schedulePreview);
+            bindTreatmentQtyInputs(label);
             treatmentGrid.appendChild(label);
         }
 
         function applyTreatmentLines(lines) {
             const remaining = Object.fromEntries((lines || []).map(l => [l.code, l.quantity]));
+            if (treatments.length) {
+                renderTreatmentGrid({ preserveQuantities: false });
+            }
             treatmentGrid.querySelectorAll('[data-treatment-code]').forEach(row => {
                 const code = row.dataset.treatmentCode;
                 const qty = remaining[code] || 0;
-                row.querySelector('input').value = qty;
+                const input = row.querySelector('[data-qty]');
+                if (input) {
+                    input.value = qty;
+                }
                 delete remaining[code];
             });
             Object.entries(remaining).forEach(([code, quantity]) => {
@@ -596,15 +657,35 @@ $editorConfig = [
             });
         }
 
-        function setPaymentInputs(row) {
-            document.getElementById('dr-dhs').value = row?.dhs_amount ?? 0;
-            document.getElementById('dr-cheque').value = row?.cheque_amount ?? 0;
-            document.getElementById('dr-tabby').value = row?.tabby_amount ?? 0;
-            document.getElementById('dr-usd').value = row?.usd_amount ?? 0;
-            document.getElementById('dr-visa').value = row?.visa_amount ?? 0;
+        function setPaymentInput(id, value) {
+            const field = document.getElementById(id);
+            if (field) {
+                field.value = value;
+            }
         }
 
-        function clearForm() {
+        function setPaymentInputs(row) {
+            setPaymentInput('dr-dhs', row?.dhs_amount ?? 0);
+            setPaymentInput('dr-cheque', row?.cheque_amount ?? 0);
+            setPaymentInput('dr-tabby', row?.tabby_amount ?? 0);
+            setPaymentInput('dr-usd', row?.usd_amount ?? 0);
+            setPaymentInput('dr-visa', row?.visa_amount ?? 0);
+        }
+
+        function resetPreviewDisplay() {
+            previewBox.hidden = true;
+            document.getElementById('dr-preview-paid').textContent = '0.00 ' + clinicCurrency;
+            document.getElementById('dr-preview-lab').textContent = '0.00 ' + clinicCurrency;
+            document.getElementById('dr-preview-net').textContent = '0.00 ' + clinicCurrency;
+            document.getElementById('dr-preview-income').textContent = '0.00 ' + clinicCurrency;
+        }
+
+        function cancelPreview() {
+            clearTimeout(previewTimer);
+            previewTimer = null;
+        }
+
+        function resetEmptyDayForm() {
             editingRowId = null;
             entryTitle.textContent = 'New entry';
             saveBtn.textContent = 'Save entry';
@@ -614,13 +695,20 @@ $editorConfig = [
             if (treatmentSearch) {
                 treatmentSearch.value = '';
             }
-            if (treatmentGrid.querySelectorAll('[data-qty]').length) {
+            if (treatments.length) {
+                renderTreatmentGrid({ preserveQuantities: false });
+            } else if (treatmentGrid.querySelectorAll('[data-qty]').length) {
                 treatmentGrid.querySelectorAll('[data-qty]').forEach(i => i.value = 0);
                 treatmentGrid.querySelectorAll('[data-orphan]').forEach(el => el.remove());
-            } else if (treatments.length) {
-                renderTreatmentGrid();
             }
             rowList.querySelectorAll('.dr-row-card').forEach(card => card.classList.remove('is-editing'));
+            updateLabPriceNotice();
+            cancelPreview();
+            resetPreviewDisplay();
+        }
+
+        function clearForm() {
+            resetEmptyDayForm();
             schedulePreview();
         }
 
@@ -680,9 +768,9 @@ $editorConfig = [
             const dayCounts = body.day_counts || {};
             updateDayMarkers(dayCounts);
 
-            let dayToSelect = preferredDay ?? selectedDay;
-            if (dayToSelect !== null && !dayHasRows(dayCounts, dayToSelect)) {
-                dayToSelect = null;
+            let dayToSelect = preferredDay ?? null;
+            if (dayToSelect === null && selectedDay !== null && dayHasRows(dayCounts, selectedDay)) {
+                dayToSelect = selectedDay;
             }
             if (dayToSelect === null) {
                 dayToSelect = firstDayWithRows(dayCounts);
@@ -701,6 +789,8 @@ $editorConfig = [
 
             selectCalendarDay(dayToSelect);
             refreshSelectionHint();
+            cancelPreview();
+            resetEmptyDayForm();
             await loadTreatments();
             await loadRows();
         }
@@ -712,6 +802,9 @@ $editorConfig = [
             const rows = body.data || [];
             if (!rows.length) {
                 rowList.innerHTML = '<p class="extraction-muted">No entries for this day.</p>';
+                if (!editingRowId) {
+                    resetEmptyDayForm();
+                }
                 return;
             }
             rowList.innerHTML = rows.map(r => `
@@ -770,30 +863,37 @@ $editorConfig = [
 
         async function runPreview() {
             const lines = selectedLines();
+            updateLabPriceNotice();
+
             if (!selectedDoctorId || !selectedDay || !lines.length) {
-                previewBox.hidden = true;
+                resetPreviewDisplay();
                 return;
             }
-            const body = await api(`/daily-report/${reportId}/preview`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    doctor_id: selectedDoctorId,
-                    day: selectedDay,
-                    dhs_amount: document.getElementById('dr-dhs').value || 0,
-                    cheque_amount: document.getElementById('dr-cheque').value || 0,
-                    tabby_amount: document.getElementById('dr-tabby').value || 0,
-                    usd_amount: document.getElementById('dr-usd').value || 0,
-                    visa_amount: document.getElementById('dr-visa').value || 0,
-                    treatment_lines: lines,
-                }),
-            });
-            const p = body.data;
-            previewBox.hidden = false;
-            document.getElementById('dr-preview-paid').textContent = p.paid_total_aed + ' ' + clinicCurrency;
-            document.getElementById('dr-preview-lab').textContent = p.lab_total_aed + ' ' + clinicCurrency;
-            document.getElementById('dr-preview-net').textContent = p.net_total_aed + ' ' + clinicCurrency;
-            const pct = canViewCommission && p.commission_percentage ? ` (${p.commission_percentage}%)` : '';
-            document.getElementById('dr-preview-income').textContent = p.doctor_income_aed + ' ' + clinicCurrency + pct;
+            try {
+                const body = await api(`/daily-report/${reportId}/preview`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        doctor_id: selectedDoctorId,
+                        day: selectedDay,
+                        dhs_amount: paymentValue('dr-dhs'),
+                        cheque_amount: paymentValue('dr-cheque'),
+                        tabby_amount: paymentValue('dr-tabby'),
+                        usd_amount: paymentValue('dr-usd'),
+                        visa_amount: paymentValue('dr-visa'),
+                        treatment_lines: lines,
+                    }),
+                });
+                const p = body.data;
+                previewBox.hidden = false;
+                document.getElementById('dr-preview-paid').textContent = p.paid_total_aed + ' ' + clinicCurrency;
+                document.getElementById('dr-preview-lab').textContent = p.lab_total_aed + ' ' + clinicCurrency;
+                document.getElementById('dr-preview-net').textContent = p.net_total_aed + ' ' + clinicCurrency;
+                const pct = canViewCommission && p.commission_percentage ? ` (${p.commission_percentage}%)` : '';
+                document.getElementById('dr-preview-income').textContent = p.doctor_income_aed + ' ' + clinicCurrency + pct;
+            } catch (error) {
+                previewBox.hidden = true;
+                console.error('Preview failed:', error);
+            }
         }
 
         function markDateRange(from, to) {
@@ -833,7 +933,8 @@ $editorConfig = [
                 dayButtons.forEach(b => b.classList.remove('is-active'));
                 btn.classList.add('is-active');
                 selectedDay = parseInt(btn.dataset.day, 10);
-                clearForm();
+                cancelPreview();
+                resetEmptyDayForm();
                 refreshSelectionHint();
                 if (selectedDoctorId) {
                     await loadTreatments();
@@ -843,7 +944,10 @@ $editorConfig = [
         });
 
         ['dr-dhs', 'dr-cheque', 'dr-tabby', 'dr-usd', 'dr-visa'].forEach(id => {
-            document.getElementById(id).addEventListener('input', schedulePreview);
+            const field = document.getElementById(id);
+            if (field) {
+                field.addEventListener('input', schedulePreview);
+            }
         });
 
         treatmentSearch.addEventListener('input', () => {
@@ -857,11 +961,11 @@ $editorConfig = [
             const payload = {
                 doctor_id: selectedDoctorId,
                 day: selectedDay,
-                dhs_amount: document.getElementById('dr-dhs').value || 0,
-                cheque_amount: document.getElementById('dr-cheque').value || 0,
-                tabby_amount: document.getElementById('dr-tabby').value || 0,
-                usd_amount: document.getElementById('dr-usd').value || 0,
-                visa_amount: document.getElementById('dr-visa').value || 0,
+                dhs_amount: paymentValue('dr-dhs'),
+                cheque_amount: paymentValue('dr-cheque'),
+                tabby_amount: paymentValue('dr-tabby'),
+                usd_amount: paymentValue('dr-usd'),
+                visa_amount: paymentValue('dr-visa'),
                 treatment_lines: lines,
             };
             if (editingRowId) payload.work_row_id = editingRowId;

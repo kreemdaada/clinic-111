@@ -351,7 +351,7 @@ class DailyReportEditorService
                 $resolved['price']->currency,
                 $clinicCurrency,
             );
-            $lineTotal = MoneyCalculator::multiply($unitInClinicCurrency, (string) $item->quantity);
+            $lineTotal = MoneyCalculator::multiply($unitInClinicCurrency, (int) $item->quantity);
             $total = MoneyCalculator::add($total, $lineTotal);
         }
 
