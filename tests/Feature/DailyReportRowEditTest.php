@@ -214,6 +214,83 @@ class DailyReportRowEditTest extends TestCase
             ->assertSee('35%', false);
     }
 
+    public function test_admin_preview_calculates_lab_cost_for_zir_treatments(): void
+    {
+        $this->seed();
+
+        $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $doctor = Doctor::query()->where('code', 'JACK')->firstOrFail();
+
+        $report = $this->createDailyReport([
+            'report_date' => '2026-06-01',
+            'source_type' => ReportSourceType::ManualEntry,
+            'source_file_name' => 'JACK · 1 Jun – 30 Jun 2026',
+            'status' => ReportStatus::Uploaded,
+        ]);
+
+        $this->actingAs($admin)
+            ->postJson(route('daily-report.preview', $report), [
+                'doctor_id' => $doctor->id,
+                'day' => 5,
+                'dhs_amount' => '1000',
+                'cheque_amount' => '0',
+                'tabby_amount' => '0',
+                'usd_amount' => '0',
+                'visa_amount' => '0',
+                'treatment_lines' => [
+                    ['code' => 'ZIR', 'quantity' => 1],
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.treatment_text', 'ZIR x 1')
+            ->assertJsonPath('data.paid_total_aed', '1000.00')
+            ->assertJsonPath('data.lab_total_aed', '360.00')
+            ->assertJsonPath('data.net_total_aed', '640.00');
+    }
+
+    public function test_admin_can_save_new_manual_row_with_zir_treatment(): void
+    {
+        $this->seed();
+
+        $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $doctor = Doctor::query()->where('code', 'JACK')->firstOrFail();
+        $treatment = Treatment::query()->where('code', 'ZIR')->firstOrFail();
+
+        $report = $this->createDailyReport([
+            'report_date' => '2026-06-01',
+            'source_type' => ReportSourceType::ManualEntry,
+            'source_file_name' => 'JACK · 1 Jun – 30 Jun 2026',
+            'status' => ReportStatus::Uploaded,
+        ]);
+
+        $response = $this->actingAs($admin)->postJson(route('daily-report.rows.save', $report), [
+            'doctor_id' => $doctor->id,
+            'day' => 5,
+            'dhs_amount' => '500',
+            'cheque_amount' => '0',
+            'tabby_amount' => '0',
+            'usd_amount' => '0',
+            'visa_amount' => '0',
+            'treatment_lines' => [
+                ['code' => $treatment->code, 'quantity' => 2],
+            ],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.treatment_text', 'ZIR x 2');
+
+        $workRow = DailyWorkRow::query()->findOrFail($response->json('data.id'));
+        $workRow->load('workItems.treatment', 'workItems.labJob');
+
+        $this->assertSame('500.00', (string) $workRow->paid_total_aed);
+        $this->assertCount(1, $workRow->workItems);
+        $this->assertSame('ZIR', $workRow->workItems->first()->treatment->code);
+        $this->assertSame(2, $workRow->workItems->first()->quantity);
+        $this->assertNotNull($workRow->workItems->first()->labJob);
+        $this->assertSame('720.00', (string) $workRow->workItems->first()->labJob->total_cost_aed);
+        $this->assertSame(ReportStatus::Calculated, $report->fresh()->status);
+    }
+
     public function test_viewer_editor_is_read_only(): void
     {
         $this->seed();

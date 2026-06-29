@@ -44,7 +44,7 @@
 <form method="GET" action="{{ route('lab-prices.index') }}" class="lp-toolbar card" style="padding:1rem;">
     <div class="form-group" style="margin:0;min-width:160px;">
         <label class="form-label">Search</label>
-        <input class="form-input" type="search" name="search" value="{{ $search }}" placeholder="Lab, treatment, doctor">
+        <input class="form-input" type="search" name="search" value="{{ $search }}" placeholder="Search by doctor name or code">
     </div>
     <div class="form-group" style="margin:0;">
         <label class="form-label">Laboratory</label>

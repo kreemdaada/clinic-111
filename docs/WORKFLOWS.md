@@ -743,6 +743,23 @@ Cross-clinic resource access returns **404** via `TenantResourceGuard` and servi
 
 ---
 
+## 26. SQLite → PostgreSQL production migration (ADR-035)
+
+**Trigger:** Deploying to production with PostgreSQL while preserving existing SQLite customer data.
+
+**Steps:**
+
+1. Backup: `cp database/database.sqlite database/database.sqlite.backup-$(date +%Y%m%d-%H%M%S)`
+2. Configure production `.env` with `DB_CONNECTION=pgsql`
+3. `php artisan migrate --force` on empty PostgreSQL
+4. `php artisan app:migrate-sqlite-to-pgsql --dry-run` — compare row counts
+5. `php artisan app:migrate-sqlite-to-pgsql` — import with validation
+6. Optional PostgreSQL backup: `pg_dump clinic_accounting > backup.sql`
+
+**Rules:** Source SQLite is read-only. Command never prints passwords or patient data.
+
+---
+
 ## 21. Environment Variables (import / privacy)
 
 | Variable | Purpose |
@@ -785,6 +802,10 @@ sequenceDiagram
 ---
 
 ## What Changed
+
+**Updated — 2026-06-29**
+
+- SQLite → PostgreSQL production migration workflow (ADR-035)
 
 **Updated — 2026-06-28**
 

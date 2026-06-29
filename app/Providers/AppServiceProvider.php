@@ -10,6 +10,7 @@ use App\View\Composers\ClinicContextComposer;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -77,5 +78,8 @@ class AppServiceProvider extends ServiceProvider
             'treatments.*',
             'clinics.*',
         ], ClinicContextComposer::class);
+
+        Paginator::defaultView('vendor.pagination.clinic');
+        Paginator::defaultSimpleView('vendor.pagination.clinic');
     }
 }

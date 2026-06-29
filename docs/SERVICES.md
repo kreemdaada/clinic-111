@@ -658,6 +658,29 @@ Used by `AuditLogService::logPlatform()` for unknown-email login failures, locko
 
 ---
 
+## Database migration (ADR-035 — PostgreSQL production readiness)
+
+| Component | Path |
+|---|---|
+| `SqliteToPostgresMigrationService` | `app/Services/Database/SqliteToPostgresMigrationService.php` |
+| `PostgresMigrationValidationService` | `app/Services/Database/PostgresMigrationValidationService.php` |
+| `SqliteToPostgresTableRegistry` | `app/Support/Database/SqliteToPostgresTableRegistry.php` |
+| Artisan command | `app/Console/Commands/MigrateSqliteToPgsqlCommand.php` |
+
+**Command:** `php artisan app:migrate-sqlite-to-pgsql`
+
+**Behaviour:**
+
+* Reads business tables from a SQLite file (default `database/database.sqlite`) — **read-only**, never deleted
+* Writes to configured PostgreSQL connection (`--pgsql=pgsql`)
+* Preserves primary keys; resets PostgreSQL sequences after import
+* `--dry-run` prints row counts only
+* Post-import validation: row counts + payment/lab aggregate totals
+
+**Dependencies:** Laravel DB connections only — no business logic changes
+
+---
+
 ## Platform Security (ADR-033 — Milestone 13A)
 
 | Component | Path |

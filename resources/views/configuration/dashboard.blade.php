@@ -136,109 +136,426 @@
     }
 
     .cfg-setup {
-        margin-bottom: 1.5rem;
+        margin-bottom: 1.75rem;
         border: 1px solid var(--border);
-        border-radius: var(--radius);
-        background: var(--surface);
-        padding: 1.25rem 1.35rem;
+        border-radius: calc(var(--radius) + 2px);
+        background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+        padding: 0;
+        overflow: hidden;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.04);
+    }
+
+    .cfg-setup.is-complete {
+        border-color: #86efac;
+    }
+
+    .cfg-setup-accent {
+        height: 3px;
+        background: linear-gradient(90deg, var(--accent) 0%, #14b8a6 100%);
+    }
+
+    .cfg-setup.is-complete .cfg-setup-accent {
+        background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+    }
+
+    .cfg-setup-body {
+        padding: 1.35rem 1.5rem 1.5rem;
     }
 
     .cfg-setup-header {
         display: flex;
         justify-content: space-between;
-        align-items: flex-start;
-        gap: 1rem;
+        align-items: center;
+        gap: 1.25rem;
         flex-wrap: wrap;
-        margin-bottom: 1rem;
+        margin-bottom: 1.15rem;
     }
 
     .cfg-setup-header h2 {
-        font-size: 1.05rem;
-        margin: 0 0 0.25rem;
+        font-size: 1.125rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin: 0 0 0.3rem;
     }
 
     .cfg-setup-header p {
         margin: 0;
         color: var(--text-muted);
         font-size: 0.875rem;
+        max-width: 36rem;
     }
 
-    .cfg-progress-ring {
-        min-width: 4.5rem;
-        text-align: center;
-        background: var(--surface-muted);
-        border-radius: var(--radius-sm);
-        padding: 0.65rem 0.75rem;
+    .cfg-setup-meta {
+        font-size: 0.8125rem;
+        color: var(--text-subtle);
+        margin-top: 0.35rem;
     }
 
-    .cfg-progress-value {
-        font-size: 1.35rem;
-        font-weight: 700;
+    .cfg-progress-circle {
+        --progress: 0;
+        position: relative;
+        width: 4.5rem;
+        height: 4.5rem;
+        flex-shrink: 0;
+    }
+
+    .cfg-progress-circle svg {
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
+    }
+
+    .cfg-progress-circle-track {
+        fill: none;
+        stroke: var(--surface-subtle);
+        stroke-width: 3;
+    }
+
+    .cfg-progress-circle-fill {
+        fill: none;
+        stroke: var(--accent);
+        stroke-width: 3;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 0.6s ease;
+    }
+
+    .cfg-setup.is-complete .cfg-progress-circle-fill {
+        stroke: var(--success);
+    }
+
+    .cfg-progress-circle-label {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
         line-height: 1.1;
     }
 
+    .cfg-progress-value {
+        font-size: 1rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+    }
+
     .cfg-progress-label {
-        font-size: 0.6875rem;
+        font-size: 0.625rem;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: var(--text-muted);
+        letter-spacing: 0.06em;
+        color: var(--text-subtle);
+        font-weight: 600;
+    }
+
+    .cfg-setup-bar {
+        --cfg-progress: 0;
+        height: 6px;
+        background: var(--surface-subtle);
+        border-radius: 999px;
+        overflow: hidden;
+        margin-bottom: 1.35rem;
+    }
+
+    .cfg-setup-bar-fill {
+        width: calc(var(--cfg-progress) * 1%);
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--accent), #2dd4bf);
+        transition: width 0.6s ease;
+    }
+
+    .cfg-setup.is-complete .cfg-setup-bar-fill {
+        background: linear-gradient(90deg, #22c55e, #4ade80);
+    }
+
+    .cfg-setup-steps-wrap {
+        overflow-x: auto;
+        margin: 0 -0.25rem;
+        padding: 0 0.25rem 0.35rem;
+        -webkit-overflow-scrolling: touch;
     }
 
     .cfg-setup-steps {
         list-style: none;
-        display: grid;
-        gap: 0.55rem;
+        display: flex;
+        gap: 0;
         margin: 0;
         padding: 0;
+        min-width: 100%;
     }
 
     .cfg-setup-step {
+        flex: 1 1 0;
+        min-width: 9.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .cfg-setup-step-rail {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        margin-bottom: 0.65rem;
+    }
+
+    .cfg-setup-rail-line {
+        flex: 1;
+        height: 2px;
+        background: var(--border);
+        transition: background 0.2s ease;
+    }
+
+    .cfg-setup-rail-line.is-done {
+        background: #86efac;
+    }
+
+    .cfg-setup-rail-line.is-spacer {
+        background: transparent;
+    }
+
+    .cfg-setup-marker {
+        width: 2rem;
+        height: 2rem;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        font-size: 0.75rem;
+        font-weight: 700;
+        flex-shrink: 0;
+        background: var(--surface);
+        border: 2px solid var(--border-strong);
+        color: var(--text-muted);
+    }
+
+    .cfg-setup-step.is-done .cfg-setup-marker {
+        background: var(--success-soft);
+        border-color: #86efac;
+        color: var(--success);
+    }
+
+    .cfg-setup-step.is-current .cfg-setup-marker {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+        box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
+    }
+
+    .cfg-setup-marker svg {
+        width: 0.95rem;
+        height: 0.95rem;
+    }
+
+    .cfg-setup-step-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 0.35rem;
+        padding: 0.75rem 0.55rem;
+        margin: 0 0.3rem;
+        min-height: 100%;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface);
+        transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .cfg-setup-step.is-done .cfg-setup-step-card {
+        border-color: #bbf7d0;
+        background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
+    }
+
+    .cfg-setup-step.is-current .cfg-setup-step-card {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+        box-shadow: 0 0 0 1px rgba(15, 118, 110, 0.12);
+    }
+
+    .cfg-setup-step-num {
+        font-size: 0.6875rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-subtle);
+    }
+
+    .cfg-setup-step.is-current .cfg-setup-step-num {
+        color: var(--accent);
+    }
+
+    .cfg-setup-step.is-done .cfg-setup-step-num {
+        color: var(--success);
+    }
+
+    .cfg-setup-step-title {
+        font-weight: 600;
+        font-size: 0.875rem;
+        letter-spacing: -0.01em;
+        line-height: 1.25;
+    }
+
+    .cfg-setup-step-desc {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        min-height: 2.1rem;
+    }
+
+    .cfg-setup-step-tags {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.3rem;
+    }
+
+    .cfg-setup-tag {
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.625rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 0.12rem 0.4rem;
+        border-radius: 999px;
+        background: var(--surface-subtle);
+        color: var(--text-subtle);
+    }
+
+    .cfg-setup-tag.is-next {
+        background: #ccfbf1;
+        color: #0f766e;
+    }
+
+    .cfg-setup-tag.is-required {
+        background: #fef3c7;
+        color: #b45309;
+    }
+
+    .cfg-setup-tag.is-optional {
+        background: var(--surface-subtle);
+        color: var(--text-subtle);
+    }
+
+    .cfg-setup-step-action {
+        margin-top: auto;
+        padding-top: 0.15rem;
+    }
+
+    .cfg-setup-done-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--success);
+    }
+
+    .cfg-setup-done-badge svg {
+        width: 0.85rem;
+        height: 0.85rem;
+    }
+
+    @media (max-width: 720px) {
+        .cfg-setup-step {
+            min-width: 8.75rem;
+        }
+
+        .cfg-setup-step-desc {
+            -webkit-line-clamp: 3;
+            line-clamp: 3;
+            min-height: 3.15rem;
+        }
+    }
+
+    .cfg-setup-footer {
+        margin-top: 1.15rem;
+        padding: 0.95rem 1rem;
+        border-radius: var(--radius);
+        background: var(--surface-muted);
+        border: 1px solid var(--border);
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 0.75rem;
-        padding: 0.65rem 0.75rem;
-        border-radius: var(--radius-sm);
-        background: var(--surface-muted);
+        gap: 1rem;
+        flex-wrap: wrap;
     }
 
-    .cfg-setup-step.is-current {
-        outline: 2px solid var(--accent);
-        background: var(--accent-soft);
+    .cfg-setup-footer.is-ready {
+        background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+        border-color: #bbf7d0;
     }
 
-    .cfg-setup-step-main {
+    .cfg-setup-ready {
         display: flex;
         align-items: center;
         gap: 0.65rem;
         min-width: 0;
     }
 
-    .cfg-setup-icon {
-        width: 1.35rem;
-        text-align: center;
-        font-weight: 700;
+    .cfg-setup-ready-icon {
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        background: var(--surface);
+        border: 1px solid var(--border);
         flex-shrink: 0;
-    }
-
-    .cfg-setup-step-title {
-        font-weight: 600;
-        font-size: 0.9rem;
-    }
-
-    .cfg-setup-step-meta {
-        font-size: 0.78rem;
         color: var(--text-muted);
     }
 
+    .cfg-setup-footer.is-ready .cfg-setup-ready-icon {
+        background: #dcfce7;
+        border-color: #86efac;
+        color: var(--success);
+    }
+
+    .cfg-setup-ready-icon svg {
+        width: 1.1rem;
+        height: 1.1rem;
+    }
+
+    .cfg-setup-ready-label {
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+    }
+
+    .cfg-setup-ready-value {
+        font-weight: 700;
+        font-size: 0.9375rem;
+        color: var(--text);
+    }
+
+    .cfg-setup-footer.is-ready .cfg-setup-ready-value {
+        color: var(--success);
+    }
+
     .cfg-setup-complete {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.65rem;
         background: var(--success-soft);
         border: 1px solid #bbf7d0;
-        color: var(--success);
-        border-radius: var(--radius-sm);
-        padding: 0.75rem 0.85rem;
+        color: #166534;
+        border-radius: var(--radius);
+        padding: 0.85rem 1rem;
         font-size: 0.875rem;
-        margin-top: 0.75rem;
+        margin-top: 0.85rem;
+        line-height: 1.45;
+    }
+
+    .cfg-setup-complete-icon {
+        width: 1.35rem;
+        height: 1.35rem;
+        flex-shrink: 0;
+        margin-top: 0.05rem;
+        color: var(--success);
     }
 </style>
 @endpush
@@ -255,61 +572,143 @@
 </div>
 
 @if (isset($configurationStatus))
-<section class="cfg-setup">
-    <div class="cfg-setup-header">
-        <div>
-            <h2>Business Configuration</h2>
-            <p>Complete each step before importing your first daily report.</p>
-        </div>
-        <div class="cfg-progress-ring">
-            <div class="cfg-progress-value">{{ $configurationStatus['progress_percentage'] }}%</div>
-            <div class="cfg-progress-label">Complete</div>
-        </div>
-    </div>
-
-    <ul class="cfg-setup-steps">
-        @foreach ($configurationStatus['steps'] as $step)
-            @if ($step['key'] === 'import')
-                @continue
-            @endif
-            <li class="cfg-setup-step {{ ($configurationStatus['current_step'] ?? null) === $step['key'] ? 'is-current' : '' }}">
-                <div class="cfg-setup-step-main">
-                    <span class="cfg-setup-icon">{{ $step['completed'] ? '✔' : '✖' }}</span>
-                    <div>
-                        <div class="cfg-setup-step-title">{{ $step['label'] }}</div>
-                        <div class="cfg-setup-step-meta">
-                            {{ $step['required'] ? 'Required' : 'Optional' }}
-                            @if (($configurationStatus['current_step'] ?? null) === $step['key'])
-                                · Next step
-                            @endif
-                        </div>
-                    </div>
+@php
+    $setupSteps = collect($configurationStatus['steps'])->where('key', '!=', 'import')->values();
+    $completedSetupCount = $setupSteps->where('completed', true)->count();
+    $totalSetupCount = $setupSteps->count();
+    $progressPct = (int) $configurationStatus['progress_percentage'];
+    $setupComplete = $configurationStatus['ready_for_import'];
+    $circumference = 100;
+    $strokeOffset = $circumference - ($progressPct / 100) * $circumference;
+@endphp
+<section class="cfg-setup {{ $setupComplete ? 'is-complete' : '' }}">
+    <div class="cfg-setup-accent"></div>
+    <div class="cfg-setup-body">
+        <div class="cfg-setup-header">
+            <div>
+                <h2>Business Configuration</h2>
+                <p>Complete each step before importing your first daily report.</p>
+                <div class="cfg-setup-meta">{{ $completedSetupCount }} of {{ $totalSetupCount }} steps complete</div>
+            </div>
+            <div class="cfg-progress-circle" aria-hidden="true">
+                <svg viewBox="0 0 36 36" role="img" aria-label="{{ $progressPct }} percent complete">
+                    <circle class="cfg-progress-circle-track" cx="18" cy="18" r="15.9155"></circle>
+                    <circle
+                        class="cfg-progress-circle-fill"
+                        cx="18"
+                        cy="18"
+                        r="15.9155"
+                        stroke-dasharray="{{ $circumference }}"
+                        stroke-dashoffset="{{ $strokeOffset }}"
+                    ></circle>
+                </svg>
+                <div class="cfg-progress-circle-label">
+                    <div class="cfg-progress-value">{{ $progressPct }}%</div>
+                    <div class="cfg-progress-label">Complete</div>
                 </div>
-                @if (! $step['completed'])
-                    <a href="{{ route($step['index_route']) }}" class="btn btn-primary btn-sm">Configure</a>
-                @endif
-            </li>
-        @endforeach
-    </ul>
+            </div>
+        </div>
 
-    <div style="margin-top:0.85rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;">
-        <strong>Ready for Import:</strong>
-        <span>{{ $configurationStatus['ready_for_import'] ? 'Yes' : 'No' }}</span>
-        @if ($configurationStatus['ready_for_import'])
-            <a href="{{ route('imports.index') }}" class="btn btn-primary btn-sm">Import first report</a>
-        @elseif (! empty($configurationStatus['current_step']))
-            @php
-                $nextStep = collect($configurationStatus['steps'])->firstWhere('key', $configurationStatus['current_step']);
-            @endphp
-            @if ($nextStep)
-                <a href="{{ route($nextStep['index_route']) }}" class="btn btn-primary btn-sm">Continue setup</a>
+        <div class="cfg-setup-bar" style="--cfg-progress: {{ $progressPct }}" role="progressbar" aria-valuenow="{{ $progressPct }}" aria-valuemin="0" aria-valuemax="100">
+            <div class="cfg-setup-bar-fill"></div>
+        </div>
+
+        <div class="cfg-setup-steps-wrap">
+            <ul class="cfg-setup-steps">
+                @foreach ($setupSteps as $index => $step)
+                    @php
+                        $isCurrent = ($configurationStatus['current_step'] ?? null) === $step['key'];
+                        $stepNumber = $index + 1;
+                        $prevCompleted = $index > 0 ? (bool) $setupSteps[$index - 1]['completed'] : false;
+                    @endphp
+                    <li class="cfg-setup-step {{ $step['completed'] ? 'is-done' : '' }} {{ $isCurrent ? 'is-current' : '' }}">
+                        <div class="cfg-setup-step-rail" aria-hidden="true">
+                            <div class="cfg-setup-rail-line {{ $index === 0 ? 'is-spacer' : ($prevCompleted ? 'is-done' : '') }}"></div>
+                            <div class="cfg-setup-marker">
+                                @if ($step['completed'])
+                                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M5 10.5 8.5 14 15 6.5"></path>
+                                    </svg>
+                                @else
+                                    {{ $stepNumber }}
+                                @endif
+                            </div>
+                            <div class="cfg-setup-rail-line {{ $loop->last ? 'is-spacer' : ($step['completed'] ? 'is-done' : '') }}"></div>
+                        </div>
+                        <div class="cfg-setup-step-card">
+                            <div class="cfg-setup-step-num">Step {{ $stepNumber }}</div>
+                            <div class="cfg-setup-step-title">{{ $step['label'] }}</div>
+                            <div class="cfg-setup-step-desc">{{ $step['description'] }}</div>
+                            <div class="cfg-setup-step-tags">
+                                @if ($step['required'])
+                                    <span class="cfg-setup-tag is-required">Required</span>
+                                @else
+                                    <span class="cfg-setup-tag is-optional">Optional</span>
+                                @endif
+                                @if ($isCurrent)
+                                    <span class="cfg-setup-tag is-next">Next step</span>
+                                @endif
+                            </div>
+                            <div class="cfg-setup-step-action">
+                                @if ($step['completed'])
+                                    <span class="cfg-setup-done-badge">
+                                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M5 10.5 8.5 14 15 6.5"></path>
+                                        </svg>
+                                        Done
+                                    </span>
+                                @else
+                                    <a href="{{ route($step['index_route']) }}" class="btn btn-primary btn-sm">Configure</a>
+                                @endif
+                            </div>
+                        </div>
+                    </li>
+                @endforeach
+            </ul>
+        </div>
+
+        <div class="cfg-setup-footer {{ $setupComplete ? 'is-ready' : '' }}">
+            <div class="cfg-setup-ready">
+                <div class="cfg-setup-ready-icon" aria-hidden="true">
+                    @if ($setupComplete)
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <path d="M22 4 12 14.01l-3-3"></path>
+                        </svg>
+                    @else
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M12 6v6l4 2"></path>
+                        </svg>
+                    @endif
+                </div>
+                <div>
+                    <div class="cfg-setup-ready-label">Ready for Import</div>
+                    <div class="cfg-setup-ready-value">{{ $setupComplete ? 'Yes' : 'No' }}</div>
+                </div>
+            </div>
+            @if ($setupComplete)
+                <a href="{{ route('imports.index') }}" class="btn btn-primary">Import first report</a>
+            @elseif (! empty($configurationStatus['current_step']))
+                @php
+                    $nextStep = collect($configurationStatus['steps'])->firstWhere('key', $configurationStatus['current_step']);
+                @endphp
+                @if ($nextStep)
+                    <a href="{{ route($nextStep['index_route']) }}" class="btn btn-primary">Continue setup</a>
+                @endif
             @endif
+        </div>
+
+        @if ($setupComplete)
+            <div class="cfg-setup-complete">
+                <svg class="cfg-setup-complete-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <path d="M22 4 12 14.01l-3-3"></path>
+                </svg>
+                <div>Business configuration is complete. You can import daily reports.</div>
+            </div>
         @endif
     </div>
-
-    @if ($configurationStatus['ready_for_import'])
-        <div class="cfg-setup-complete">Business configuration is complete. You can import daily reports.</div>
-    @endif
 </section>
 @endif
 
