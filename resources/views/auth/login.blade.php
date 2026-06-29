@@ -5,23 +5,48 @@
 @push('styles')
 <style>
     .login-wrap {
-        min-height: calc(100vh - 3rem);
+        min-height: calc(100vh - 56px - 3rem);
         display: flex;
         align-items: center;
         justify-content: center;
     }
-    .login-card { width: 100%; max-width: 400px; }
-    .login-card h1 { font-size: 1.35rem; margin-bottom: 0.25rem; }
-    .login-card p { color: #64748b; margin-bottom: 1.25rem; font-size: 0.9rem; }
-    .error-list { color: #991b1b; font-size: 0.85rem; margin-bottom: 1rem; }
+
+    .login-card {
+        width: 100%;
+        max-width: 400px;
+    }
+
+    .login-card h1 {
+        font-size: 1.35rem;
+        margin-bottom: 0.25rem;
+        color: var(--text);
+    }
+
+    .login-card .login-lead {
+        color: var(--text-muted);
+        margin-bottom: 1.25rem;
+        font-size: 0.9rem;
+    }
+
+    .login-footer {
+        margin-top: 1rem;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        text-align: center;
+    }
+
+    .error-list {
+        list-style: none;
+        margin: 0;
+    }
 </style>
 @endpush
 
 @section('content')
 <div class="login-wrap">
     <div class="card login-card">
-        <h1>Clinic Accounting</h1>
-        <p>Sign in to manage daily reports and clinic configuration.</p>
+        <h1>Sign in to DentalFinance</h1>
+        <p class="login-lead">Manage daily reports, imports, and clinic configuration.</p>
 
         @if ($errors->any())
             <div class="alert alert-error">
@@ -43,11 +68,13 @@
                 <label class="form-label" for="password">Password</label>
                 <input class="form-input" type="password" id="password" name="password" required>
             </div>
-            <button type="submit" class="btn btn-primary" style="width:100%;">Sign in</button>
+            <button type="submit" class="btn btn-primary btn-block">Sign in</button>
         </form>
 
-        <p style="margin-top:1rem;font-size:0.85rem;color:#64748b;text-align:center;">
+        <p class="login-footer">
             <a href="{{ route('register-clinic.create') }}">Register a new clinic</a>
+            ·
+            <a href="{{ route('landing') }}">Back to homepage</a>
         </p>
     </div>
 </div>

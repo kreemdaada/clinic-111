@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Clinic 111 Accounting')</title>
+    <title>@yield('title', 'DentalFinance')</title>
     <style>
         *,
         *::before,
@@ -33,15 +33,19 @@
             --text: #0f172a;
             --text-muted: #64748b;
             --text-subtle: #94a3b8;
-            --accent: #0f766e;
-            --accent-hover: #0d9488;
-            --accent-soft: #f0fdfa;
+            --primary: #0284c7;
+            --primary-hover: #0ea5e9;
+            --primary-soft: #e0f2fe;
+            --accent: #0284c7;
+            --accent-hover: #0ea5e9;
+            --accent-soft: #e0f2fe;
+            --accent-teal: #0f766e;
             --danger: #b91c1c;
             --danger-soft: #fef2f2;
             --warning: #b45309;
             --warning-soft: #fffbeb;
-            --info: #0369a1;
-            --info-soft: #f0f9ff;
+            --info: #0284c7;
+            --info-soft: #e0f2fe;
             --success: #15803d;
             --success-soft: #f0fdf4;
             --radius: 8px;
@@ -60,13 +64,39 @@
         }
 
         .topbar {
-            background: #1e293b;
+            background: var(--text);
             color: #fff;
             padding: 0 1.5rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
             height: 56px;
+        }
+
+        .guest-header {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 1.5rem;
+            height: 56px;
+            display: flex;
+            align-items: center;
+        }
+
+        .guest-brand {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: var(--text);
+            letter-spacing: -0.02em;
+            text-decoration: none;
+        }
+
+        .guest-brand span {
+            color: var(--primary);
+        }
+
+        .guest-brand:hover {
+            color: var(--text);
         }
 
         .topbar-brand {
@@ -214,15 +244,19 @@
         }
 
         .btn-primary {
-            background: var(--text);
+            background: var(--primary);
             color: #fff;
-            border-color: var(--text);
+            border-color: var(--primary);
         }
 
         .btn-primary:hover {
-            background: #1e293b;
-            border-color: #1e293b;
+            background: var(--primary-hover);
+            border-color: var(--primary-hover);
             color: #fff;
+        }
+
+        .btn-block {
+            width: 100%;
         }
 
         .btn-secondary {
@@ -259,11 +293,6 @@
             color: #fff;
         }
 
-        .btn-primary:disabled {
-            background: #93c5fd;
-            cursor: not-allowed;
-        }
-
         .form-label {
             display: block;
             font-weight: 600;
@@ -277,6 +306,19 @@
             border: 1px solid #cbd5e1;
             border-radius: 8px;
             font-size: 0.95rem;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-soft);
+        }
+
+        a:focus-visible,
+        button:focus-visible,
+        .form-input:focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
         }
 
         .form-group {
@@ -538,9 +580,12 @@
     @auth
     <header class="topbar">
         <a href="{{ route('imports.index') }}" class="topbar-brand">
-            {{ $currentClinic->name ?? 'Clinic Accounting' }}
+            Dental<span style="color:var(--primary-hover);">Finance</span>
+            @isset($currentClinic)
+            <span style="font-size:0.75rem;font-weight:500;color:#94a3b8;margin-left:0.35rem;">· {{ $currentClinic->name }}</span>
+            @endisset
             @isset($clinicCurrency)
-            <span style="font-size:0.75rem;font-weight:500;color:var(--text-muted);margin-left:0.35rem;">({{ $clinicCurrency }})</span>
+            <span style="font-size:0.75rem;font-weight:500;color:#94a3b8;margin-left:0.35rem;">({{ $clinicCurrency }})</span>
             @endisset
         </a>
         <nav class="topbar-nav">
@@ -555,6 +600,10 @@
                 <button type="submit" class="btn-logout">Logout</button>
             </form>
         </nav>
+    </header>
+    @else
+    <header class="guest-header">
+        <a href="{{ route('landing') }}" class="guest-brand">Dental<span>Finance</span></a>
     </header>
     @endauth
 
