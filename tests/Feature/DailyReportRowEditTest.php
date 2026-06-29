@@ -307,7 +307,7 @@ class DailyReportRowEditTest extends TestCase
         $this->actingAs($viewer)
             ->get(route('daily-report.edit', $report))
             ->assertOk()
-            ->assertSee('View-only access', false)
+            ->assertSee('View-only — you can browse entries but cannot edit them.', false)
             ->assertDontSee('id="dr-add-doctor-open"', false)
             ->assertDontSee('35%', false);
     }
