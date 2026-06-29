@@ -12,13 +12,13 @@
         padding: 1rem 0;
     }
     .onboarding-card { width: 100%; max-width: 640px; }
-    .onboarding-card h1 { font-size: 1.35rem; margin-bottom: 0.25rem; }
-    .onboarding-card p { color: #64748b; margin-bottom: 1.25rem; font-size: 0.9rem; }
+    .onboarding-card h1 { font-size: 1.35rem; margin-bottom: 0.25rem; color: var(--text); }
+    .onboarding-card p { color: var(--text-muted); margin-bottom: 1.25rem; font-size: 0.9rem; }
     .section-title {
         font-size: 0.95rem;
         font-weight: 600;
         margin: 1.25rem 0 0.75rem;
-        color: #334155;
+        color: var(--text);
     }
     .form-grid {
         display: grid;
@@ -38,7 +38,7 @@
 <div class="onboarding-wrap">
     <div class="card onboarding-card">
         <h1>Register Your Clinic</h1>
-        <p>Create a new clinic account and configure your business rules after onboarding.</p>
+        <p>Create your DentalFinance account and configure your business rules after onboarding.</p>
 
         @if ($errors->any())
             <div class="alert alert-error">

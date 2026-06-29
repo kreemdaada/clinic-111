@@ -1,36 +1,24 @@
 <?php
 
+use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\ClinicAdminController;
 use App\Http\Controllers\Web\ClinicOnboardingController;
 use App\Http\Controllers\Web\ConfigurationDashboardController;
-use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\DailyReportEditorController;
-use App\Http\Controllers\Web\DoctorFixedFeeAdminController;
 use App\Http\Controllers\Web\DoctorAdminController;
+use App\Http\Controllers\Web\DoctorFixedFeeAdminController;
 use App\Http\Controllers\Web\EmailVerificationController;
 use App\Http\Controllers\Web\ImportController;
 use App\Http\Controllers\Web\LabAdminController;
 use App\Http\Controllers\Web\LabPriceAdminController;
+use App\Http\Controllers\Web\LandingController;
 use App\Http\Controllers\Web\LogController;
 use App\Http\Controllers\Web\ReportLockController;
 use App\Http\Controllers\Web\TreatmentAdminController;
 use App\Http\Controllers\Web\UserAdminController;
-use App\Models\User;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    if (Auth::check()) {
-        $user = Auth::user();
-        if ($user instanceof User && ! $user->hasVerifiedEmail()) {
-            return redirect()->route('verification.notice');
-        }
-
-        return redirect()->route('imports.index');
-    }
-
-    return redirect()->route('login');
-});
+Route::get('/', [LandingController::class, 'index'])->name('landing');
 
 Route::get('/register-clinic', [ClinicOnboardingController::class, 'create'])->name('register-clinic.create');
 
