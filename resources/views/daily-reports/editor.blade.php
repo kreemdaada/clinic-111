@@ -363,11 +363,11 @@
         <form id="dr-add-doctor-form" style="margin-top:1rem;display:grid;gap:0.75rem;">
             <div class="form-group" style="margin:0;">
                 <label class="form-label">Name</label>
-                <input class="form-input" name="name" required placeholder="Dr Smith">
+                <input class="form-input" name="name" required placeholder="ALI">
             </div>
             <div class="form-group" style="margin:0;">
                 <label class="form-label">Code</label>
-                <input class="form-input" name="code" required placeholder="SMITH" style="text-transform:uppercase;">
+                <input class="form-input" name="code" required placeholder="JACK" style="text-transform:uppercase;">
             </div>
             <div class="form-group" style="margin:0;">
                 <label class="form-label">Commission type</label>
