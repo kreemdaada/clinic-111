@@ -589,6 +589,7 @@
             @endisset
         </a>
         <nav class="topbar-nav">
+            <a href="{{ route('clinic.financial-overview') }}" @class(['active'=> request()->routeIs('clinic.financial-overview')])>Overview</a>
             <a href="{{ route('imports.index') }}" @class(['active'=> request()->routeIs('imports.*') || request()->routeIs('logs.*')])>Import</a>
             <a href="{{ route('daily-report.index') }}" @class(['active'=> request()->routeIs('daily-report.*')])>Daily Report</a>
             @if (auth()->user()->isAdmin())

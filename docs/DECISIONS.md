@@ -2757,6 +2757,83 @@ Clinic 111 customer data currently lives in `database/database.sqlite` during de
 
 ---
 
+## ADR-036
+
+**Title:** Clinic Financial Overview
+
+**Status:** Accepted
+
+**Date:** 2026-06-29
+
+**Milestone:** Milestone 15 — Clinic Financial Overview
+
+**Context:**
+
+The public landing page shows a practice overview mockup with KPIs, trends, and top treatments. Authenticated users had no data-driven equivalent. Accounting data already exists in `payments`, `daily_work_rows`, `lab_jobs`, and `work_items`, with rules defined in ADR-001 (TOTAL = collected payments), ADR-002 (JOB = lab cost), and `MonthlyIncomeCalculationService` for per-doctor summaries.
+
+**Decision:**
+
+* Add a **Practice Overview** screen for the current clinic only (`CurrentClinicResolver`, explicit `clinic_id` filters — ADR-028/029).
+* Compute KPIs **server-side** in `ClinicFinancialOverviewService`; no financial logic in Blade, JavaScript, or controllers.
+* **Revenue** = `SUM(payments.amount_aed)` for rows whose `daily_work_rows.work_date` falls in the selected calendar month (clinic timezone). Matches `MonthlyIncomeCalculationService` (ADR-001).
+* **Lab cost** = `SUM(lab_jobs.total_cost_aed)` for jobs with status `calculated` or `adjusted`, linked to work rows in the same month (ADR-002). Exclude `cancelled`.
+* **Calculated result** = revenue − lab cost only. Label **“Calculated result”** — not profit or net income. UI explains that doctor commissions, overhead, and taxes are excluded.
+* **Month-over-month comparison** for revenue, lab cost, and calculated result using `((current − previous) / previous) × 100`. If previous is zero or missing → display “No comparison available” (no division by zero).
+* **Six-month revenue trend** ending at the selected month (inclusive), same revenue definition.
+* **Top treatments by revenue (top 5):** allocate each row’s collected payments to work items **proportionally by quantity** on that row (only method available — payments are row-level, not treatment-level). Sort by revenue desc, then treatment name asc.
+* **Period:** single selectable month (`YYYY-MM`), default = current month in clinic timezone.
+* **Currency:** clinic base currency via `ClinicCurrencySupport` / `CurrencyFormatter` (ADR-034). No hard-coded symbols.
+* **Data stand:** show count of non-failed `daily_reports` for the selected month and latest import filename when present — do not claim “month complete”.
+* **No** analytics snapshots, materialized views, cache layer, or new chart libraries in v1. CSS bar chart + accessible text values.
+* Exclude `daily_reports` with status `failed` from aggregates.
+
+**Alternatives Considered:**
+
+1. Controller queries — rejected (logic duplication, untestable views).
+2. Blade/JS calculation — rejected.
+3. Persisted analytics snapshot table — rejected for v1 (premature).
+4. Materialized views — rejected for v1.
+5. Cache — rejected until performance proven.
+6. New Chart.js/Recharts dependency — rejected; CSS bars sufficient.
+7. Treatment revenue = quantity counts only — rejected (does not satisfy “Umsatz”).
+
+**Consequences:**
+
+* Positive: real KPIs for practice managers; reuses canonical accounting data; tenant-safe.
+* Negative: treatment revenue uses proportional allocation (documented limitation); full P&L not provided.
+
+**Affected Components:**
+
+* `ClinicFinancialOverviewController`, `ClinicFinancialOverviewService`, DTOs under `app/DTOs/Analytics/`, `FinancialPeriod`, route `clinic.financial-overview`, Blade view, topbar navigation, tests, `docs/CLINIC_FINANCIAL_OVERVIEW.md`.
+
+**Related Documentation:**
+
+* `docs/BUSINESS_RULES.md`, `docs/SERVICES.md`, ADR-001, ADR-002, ADR-014, ADR-034, ADR-028, ADR-029.
+
+**Implementation:**
+
+Implemented 2026-06-29 on branch `feature/clinic-financial-overview`:
+
+* Route `GET /practice-overview` → `clinic.financial-overview` (auth, verified, roles: admin/accountant/viewer).
+* `ClinicFinancialOverviewController` (invokable) + `ClinicFinancialOverviewRequest` (`month` regex `YYYY-MM`).
+* `ClinicFinancialOverviewService` with explicit `clinic_id` filters on `payments`, `lab_jobs`, `daily_work_rows`, `work_items`, `daily_reports`.
+* DTOs: `ClinicFinancialOverviewData`, `FinancialKpiData`, `MonthlyRevenueData`, `TreatmentRevenueData`.
+* Support: `FinancialPeriod` (clinic timezone month boundaries), `MonthOverMonthComparison`.
+* Blade view `resources/views/clinic-financial-overview/index.blade.php` (CSS bar chart, KPI cards, top treatments, empty state).
+* Topbar navigation link “Overview”; `ClinicContextComposer` registration.
+* Documentation: `docs/CLINIC_FINANCIAL_OVERVIEW.md`.
+
+Tests:
+
+* `tests/Feature/ClinicFinancialOverviewTest.php` — access control, tenant isolation, KPI calculation, MoM comparison, top treatments, timezone default, empty/invalid month, navigation (14 tests).
+* Full suite: 468 tests passing.
+
+**Notes:**
+
+This overview is operational reporting on imported DentalFinance data — not tax advice or full bookkeeping.
+
+---
+
 # ADR Index
 
 | ADR     | Title                                  | Status   |
@@ -2796,6 +2873,7 @@ Clinic 111 customer data currently lives in `database/database.sqlite` during de
 | ADR-033 | Tenant Security                        | Accepted |
 | ADR-034 | Multi-Currency Strategy                | Accepted |
 | ADR-035 | PostgreSQL Production Readiness        | Accepted |
+| ADR-036 | Clinic Financial Overview              | Accepted |
 
 ---
 
@@ -2803,9 +2881,9 @@ Clinic 111 customer data currently lives in `database/database.sqlite` during de
 
 The following architectural topics are expected to receive future ADRs.
 
-**ADR-035** — Subscription & Licensing (Proposed)
+**ADR-037** — Subscription & Licensing (Proposed)
 
-**ADR-036** — Public SaaS Platform (Proposed)
+**ADR-038** — Public SaaS Platform (Proposed)
 
 ---
 

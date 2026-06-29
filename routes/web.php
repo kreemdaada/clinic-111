@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\ClinicAdminController;
+use App\Http\Controllers\Web\ClinicFinancialOverviewController;
 use App\Http\Controllers\Web\ClinicOnboardingController;
 use App\Http\Controllers\Web\ConfigurationDashboardController;
 use App\Http\Controllers\Web\DailyReportEditorController;
@@ -47,6 +48,10 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/practice-overview', ClinicFinancialOverviewController::class)
+        ->middleware('role:admin,accountant,viewer')
+        ->name('clinic.financial-overview');
+
     Route::get('/imports', [ImportController::class, 'index'])
         ->middleware('role:admin,accountant,viewer')
         ->name('imports.index');
