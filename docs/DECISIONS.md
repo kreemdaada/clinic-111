@@ -2963,7 +2963,7 @@ External off-site backup copy is an operational requirement — local VPS backup
 | ADR-034 | Multi-Currency Strategy                | Accepted |
 | ADR-035 | PostgreSQL Production Readiness        | Accepted |
 | ADR-036 | Clinic Financial Overview              | Accepted |
-| ADR-037 | Production Deployment Architecture   | Accepted |
+| ADR-037 | Production Deployment Architecture   | Proposed |
 
 ---
 
