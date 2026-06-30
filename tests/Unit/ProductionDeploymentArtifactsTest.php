@@ -157,4 +157,37 @@ class ProductionDeploymentArtifactsTest extends TestCase
         $this->assertStringNotContainsString('welcome', $routes);
         $this->assertStringContainsString('@vite', $welcome);
     }
+
+    public function test_production_mail_configuration_uses_resend_smtp_scheme_for_port_587(): void
+    {
+        $mailConfig = file_get_contents(base_path('config/mail.php'));
+        $productionEnv = file_get_contents(base_path('deploy/app.env.example'));
+        $documentation = file_get_contents(base_path('docs/PRODUCTION_DEPLOYMENT.md'));
+
+        $this->assertIsString($mailConfig);
+        $this->assertIsString($productionEnv);
+        $this->assertIsString($documentation);
+
+        $this->assertStringContainsString("'scheme' => env('MAIL_SCHEME')", $mailConfig);
+        $this->assertStringNotContainsString('MAIL_ENCRYPTION', $mailConfig);
+
+        foreach ([
+            'MAIL_MAILER=smtp',
+            'MAIL_SCHEME=smtp',
+            'MAIL_HOST=smtp.resend.com',
+            'MAIL_PORT=587',
+            'MAIL_USERNAME=resend',
+            'MAIL_FROM_ADDRESS=system@dentalfinance.eu',
+            'MAIL_FROM_NAME=DentalFinance',
+            'MAIL_EHLO_DOMAIN=dentalfinance.eu',
+        ] as $expectedLine) {
+            $this->assertStringContainsString($expectedLine, $productionEnv, "Missing in deploy/app.env.example: {$expectedLine}");
+            $this->assertStringContainsString($expectedLine, $documentation, "Missing in docs/PRODUCTION_DEPLOYMENT.md: {$expectedLine}");
+        }
+
+        $this->assertStringNotContainsString('MAIL_ENCRYPTION=', $productionEnv);
+        $this->assertStringNotContainsString('MAIL_ENCRYPTION=', $documentation);
+        $this->assertStringNotContainsString('brevo', strtolower($productionEnv));
+        $this->assertStringNotContainsString('brevo', strtolower($documentation));
+    }
 }

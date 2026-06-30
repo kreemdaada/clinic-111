@@ -15,7 +15,7 @@ Operational guide for deploying DentalFinance to `dentalfinance.eu` on IONOS VPS
 | Cache / Session / Queue | PostgreSQL (`database` driver) — **no Redis in v1** |
 | Registry | GitHub Container Registry (GHCR), tag = full Git commit SHA |
 | CI/CD | GitHub Actions (`ci.yml`, `deploy-production.yml`) |
-| SMTP | Brevo free tier (`smtp-relay.brevo.com:587`) |
+| SMTP | Resend (`smtp.resend.com:587`) |
 
 ```
 Internet → :443/:80 → app (FrankenPHP/Caddy)
@@ -29,7 +29,7 @@ Internet → :443/:80 → app (FrankenPHP/Caddy)
 * IONOS VPS L+ with Ubuntu 24.04 LTS
 * Domain `dentalfinance.eu` at IONOS
 * GitHub repository with Actions enabled
-* Brevo account (free SMTP)
+* Resend account (SMTP relay)
 * SSH key pair for deploy user
 
 ## 3. IONOS VPS selection
@@ -248,27 +248,33 @@ curl -I http://dentalfinance.eu/up    # should redirect to HTTPS
 curl -I https://www.dentalfinance.eu  # should redirect to apex
 ```
 
-## 20. SMTP (Brevo)
+## 20. SMTP (Resend)
 
-Production uses **Brevo SMTP**, not IONOS mailbox authentication.
+Production uses **Resend SMTP**, not IONOS mailbox authentication.
 
-1. Create free Brevo account
-2. Generate SMTP key (Settings → SMTP & API)
-3. Authenticate domain `dentalfinance.eu` in Brevo
-4. Add Brevo DNS records at IONOS (SPF/DKIM/DMARC as instructed)
+1. Create a Resend account
+2. Generate an API key (Resend dashboard → API Keys)
+3. Add and verify domain `dentalfinance.eu` in Resend
+4. Add Resend DNS records at IONOS (SPF/DKIM/DMARC as instructed)
 5. Set in `app.env`:
 
 ```dotenv
-MAIL_HOST=smtp-relay.brevo.com
+MAIL_MAILER=smtp
+MAIL_SCHEME=smtp
+MAIL_HOST=smtp.resend.com
 MAIL_PORT=587
-MAIL_USERNAME=<brevo-smtp-login>
-MAIL_PASSWORD=<brevo-smtp-key>
+MAIL_USERNAME=resend
+MAIL_PASSWORD=<resend-api-key>
 MAIL_FROM_ADDRESS=system@dentalfinance.eu
+MAIL_FROM_NAME=DentalFinance
+MAIL_EHLO_DOMAIN=dentalfinance.eu
 ```
 
-`system@dentalfinance.eu` may be an IONOS forwarder; authentication uses Brevo credentials.
+Use `MAIL_SCHEME=smtp` for port 587 (STARTTLS). Laravel 13 does not read `MAIL_ENCRYPTION`; supported schemes are `smtp` (port 587 / STARTTLS) and `smtps` (port 465 / implicit TLS).
 
-Free tier limit: 300 emails/day (check Brevo current plan).
+Resend SMTP uses the fixed username `resend`; the API key is the SMTP password. Store the key only in server-side `app.env`.
+
+Check Resend plan limits for daily/monthly sending quotas.
 
 ## 21. SMTP test
 
@@ -400,7 +406,7 @@ Laravel logs go to stderr → Docker json-file driver (10 MB × 5 files rotation
 | 502 / no response | `docker compose ps`, app logs, Caddy cert volumes |
 | DB connection error | `database` health, `DB_*` in `app.env` |
 | Import too large | `deploy/php.ini` upload limits (32M), app validation 10 MB |
-| Mail not sent | Brevo credentials, DNS auth, `MAIL_*` vars |
+| Mail not sent | Resend API key, domain verification, DNS auth, `MAIL_*` vars |
 | Health fail after deploy | Previous image in `.deploy-state`, migration errors |
 
 ## 32. Updates
