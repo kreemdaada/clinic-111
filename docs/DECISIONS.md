@@ -2851,7 +2851,7 @@ This overview is operational reporting on imported DentalFinance data — not ta
 
 **Title:** Production Deployment Architecture
 
-**Status:** Proposed
+**Status:** Accepted
 
 **Date:** 2026-06-29
 
