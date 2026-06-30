@@ -2,6 +2,11 @@ name: Test Production SSH
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/production-deployment
+    paths:
+      - .github/workflows/test-production-ssh.yml
 
 permissions:
   contents: read
