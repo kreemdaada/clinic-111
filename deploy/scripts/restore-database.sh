@@ -1,20 +1,24 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly DEPLOY_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
+DEPLOY_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly DEPLOY_ROOT
 readonly APP_ENV_FILE="${APP_ENV_FILE:-${DEPLOY_ROOT}/app.env}"
 readonly BACKUP_SCRIPT="${SCRIPT_DIR}/backup-database.sh"
 
+# shellcheck disable=SC2034 # consumed by deploy-common.sh log() and fail()
 DEPLOY_LOG_PREFIX="restore"
 
-# shellcheck source=lib/deploy-common.sh
+# shellcheck source=deploy/scripts/lib/deploy-common.sh
 source "${SCRIPT_DIR}/lib/deploy-common.sh"
 
 BACKUP_PATH="${1:-}"
 SAFETY_BACKUP=""
 restore_failed=0
 
+# shellcheck disable=SC2329 # invoked via trap EXIT
 cleanup_on_failure() {
     if [[ "${restore_failed}" -eq 1 ]]; then
         log "Restore failed. Application may still be in maintenance mode."
@@ -61,7 +65,13 @@ fi
 
 log "Creating safety backup before restore..."
 "${BACKUP_SCRIPT}"
-SAFETY_BACKUP="$(ls -1t "${DEPLOY_ROOT}/backups/database"/dentalfinance-*.dump 2>/dev/null | head -n1 || true)"
+SAFETY_BACKUP="$(
+    find "${DEPLOY_ROOT}/backups/database" -maxdepth 1 -type f -name 'dentalfinance-*.dump' -printf '%T@ %p\n' 2>/dev/null \
+        | sort -rn \
+        | head -n1 \
+        | cut -d' ' -f2- \
+        || true
+)"
 
 log "Enabling maintenance mode..."
 compose exec -T app php artisan down --retry=60 || true
@@ -73,8 +83,10 @@ log "Terminating active database connections..."
 terminate_database_connections || true
 
 log "Restoring database..."
-if ! cat "${BACKUP_PATH}" | compose exec -T database sh -c \
-    'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner --no-privileges --exit-on-error --single-transaction'; then
+# shellcheck disable=SC2016 # POSTGRES_USER and POSTGRES_DB must expand inside the database container
+if ! compose exec -T database sh -c \
+    'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner --no-privileges --exit-on-error --single-transaction' \
+    < "${BACKUP_PATH}"; then
     restore_failed=1
     fail "Database restore failed."
 fi

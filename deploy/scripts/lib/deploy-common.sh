@@ -2,6 +2,7 @@
 # Shared helpers for DentalFinance production deployment scripts.
 # Do not source app.env — use docker compose --env-file instead.
 
+# shellcheck disable=SC2034 # sourced-library marker for consumer scripts
 readonly DEPLOY_COMMON_LOADED=1
 
 : "${DEPLOY_ROOT:?DEPLOY_ROOT must be set before sourcing deploy-common.sh}"
@@ -9,6 +10,7 @@ readonly DEPLOY_COMMON_LOADED=1
 
 readonly COMPOSE_FILE="${DEPLOY_ROOT}/compose.production.yml"
 readonly STATE_FILE="${DEPLOY_ROOT}/.deploy-state"
+# shellcheck disable=SC2034 # used by deploy.sh after sourcing this library
 readonly LOCK_FILE="${DEPLOY_ROOT}/.deploy.lock"
 readonly INTERNAL_HEALTH_URL="http://127.0.0.1:8080/up"
 

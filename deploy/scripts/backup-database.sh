@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly DEPLOY_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
+DEPLOY_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly DEPLOY_ROOT
 readonly APP_ENV_FILE="${APP_ENV_FILE:-${DEPLOY_ROOT}/app.env}"
 readonly BACKUP_DIR="${BACKUP_DIR:-${DEPLOY_ROOT}/backups/database}"
 readonly RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-14}"
 
+# shellcheck disable=SC2034 # consumed by deploy-common.sh log() and fail()
 DEPLOY_LOG_PREFIX="backup"
 
-# shellcheck source=lib/deploy-common.sh
+# shellcheck source=deploy/scripts/lib/deploy-common.sh
 source "${SCRIPT_DIR}/lib/deploy-common.sh"
 
 mkdir -p "${BACKUP_DIR}"
@@ -27,6 +30,7 @@ final_file="${BACKUP_DIR}/dentalfinance-${timestamp}.dump"
 
 log "Creating PostgreSQL custom-format backup..."
 
+# shellcheck disable=SC2016 # POSTGRES_USER and POSTGRES_DB must expand inside the database container
 compose exec -T database sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc --no-owner --no-privileges' > "${tmp_file}"
 
 if [[ ! -s "${tmp_file}" ]]; then

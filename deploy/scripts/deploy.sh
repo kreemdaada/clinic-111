@@ -1,24 +1,29 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly DEPLOY_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
+DEPLOY_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+readonly DEPLOY_ROOT
 readonly APP_ENV_FILE="${APP_ENV_FILE:-${DEPLOY_ROOT}/app.env}"
 readonly BACKUP_SCRIPT="${SCRIPT_DIR}/backup-database.sh"
 
+# shellcheck disable=SC2034 # consumed by deploy-common.sh log() and fail()
 DEPLOY_LOG_PREFIX="deploy"
 
-# shellcheck source=lib/deploy-common.sh
+# shellcheck source=deploy/scripts/lib/deploy-common.sh
 source "${SCRIPT_DIR}/lib/deploy-common.sh"
 
 IMAGE_TAG="${1:-}"
 HEALTH_RETRIES="${HEALTH_RETRIES:-12}"
 HEALTH_INTERVAL="${HEALTH_INTERVAL:-10}"
 
+# shellcheck disable=SC2329 # invoked via trap EXIT
 cleanup_lock() {
     rm -f "${LOCK_FILE}"
 }
 
+# shellcheck disable=SC2329 # invoked via trap ERR
 on_error() {
     local exit_code=$?
     if [[ -f "${LOCK_FILE}" ]]; then

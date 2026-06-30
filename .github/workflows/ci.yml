@@ -67,7 +67,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y shellcheck
-          shellcheck deploy/scripts/*.sh deploy/scripts/lib/*.sh
+          shellcheck -x deploy/scripts/*.sh deploy/scripts/lib/*.sh
 
       - name: Validate production compose file
         run: |
