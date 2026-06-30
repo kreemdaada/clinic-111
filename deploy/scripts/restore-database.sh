@@ -18,7 +18,7 @@ BACKUP_PATH="${1:-}"
 SAFETY_BACKUP=""
 restore_failed=0
 
-# shellcheck disable=SC2329 # invoked via trap EXIT
+# shellcheck disable=SC2317,SC2329 # invoked via trap EXIT
 cleanup_on_failure() {
     if [[ "${restore_failed}" -eq 1 ]]; then
         log "Restore failed. Application may still be in maintenance mode."

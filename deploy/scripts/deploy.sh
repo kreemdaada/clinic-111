@@ -18,12 +18,12 @@ IMAGE_TAG="${1:-}"
 HEALTH_RETRIES="${HEALTH_RETRIES:-12}"
 HEALTH_INTERVAL="${HEALTH_INTERVAL:-10}"
 
-# shellcheck disable=SC2329 # invoked via trap EXIT
+# shellcheck disable=SC2317,SC2329 # invoked via trap EXIT
 cleanup_lock() {
     rm -f "${LOCK_FILE}"
 }
 
-# shellcheck disable=SC2329 # invoked via trap ERR
+# shellcheck disable=SC2317,SC2329 # invoked via trap ERR
 on_error() {
     local exit_code=$?
     if [[ -f "${LOCK_FILE}" ]]; then
