@@ -3,15 +3,11 @@
 namespace Tests\Feature;
 
 use App\Enums\AuditAction;
-use App\Models\DailyReport;
-use App\Models\DailyWorkRow;
 use App\Models\Doctor;
 use App\Models\Lab;
-use App\Models\LabJob;
 use App\Models\LabPrice;
 use App\Models\Treatment;
 use App\Models\User;
-use App\Models\WorkItem;
 use App\Services\Accounting\LabPriceResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

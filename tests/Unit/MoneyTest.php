@@ -2,7 +2,6 @@
 
 namespace Tests\Unit;
 
-use App\Domain\Currency\CurrencyCatalog;
 use App\Domain\Currency\Money;
 use InvalidArgumentException;
 use Tests\TestCase;

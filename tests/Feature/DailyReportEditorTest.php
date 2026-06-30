@@ -6,6 +6,7 @@ use App\Enums\ReportSourceType;
 use App\Enums\ReportStatus;
 use App\Enums\UserRole;
 use App\Models\DailyReport;
+use App\Models\Doctor;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -45,7 +46,7 @@ class DailyReportEditorTest extends TestCase
         $this->seed();
 
         $user = User::query()->where('email', 'accountant@clinic.test')->firstOrFail();
-        $doctor = \App\Models\Doctor::query()->where('code', 'JACK')->firstOrFail();
+        $doctor = Doctor::query()->where('code', 'JACK')->firstOrFail();
 
         $response = $this->actingAs($user)->post(route('daily-report.store'), [
             'doctor_id' => $doctor->id,
@@ -53,7 +54,7 @@ class DailyReportEditorTest extends TestCase
             'date_to' => '2026-06-15',
         ]);
 
-        $report = \App\Models\DailyReport::query()->latest('id')->first();
+        $report = DailyReport::query()->latest('id')->first();
         $this->assertNotNull($report);
 
         $response->assertRedirect(route('daily-report.edit', [

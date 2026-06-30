@@ -98,7 +98,7 @@ class ImportController extends Controller
             ]);
         }
 
-        $relativeLogPath = 'import-extractions/report-' . $dailyReport->id . '.json';
+        $relativeLogPath = 'import-extractions/report-'.$dailyReport->id.'.json';
 
         if (Storage::disk('local')->exists($relativeLogPath)) {
             Storage::disk('local')->delete($relativeLogPath);

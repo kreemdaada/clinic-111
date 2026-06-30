@@ -11,20 +11,19 @@ use App\Models\DailyWorkRow;
 use App\Models\Doctor;
 use App\Models\User;
 use App\Services\Configuration\CurrentClinicResolver;
-use App\Services\Configuration\TenantResourceGuard;
 use App\Services\Configuration\ReferenceDataService;
+use App\Services\Configuration\TenantResourceGuard;
 use App\Services\DailyReport\DailyReportEditorService;
 use App\Services\DailyReport\DailyReportQueryService;
 use App\Services\DailyReport\DoctorManagementService;
 use App\Services\DailyReport\DoctorTreatmentCatalogService;
+use App\Support\ClinicCurrencySupport;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
-use App\Support\ClinicCurrencySupport;
-use App\Support\MoneyCalculator;
 use RuntimeException;
 
 /**
@@ -110,7 +109,7 @@ class DailyReportEditorController extends Controller
             ]);
         }
 
-        $relativeLogPath = 'import-extractions/report-' . $dailyReport->id . '.json';
+        $relativeLogPath = 'import-extractions/report-'.$dailyReport->id.'.json';
 
         if (Storage::disk('local')->exists($relativeLogPath)) {
             Storage::disk('local')->delete($relativeLogPath);
@@ -182,7 +181,7 @@ class DailyReportEditorController extends Controller
             ->whereDate('work_date', $workDate->toDateString())
             ->orderBy('id')
             ->get()
-            ->map(fn(DailyWorkRow $row) => $this->serializeRow($row));
+            ->map(fn (DailyWorkRow $row) => $this->serializeRow($row));
 
         return response()->json([
             'data' => $rows,
@@ -330,7 +329,7 @@ class DailyReportEditorController extends Controller
             'day' => $row->work_date ? $row->work_date->day : null,
             'treatment_text' => $row->treatment_text,
             'treatment_lines' => $row->workItems
-                ->map(fn($workItem) => [
+                ->map(fn ($workItem) => [
                     'code' => $workItem->treatment->code,
                     'quantity' => (int) $workItem->quantity,
                 ])

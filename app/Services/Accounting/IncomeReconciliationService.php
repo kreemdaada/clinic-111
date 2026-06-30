@@ -5,7 +5,6 @@ namespace App\Services\Accounting;
 use App\Models\DailyReport;
 use App\Models\DailyWorkRow;
 use App\Support\AccountingScopedQuery;
-use App\Support\ClinicCurrencySupport;
 use App\Support\MoneyCalculator;
 use Illuminate\Support\Collection;
 

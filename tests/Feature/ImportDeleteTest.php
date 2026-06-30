@@ -4,8 +4,6 @@ namespace Tests\Feature;
 
 use App\Enums\ReportSourceType;
 use App\Enums\ReportStatus;
-use App\Models\DailyReport;
-use App\Models\DailyWorkRow;
 use App\Models\Doctor;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -30,7 +28,7 @@ class ImportDeleteTest extends TestCase
             'status' => ReportStatus::Calculated,
         ]);
 
-        Storage::disk('local')->put('import-extractions/report-' . $report->id . '.json', '{}');
+        Storage::disk('local')->put('import-extractions/report-'.$report->id.'.json', '{}');
 
         $this->createDailyWorkRow($report, [
             'doctor_id' => Doctor::query()->firstOrFail()->id,
@@ -45,7 +43,7 @@ class ImportDeleteTest extends TestCase
 
         $this->assertDatabaseMissing('daily_reports', ['id' => $report->id]);
         $this->assertDatabaseMissing('daily_work_rows', ['daily_report_id' => $report->id]);
-        $logPath = 'import-extractions/report-' . $report->id . '.json';
+        $logPath = 'import-extractions/report-'.$report->id.'.json';
         $this->assertFalse(Storage::disk('local')->exists($logPath));
     }
 

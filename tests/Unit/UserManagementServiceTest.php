@@ -6,11 +6,11 @@ use App\Enums\AuditAction;
 use App\Enums\UserRole;
 use App\Models\User;
 use App\Services\User\UserManagementService;
+use App\Support\SecurePassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
 use RuntimeException;
-use App\Support\SecurePassword;
 use Tests\TestCase;
 
 class UserManagementServiceTest extends TestCase

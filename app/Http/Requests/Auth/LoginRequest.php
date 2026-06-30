@@ -2,12 +2,13 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Http\Controllers\Web\AuthController;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * Validates login credentials for web session and API token endpoints.
  *
- * Used by {@see \App\Http\Controllers\Web\AuthController} and {@see \App\Http\Controllers\Api\AuthController}.
+ * Used by {@see AuthController} and {@see \App\Http\Controllers\Api\AuthController}.
  */
 class LoginRequest extends FormRequest
 {

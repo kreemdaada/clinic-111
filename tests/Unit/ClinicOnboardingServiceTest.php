@@ -4,17 +4,15 @@ namespace Tests\Unit;
 
 use App\Enums\AuditAction;
 use App\Enums\UserRole;
-use App\Models\Clinic;
 use App\Models\Doctor;
 use App\Models\Lab;
 use App\Models\Treatment;
-use App\Models\User;
 use App\Services\Audit\AuditLogService;
 use App\Services\Configuration\ClinicOnboardingService;
+use App\Support\SecurePassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use RuntimeException;
-use App\Support\SecurePassword;
 use Tests\TestCase;
 
 class ClinicOnboardingServiceTest extends TestCase

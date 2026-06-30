@@ -191,7 +191,7 @@ class ImportRowDiagnosticsBuilder
                 $issues[] = [
                     'severity' => 'warning',
                     'code' => 'low_confidence',
-                    'message' => "{$treatment['code']}×{$treatment['quantity']}: " . ($treatment['warning_message'] ?? 'low confidence'),
+                    'message' => "{$treatment['code']}×{$treatment['quantity']}: ".($treatment['warning_message'] ?? 'low confidence'),
                 ];
             }
 

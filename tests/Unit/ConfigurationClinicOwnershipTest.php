@@ -2,13 +2,13 @@
 
 namespace Tests\Unit;
 
-use App\Models\Clinic;
 use App\Models\Doctor;
 use App\Models\DoctorFixedFee;
 use App\Models\Lab;
 use App\Models\LabPrice;
 use App\Models\Treatment;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -77,7 +77,7 @@ class ConfigurationClinicOwnershipTest extends TestCase
 
     public function test_clinic_id_is_required_on_configuration_tables(): void
     {
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
 
         Lab::withoutEvents(function () {
             Lab::query()->insert([

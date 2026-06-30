@@ -2,12 +2,12 @@
 
 namespace Tests\Unit;
 
-use App\Models\DailyReport;
 use App\Models\DailyWorkRow;
 use App\Models\Doctor;
 use App\Models\DoctorFixedFee;
 use App\Models\Treatment;
 use App\Models\WorkItem;
+use App\Services\Accounting\TreatmentParserService;
 use App\Services\Accounting\WaelFixedFeeCalculator;
 use Tests\TestCase;
 
@@ -156,7 +156,7 @@ class WaelFixedFeeCalculatorTest extends TestCase
             'treatment_text' => 'SINUC x 1',
         ]);
 
-        app(\App\Services\Accounting\TreatmentParserService::class)->parseAndPersist($row);
+        app(TreatmentParserService::class)->parseAndPersist($row);
 
         $this->assertSame(1, $row->workItems()->count());
         $this->assertSame('SINUS', $row->workItems()->first()->treatment->code);

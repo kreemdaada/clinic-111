@@ -3,12 +3,9 @@
 namespace Tests\Feature;
 
 use App\Enums\AuditAction;
-use App\Models\DailyReport;
-use App\Models\DailyWorkRow;
 use App\Models\Doctor;
 use App\Models\Treatment;
 use App\Models\User;
-use App\Models\WorkItem;
 use App\Services\Accounting\TreatmentParserService;
 use App\Services\DailyReport\DoctorTreatmentCatalogService;
 use Illuminate\Foundation\Testing\RefreshDatabase;

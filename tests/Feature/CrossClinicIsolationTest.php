@@ -2,12 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Clinic;
-use App\Models\Doctor;
-use App\Models\DoctorFixedFee;
-use App\Models\Lab;
-use App\Models\LabPrice;
-use App\Models\Treatment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

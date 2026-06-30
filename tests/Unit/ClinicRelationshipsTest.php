@@ -2,13 +2,13 @@
 
 namespace Tests\Unit;
 
-use App\Models\Clinic;
 use App\Models\Doctor;
 use App\Models\DoctorFixedFee;
 use App\Models\Lab;
 use App\Models\LabPrice;
 use App\Models\Treatment;
 use App\Models\User;
+use App\Services\Accounting\LabManagementService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -60,7 +60,7 @@ class ClinicRelationshipsTest extends TestCase
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
         $this->actingAs($admin);
 
-        $lab = app(\App\Services\Accounting\LabManagementService::class)->create([
+        $lab = app(LabManagementService::class)->create([
             'name' => 'Relationship Test Lab',
             'code' => 'REL_TEST_LAB',
         ]);

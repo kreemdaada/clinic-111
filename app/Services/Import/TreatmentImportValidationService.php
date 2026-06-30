@@ -250,11 +250,11 @@ class TreatmentImportValidationService
     private function suggestStandardFormat(string $part): ?string
     {
         if (preg_match('/^zircon\s+(\d+)/i', $part, $matches) === 1) {
-            return 'ZIR x ' . $matches[1];
+            return 'ZIR x '.$matches[1];
         }
 
         if (preg_match('/^([A-Za-z][A-Za-z0-9\-]*)\s+(\d+)/', $part, $matches) === 1) {
-            return strtoupper($matches[1]) . ' x ' . $matches[2];
+            return strtoupper($matches[1]).' x '.$matches[2];
         }
 
         if (preg_match('/^zircon/i', $part) === 1) {

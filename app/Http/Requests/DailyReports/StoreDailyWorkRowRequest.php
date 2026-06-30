@@ -3,8 +3,8 @@
 namespace App\Http\Requests\DailyReports;
 
 use App\Models\DailyReport;
-use App\Rules\BelongsToCurrentClinic;
 use App\Models\Doctor;
+use App\Rules\BelongsToCurrentClinic;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 

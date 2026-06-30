@@ -2,8 +2,10 @@
 
 namespace App\Enums;
 
+use App\Models\DailyReport;
+
 /**
- * Processing state of a {@see \App\Models\DailyReport} import pipeline.
+ * Processing state of a {@see DailyReport} import pipeline.
  *
  * Advances: uploaded → parsed → calculated|needs_review → approved.
  * On failure the report is marked `failed` and the DB transaction is rolled back.

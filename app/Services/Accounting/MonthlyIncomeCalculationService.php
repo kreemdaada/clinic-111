@@ -10,7 +10,6 @@ use App\Models\LabJob;
 use App\Models\Payment;
 use App\Models\WorkItem;
 use App\Services\Accounting\Concerns\ScopesAccountingQueries;
-use App\Services\Accounting\WaelFixedFeeCalculator;
 use App\Services\Configuration\CurrentClinicResolver;
 use App\Support\ClinicCurrencySupport;
 use App\Support\MoneyCalculator;
@@ -55,7 +54,7 @@ class MonthlyIncomeCalculationService
             ->where('is_active', true)
             ->orderBy('name')
             ->get()
-            ->map(fn(Doctor $doctor) => $this->calculateForDoctor($doctor, $monthStart, $monthEnd, $month));
+            ->map(fn (Doctor $doctor) => $this->calculateForDoctor($doctor, $monthStart, $monthEnd, $month));
     }
 
     /**
@@ -78,7 +77,7 @@ class MonthlyIncomeCalculationService
         }
 
         $payments = $this->forCurrentClinic(Payment::class)
-            ->whereHas('dailyWorkRow', fn($query) => $query->where('doctor_id', $doctor->id))
+            ->whereHas('dailyWorkRow', fn ($query) => $query->where('doctor_id', $doctor->id))
             ->whereBetween('paid_at', [$monthStart->toDateString(), $monthEnd->toDateString()])
             ->get();
 

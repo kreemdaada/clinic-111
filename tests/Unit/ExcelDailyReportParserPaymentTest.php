@@ -65,39 +65,39 @@ class ExcelDailyReportParserPaymentTest extends TestCase
         $rowIndex = 4;
         foreach ($patients as $index => $patient) {
             [$treatment, $dhs, $middleColumn, $visa] = $patient;
-            $sheet->setCellValue('B' . $rowIndex, 'Patient ' . ($index + 1));
-            $sheet->setCellValue('G' . $rowIndex, $treatment);
+            $sheet->setCellValue('B'.$rowIndex, 'Patient '.($index + 1));
+            $sheet->setCellValue('G'.$rowIndex, $treatment);
 
             if ($dhs !== null) {
-                $sheet->setCellValue('H' . $rowIndex, $dhs);
+                $sheet->setCellValue('H'.$rowIndex, $dhs);
             }
 
             if ($middleColumn !== null) {
-                $sheet->setCellValue('I' . $rowIndex, $middleColumn);
+                $sheet->setCellValue('I'.$rowIndex, $middleColumn);
             }
 
             if ($visa !== null) {
-                $sheet->setCellValue('J' . $rowIndex, $visa);
+                $sheet->setCellValue('J'.$rowIndex, $visa);
             }
 
             $rowIndex++;
         }
 
         $subtotalRow = $rowIndex + 1;
-        $sheet->setCellValue('H' . $subtotalRow, array_sum(array_map(
+        $sheet->setCellValue('H'.$subtotalRow, array_sum(array_map(
             fn (array $patient): float => (float) ($patient[1] ?? 0),
             $patients,
         )));
-        $sheet->setCellValue('I' . $subtotalRow, array_sum(array_map(
+        $sheet->setCellValue('I'.$subtotalRow, array_sum(array_map(
             fn (array $patient): float => (float) ($patient[2] ?? 0),
             $patients,
         )));
-        $sheet->setCellValue('J' . $subtotalRow, array_sum(array_map(
+        $sheet->setCellValue('J'.$subtotalRow, array_sum(array_map(
             fn (array $patient): float => (float) ($patient[3] ?? 0),
             $patients,
         )));
 
-        $filePath = tempnam(sys_get_temp_dir(), 'clinic-day-') . '.xlsx';
+        $filePath = tempnam(sys_get_temp_dir(), 'clinic-day-').'.xlsx';
         (new Xlsx($spreadsheet))->save($filePath);
 
         return $filePath;

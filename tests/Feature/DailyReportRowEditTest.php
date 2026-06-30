@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Enums\ReportSourceType;
 use App\Enums\ReportStatus;
-use App\Models\DailyReport;
 use App\Models\DailyWorkRow;
 use App\Models\Doctor;
 use App\Models\Treatment;

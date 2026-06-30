@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 class StoreLabRequest extends FormRequest
 {
     use ValidatesClinicScopedCode;
+
     public function authorize(): bool
     {
         return $this->user()?->isAdmin() ?? false;

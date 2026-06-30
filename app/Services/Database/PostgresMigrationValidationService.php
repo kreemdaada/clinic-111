@@ -4,7 +4,6 @@ namespace App\Services\Database;
 
 use App\Support\Database\SqliteToPostgresTableRegistry;
 use Illuminate\Database\Connection;
-use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 /**

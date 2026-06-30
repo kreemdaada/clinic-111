@@ -22,7 +22,7 @@ class TreatmentParserServiceTest extends TestCase
     {
         $parsedItems = $this->treatmentParserService->parse('ZIR x 2 + POST x 1');
 
-        $itemsByCode = collect($parsedItems)->keyBy(fn($item) => $item->treatmentCode);
+        $itemsByCode = collect($parsedItems)->keyBy(fn ($item) => $item->treatmentCode);
 
         $this->assertSame(2, $itemsByCode->get('ZIR')->quantity);
         $this->assertSame(1, $itemsByCode->get('POST')->quantity);
@@ -34,7 +34,7 @@ class TreatmentParserServiceTest extends TestCase
     {
         $parsedItems = $this->treatmentParserService->parse('IMP-CR x 3');
 
-        $itemsByCode = collect($parsedItems)->keyBy(fn($item) => $item->treatmentCode);
+        $itemsByCode = collect($parsedItems)->keyBy(fn ($item) => $item->treatmentCode);
 
         $this->assertTrue($itemsByCode->has('IMPL-CR'));
         $this->assertSame(3, $itemsByCode->get('IMPL-CR')->quantity);
@@ -46,7 +46,7 @@ class TreatmentParserServiceTest extends TestCase
 
         $this->assertCount(2, $parsedItems);
 
-        $itemsByCode = collect($parsedItems)->keyBy(fn($item) => $item->treatmentCode);
+        $itemsByCode = collect($parsedItems)->keyBy(fn ($item) => $item->treatmentCode);
 
         $this->assertTrue($itemsByCode->has('ZIR'));
         $this->assertTrue($itemsByCode->has('POST'));
@@ -58,7 +58,7 @@ class TreatmentParserServiceTest extends TestCase
     {
         $parsedItems = $this->treatmentParserService->parse('Impl |67');
 
-        $itemsByCode = collect($parsedItems)->keyBy(fn($item) => $item->treatmentCode);
+        $itemsByCode = collect($parsedItems)->keyBy(fn ($item) => $item->treatmentCode);
 
         $this->assertTrue($itemsByCode->has('IMPL'));
         $this->assertSame(2, $itemsByCode->get('IMPL')->quantity);
@@ -68,7 +68,7 @@ class TreatmentParserServiceTest extends TestCase
     {
         $parsedItems = $this->treatmentParserService->parse('Exo |2 | Impl |67');
 
-        $itemsByCode = collect($parsedItems)->keyBy(fn($item) => $item->treatmentCode);
+        $itemsByCode = collect($parsedItems)->keyBy(fn ($item) => $item->treatmentCode);
 
         $this->assertCount(2, $parsedItems);
         $this->assertTrue($itemsByCode->has('EXO'));
@@ -80,7 +80,7 @@ class TreatmentParserServiceTest extends TestCase
     {
         $parsedItems = $this->treatmentParserService->parse('Zir cr 546|5');
 
-        $itemsByCode = collect($parsedItems)->keyBy(fn($item) => $item->treatmentCode);
+        $itemsByCode = collect($parsedItems)->keyBy(fn ($item) => $item->treatmentCode);
 
         $this->assertTrue($itemsByCode->has('ZIR'));
         $this->assertSame(5, $itemsByCode->get('ZIR')->quantity);
@@ -90,7 +90,7 @@ class TreatmentParserServiceTest extends TestCase
     {
         $parsedItems = $this->treatmentParserService->parse('ZIR CR 546|6517');
 
-        $itemsByCode = collect($parsedItems)->keyBy(fn($item) => $item->treatmentCode);
+        $itemsByCode = collect($parsedItems)->keyBy(fn ($item) => $item->treatmentCode);
 
         $this->assertTrue($itemsByCode->has('ZIR'));
         $this->assertSame(3, $itemsByCode->get('ZIR')->quantity);
@@ -100,7 +100,7 @@ class TreatmentParserServiceTest extends TestCase
     {
         $parsedItems = $this->treatmentParserService->parse('ZIR-CR x 3 + IMPL-ZIR x 2');
 
-        $itemsByCode = collect($parsedItems)->keyBy(fn($item) => $item->treatmentCode);
+        $itemsByCode = collect($parsedItems)->keyBy(fn ($item) => $item->treatmentCode);
 
         $this->assertSame(3, $itemsByCode->get('ZIR')->quantity);
         $this->assertSame(2, $itemsByCode->get('IMPL-ZIR')->quantity);
@@ -110,7 +110,7 @@ class TreatmentParserServiceTest extends TestCase
     {
         $parsedItems = $this->treatmentParserService->parse('M/C-CR x 1');
 
-        $itemsByCode = collect($parsedItems)->keyBy(fn($item) => $item->treatmentCode);
+        $itemsByCode = collect($parsedItems)->keyBy(fn ($item) => $item->treatmentCode);
 
         $this->assertTrue($itemsByCode->has('MC'));
         $this->assertSame(1, $itemsByCode->get('MC')->quantity);
@@ -120,7 +120,7 @@ class TreatmentParserServiceTest extends TestCase
     {
         $parsedItems = $this->treatmentParserService->parse('Abb (2)');
 
-        $itemsByCode = collect($parsedItems)->keyBy(fn($item) => $item->treatmentCode);
+        $itemsByCode = collect($parsedItems)->keyBy(fn ($item) => $item->treatmentCode);
 
         $this->assertTrue($itemsByCode->has('ABT'));
         $this->assertSame(2, $itemsByCode->get('ABT')->quantity);
@@ -130,7 +130,7 @@ class TreatmentParserServiceTest extends TestCase
     {
         $parsedItems = $this->treatmentParserService->parse('MC cr  8765|5678');
 
-        $itemsByCode = collect($parsedItems)->keyBy(fn($item) => $item->treatmentCode);
+        $itemsByCode = collect($parsedItems)->keyBy(fn ($item) => $item->treatmentCode);
 
         $this->assertTrue($itemsByCode->has('MC'));
         $this->assertSame(8, $itemsByCode->get('MC')->quantity);
@@ -140,7 +140,7 @@ class TreatmentParserServiceTest extends TestCase
     {
         $parsedItems = $this->treatmentParserService->parse('MC cr |7 from advance 500 dhs');
 
-        $itemsByCode = collect($parsedItems)->keyBy(fn($item) => $item->treatmentCode);
+        $itemsByCode = collect($parsedItems)->keyBy(fn ($item) => $item->treatmentCode);
 
         $this->assertTrue($itemsByCode->has('MC'));
         $this->assertSame(1, $itemsByCode->get('MC')->quantity);
@@ -163,7 +163,7 @@ class TreatmentParserServiceTest extends TestCase
 
         foreach ($cases as $text => $expectedQuantities) {
             $itemsByCode = collect($this->treatmentParserService->parse($text))
-                ->keyBy(fn($item) => $item->treatmentCode);
+                ->keyBy(fn ($item) => $item->treatmentCode);
 
             foreach ($expectedQuantities as $code => $quantity) {
                 $this->assertTrue($itemsByCode->has($code), "Missing {$code} for: {$text}");

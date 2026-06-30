@@ -2,14 +2,16 @@
 
 namespace App\Models;
 
+use App\Services\Accounting\LabPriceResolver;
+use App\Support\IncomeSheetColumnMap;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Excel Server Income export layout for one doctor (sheet name, columns, layout type).
  *
- * Single source of truth for export + {@see \App\Support\IncomeSheetColumnMap} diagnostics.
- * Calculation still uses {@see \App\Services\Accounting\LabPriceResolver} (lab_prices table).
+ * Single source of truth for export + {@see IncomeSheetColumnMap} diagnostics.
+ * Calculation still uses {@see LabPriceResolver} (lab_prices table).
  */
 class DoctorIncomeExportProfile extends Model
 {

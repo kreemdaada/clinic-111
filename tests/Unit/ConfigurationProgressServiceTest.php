@@ -10,7 +10,6 @@ use App\Models\Lab;
 use App\Models\LabPrice;
 use App\Models\Treatment;
 use App\Models\User;
-use App\Services\Configuration\BusinessConfigurationService;
 use App\Services\Configuration\ConfigurationProgressService;
 use App\Support\SecurePassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;

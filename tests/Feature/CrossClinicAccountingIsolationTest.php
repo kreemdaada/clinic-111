@@ -6,10 +6,8 @@ use App\Enums\PaymentMethod;
 use App\Enums\ReportSourceType;
 use App\Enums\ReportStatus;
 use App\Models\DailyReport;
-use App\Models\LabJob;
 use App\Models\Payment;
 use App\Models\User;
-use App\Models\WorkItem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

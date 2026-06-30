@@ -4,6 +4,8 @@ namespace App\Services\Export;
 
 use App\Models\Doctor;
 use App\Models\DoctorIncomeExportProfile;
+use App\Services\Accounting\LabJobCalculationService;
+use App\Services\Accounting\LabPriceResolver;
 use App\Services\Configuration\CurrentClinicResolver;
 use App\Support\DoctorLabelNormalizer;
 use Illuminate\Support\Collection;
@@ -12,8 +14,8 @@ use Illuminate\Support\Collection;
  * Loads doctor-specific Server Income Excel layout from the database.
  *
  * Replaces hardcoded profile arrays — add/change doctors via DB + seeder/admin, not code deploy.
- * JOB calculation is unchanged: still {@see \App\Services\Accounting\LabJobCalculationService}
- * with prices from {@see \App\Services\Accounting\LabPriceResolver}.
+ * JOB calculation is unchanged: still {@see LabJobCalculationService}
+ * with prices from {@see LabPriceResolver}.
  */
 class DoctorIncomeExportProfileService
 {

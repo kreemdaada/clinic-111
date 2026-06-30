@@ -2,8 +2,10 @@
 
 namespace App\Enums;
 
+use App\Models\DailyReport;
+
 /**
- * Origin of a {@see \App\Models\DailyReport} record.
+ * Origin of a {@see DailyReport} record.
  *
  * Stored in `daily_reports.source_type`. Determines whether rows came from
  * Excel import (V1) or manual web entry (V2 planned).

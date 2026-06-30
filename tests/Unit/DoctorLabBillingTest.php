@@ -2,8 +2,6 @@
 
 namespace Tests\Unit;
 
-use App\Models\DailyReport;
-use App\Models\DailyWorkRow;
 use App\Models\Doctor;
 use App\Models\Treatment;
 use App\Models\WorkItem;

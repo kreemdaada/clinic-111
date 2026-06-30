@@ -2,10 +2,8 @@
 
 namespace Tests\Unit;
 
-use App\Models\Clinic;
 use App\Models\Doctor;
 use App\Models\Lab;
-use App\Models\User;
 use App\Services\Accounting\LabManagementService;
 use App\Services\Configuration\ConfigurationDashboardService;
 use App\Services\DailyReport\DoctorManagementService;

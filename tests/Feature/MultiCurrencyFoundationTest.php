@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Clinic;
 use App\Models\User;
+use App\Services\Accounting\PaymentCalculationService;
 use App\Support\SecurePassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -92,7 +93,7 @@ class MultiCurrencyFoundationTest extends TestCase
         $clinic->is_active = true;
         $clinic->save();
 
-        $service = app(\App\Services\Accounting\PaymentCalculationService::class);
+        $service = app(PaymentCalculationService::class);
 
         $result = $service->calculateTotalCollected(
             $clinic,

@@ -2,7 +2,16 @@
 
 namespace Tests;
 
+use App\Models\Clinic;
+use App\Models\DailyReport;
+use App\Models\DailyWorkRow;
+use App\Models\Doctor;
+use App\Models\Lab;
+use App\Models\LabJob;
+use App\Models\LabPrice;
+use App\Models\Treatment;
 use App\Models\User;
+use App\Models\WorkItem;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
@@ -31,22 +40,22 @@ abstract class TestCase extends BaseTestCase
         return $user;
     }
 
-    protected function clinic111(): \App\Models\Clinic
+    protected function clinic111(): Clinic
     {
-        return \App\Models\Clinic::query()->where('code', 'CLINIC_111')->firstOrFail();
+        return Clinic::query()->where('code', 'CLINIC_111')->firstOrFail();
     }
 
-    protected function clinic222(): \App\Models\Clinic
+    protected function clinic222(): Clinic
     {
-        return \App\Models\Clinic::query()->where('code', 'CLINIC_222')->firstOrFail();
+        return Clinic::query()->where('code', 'CLINIC_222')->firstOrFail();
     }
 
     /**
-     * @return array{clinic: \App\Models\Clinic, admin: User}
+     * @return array{clinic: Clinic, admin: User}
      */
     protected function seedClinic222Tenant(): array
     {
-        $clinic = \App\Models\Clinic::query()->create([
+        $clinic = Clinic::query()->create([
             'name' => 'Clinic 222',
             'code' => 'CLINIC_222',
             'currency' => 'AED',
@@ -66,13 +75,13 @@ abstract class TestCase extends BaseTestCase
         $admin->email_verified_at = now();
         $admin->save();
 
-        $lab = \App\Models\Lab::query()->create([
+        $lab = Lab::query()->create([
             'clinic_id' => $clinic->id,
             'name' => 'Clinic 222 Lab',
             'code' => 'C222_LAB',
         ]);
 
-        $treatment = \App\Models\Treatment::query()->create([
+        $treatment = Treatment::query()->create([
             'clinic_id' => $clinic->id,
             'code' => 'C222_TX',
             'name' => 'Clinic 222 Treatment',
@@ -81,7 +90,7 @@ abstract class TestCase extends BaseTestCase
         $treatment->is_active = true;
         $treatment->save();
 
-        $doctor = \App\Models\Doctor::query()->create([
+        $doctor = Doctor::query()->create([
             'clinic_id' => $clinic->id,
             'name' => 'Dr Clinic 222',
             'code' => 'C222_DOC',
@@ -91,7 +100,7 @@ abstract class TestCase extends BaseTestCase
             'is_active' => true,
         ]);
 
-        $price = \App\Models\LabPrice::query()->create([
+        $price = LabPrice::query()->create([
             'clinic_id' => $clinic->id,
             'lab_id' => $lab->id,
             'treatment_id' => $treatment->id,
@@ -128,9 +137,9 @@ abstract class TestCase extends BaseTestCase
     /**
      * @param  array<string, mixed>  $attributes
      */
-    protected function createDailyReport(array $attributes = []): \App\Models\DailyReport
+    protected function createDailyReport(array $attributes = []): DailyReport
     {
-        return \App\Models\DailyReport::query()->create($this->withClinicId($attributes));
+        return DailyReport::query()->create($this->withClinicId($attributes));
     }
 
     /**
@@ -144,17 +153,17 @@ abstract class TestCase extends BaseTestCase
     /**
      * @param  array<string, mixed>  $attributes
      */
-    protected function createClinic222DailyReport(array $attributes = []): \App\Models\DailyReport
+    protected function createClinic222DailyReport(array $attributes = []): DailyReport
     {
-        return \App\Models\DailyReport::query()->create($this->withClinic222Id($attributes));
+        return DailyReport::query()->create($this->withClinic222Id($attributes));
     }
 
     /**
      * @param  array<string, mixed>  $attributes
      */
-    protected function createDailyWorkRow(\App\Models\DailyReport $dailyReport, array $attributes = []): \App\Models\DailyWorkRow
+    protected function createDailyWorkRow(DailyReport $dailyReport, array $attributes = []): DailyWorkRow
     {
-        return \App\Models\DailyWorkRow::query()->create(array_merge([
+        return DailyWorkRow::query()->create(array_merge([
             'clinic_id' => $dailyReport->clinic_id,
             'daily_report_id' => $dailyReport->id,
         ], $attributes));
@@ -163,9 +172,9 @@ abstract class TestCase extends BaseTestCase
     /**
      * @param  array<string, mixed>  $attributes
      */
-    protected function createWorkItem(\App\Models\DailyWorkRow $dailyWorkRow, array $attributes = []): \App\Models\WorkItem
+    protected function createWorkItem(DailyWorkRow $dailyWorkRow, array $attributes = []): WorkItem
     {
-        return \App\Models\WorkItem::query()->create(array_merge([
+        return WorkItem::query()->create(array_merge([
             'clinic_id' => $dailyWorkRow->clinic_id,
             'daily_work_row_id' => $dailyWorkRow->id,
         ], $attributes));
@@ -174,9 +183,9 @@ abstract class TestCase extends BaseTestCase
     /**
      * @param  array<string, mixed>  $attributes
      */
-    protected function createLabJob(\App\Models\WorkItem $workItem, array $attributes = []): \App\Models\LabJob
+    protected function createLabJob(WorkItem $workItem, array $attributes = []): LabJob
     {
-        return \App\Models\LabJob::query()->create(array_merge([
+        return LabJob::query()->create(array_merge([
             'clinic_id' => $workItem->clinic_id,
             'work_item_id' => $workItem->id,
         ], $attributes));

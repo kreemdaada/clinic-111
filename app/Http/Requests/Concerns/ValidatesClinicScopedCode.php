@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Concerns;
 
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
 
 trait ValidatesClinicScopedCode
@@ -10,7 +11,7 @@ trait ValidatesClinicScopedCode
     {
         $clinicId = $this->user()?->clinic_id;
 
-        $rule = \Illuminate\Validation\Rule::unique($table, 'code');
+        $rule = Rule::unique($table, 'code');
 
         if ($clinicId !== null) {
             $rule->where('clinic_id', $clinicId);

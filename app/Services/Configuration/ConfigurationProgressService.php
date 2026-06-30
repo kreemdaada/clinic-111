@@ -124,7 +124,7 @@ class ConfigurationProgressService
         $readyForImport = $completedRequired === $totalRequired;
 
         if ($readyForImport) {
-            $steps = array_map(function (array $step) use ($readyForImport) {
+            $steps = array_map(function (array $step) {
                 if ($step['key'] === self::STEP_IMPORT) {
                     $step['completed'] = true;
                 }

@@ -11,6 +11,7 @@ use App\Models\Treatment;
 use App\Services\Accounting\LabJobCalculationService;
 use App\Services\Accounting\MonthlyIncomeCalculationService;
 use App\Services\Accounting\PaymentCalculationService;
+use App\Services\DailyReport\DailyReportEditorService;
 use App\Services\Import\DailyReportImportService;
 use App\Support\AccountingScopedQuery;
 use RuntimeException;
@@ -28,7 +29,7 @@ class AccountingOwnershipTest extends TestCase
 
     public function test_manual_report_create_assigns_current_clinic_id(): void
     {
-        $report = app(\App\Services\DailyReport\DailyReportEditorService::class)
+        $report = app(DailyReportEditorService::class)
             ->createManualReport(now()->startOfMonth(), 'Ownership test');
 
         $this->assertSame($this->clinic111()->id, $report->clinic_id);

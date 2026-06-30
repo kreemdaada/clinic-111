@@ -10,7 +10,10 @@ use App\Models\Lab;
 use App\Models\LabPrice;
 use App\Models\Treatment;
 use App\Models\User;
+use App\Services\Accounting\LabBillingResolver;
+use App\Services\Accounting\LabPriceResolver;
 use App\Services\Accounting\PaymentCalculationService;
+use App\Services\Accounting\TreatmentParserService;
 use App\Services\DailyReport\DailyReportEditorService;
 use App\Support\MoneyCalculator;
 use Carbon\Carbon;
@@ -239,8 +242,8 @@ class DailyReportEditorCurrencyTest extends TestCase
         $this->assertDatabaseCount('doctor_lab_billings', 2);
 
         $doctor = $doctor->fresh(['doctorLabBillings']);
-        $billingResolver = app(\App\Services\Accounting\LabBillingResolver::class);
-        $priceResolver = app(\App\Services\Accounting\LabPriceResolver::class);
+        $billingResolver = app(LabBillingResolver::class);
+        $priceResolver = app(LabPriceResolver::class);
         $activeLabs = Lab::query()->where('clinic_id', $clinic->id)->where('is_active', true)->get();
 
         $this->assertTrue($billingResolver->shouldBillLabJob($doctor, $zir));
@@ -248,7 +251,7 @@ class DailyReportEditorCurrencyTest extends TestCase
         $this->assertNotNull($priceResolver->resolveWithLabFallback($doctor, $zir, $activeLabs, Carbon::parse('2026-06-15')));
         $this->assertNotNull($priceResolver->resolveWithLabFallback($doctor, $impl, $activeLabs, Carbon::parse('2026-06-15')));
 
-        $parser = app(\App\Services\Accounting\TreatmentParserService::class);
+        $parser = app(TreatmentParserService::class);
         $parsed = $parser->parse('ZIR x 1 + IMPL x 1');
         $this->assertCount(2, $parsed, 'Expected parser to recognize ZIR and IMPL for this clinic');
 

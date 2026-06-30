@@ -1,17 +1,17 @@
 <?php
 
-use App\Http\Controllers\Api\ConfigurationStatusController;
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ClinicAdminController;
 use App\Http\Controllers\Api\ClinicOnboardingController;
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\DoctorFixedFeeAdminController;
+use App\Http\Controllers\Api\ConfigurationStatusController;
 use App\Http\Controllers\Api\DailyReportController;
+use App\Http\Controllers\Api\DoctorFixedFeeAdminController;
 use App\Http\Controllers\Api\LabAdminController;
 use App\Http\Controllers\Api\LabPriceAdminController;
 use App\Http\Controllers\Api\MonthlyIncomeController;
+use App\Http\Controllers\Api\ReferenceDataController;
 use App\Http\Controllers\Api\TreatmentAdminController;
 use App\Http\Controllers\Api\UserAdminController;
-use App\Http\Controllers\Api\ReferenceDataController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);

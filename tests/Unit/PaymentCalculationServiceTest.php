@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Models\Clinic;
 use App\Services\Accounting\PaymentCalculationService;
+use App\Support\ClinicCurrencySupport;
 use Tests\TestCase;
 
 class PaymentCalculationServiceTest extends TestCase
@@ -81,7 +82,7 @@ class PaymentCalculationServiceTest extends TestCase
         $clinic->is_active = true;
         $clinic->save();
 
-        $this->assertFalse(\App\Support\ClinicCurrencySupport::usesLegacyPaymentLayout($clinic));
+        $this->assertFalse(ClinicCurrencySupport::usesLegacyPaymentLayout($clinic));
 
         $result = $this->paymentCalculationService->calculateTotalCollected(
             $clinic,
@@ -100,7 +101,7 @@ class PaymentCalculationServiceTest extends TestCase
         $this->seedAccountingData();
         $clinic = $this->clinic111();
 
-        $this->assertTrue(\App\Support\ClinicCurrencySupport::usesLegacyPaymentLayout($clinic));
+        $this->assertTrue(ClinicCurrencySupport::usesLegacyPaymentLayout($clinic));
 
         $result = $this->paymentCalculationService->calculateTotalCollected(
             $clinic,
