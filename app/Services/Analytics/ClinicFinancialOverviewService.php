@@ -22,8 +22,8 @@ use Illuminate\Support\Facades\DB;
 /**
  * Server-side clinic financial overview (ADR-036).
  *
- * Revenue = SUM(payments.amount_aed) for work rows in period (ADR-001).
- * Lab cost = SUM(lab_jobs.total_cost_aed) for calculated/adjusted jobs (ADR-002).
+ * Revenue and lab cost are summed from AED-normalized storage columns, then converted
+ * to the clinic base currency for display ({@see ClinicCurrencySupport::fromStoredAedEquivalent}).
  */
 class ClinicFinancialOverviewService
 {
@@ -44,15 +44,15 @@ class ClinicFinancialOverviewService
         $previous = $period->previous();
         $currency = ClinicCurrencySupport::baseCurrency($clinic);
 
-        $revenueCurrent = $this->sumRevenue($period);
-        $revenuePrevious = $this->sumRevenue($previous);
-        $labCurrent = $this->sumLabCost($period);
-        $labPrevious = $this->sumLabCost($previous);
+        $revenueCurrent = $this->sumRevenue($period, $currency);
+        $revenuePrevious = $this->sumRevenue($previous, $currency);
+        $labCurrent = $this->sumLabCost($period, $currency);
+        $labPrevious = $this->sumLabCost($previous, $currency);
         $resultCurrent = MoneyCalculator::subtract($revenueCurrent, $labCurrent);
         $resultPrevious = MoneyCalculator::subtract($revenuePrevious, $labPrevious);
 
         $revenueTrend = $this->buildRevenueTrend($period, $currency);
-        $topTreatments = $this->buildTopTreatments($period);
+        $topTreatments = $this->buildTopTreatments($period, $currency);
         $reportMeta = $this->reportMetadata($period);
         $needsReviewCount = $this->countNeedsReviewReports($period);
 
@@ -87,20 +87,28 @@ class ClinicFinancialOverviewService
         );
     }
 
-    private function sumRevenue(FinancialPeriod $period): string
+    private function sumRevenue(FinancialPeriod $period, string $clinicCurrency): string
     {
-        $total = $this->paymentsInPeriodQuery($period)
+        $totalAed = $this->paymentsInPeriodQuery($period)
             ->sum('payments.amount_aed');
 
-        return $this->decimal($total);
+        return $this->fromStoredTotal($totalAed, $clinicCurrency);
     }
 
-    private function sumLabCost(FinancialPeriod $period): string
+    private function sumLabCost(FinancialPeriod $period, string $clinicCurrency): string
     {
-        $total = $this->labJobsInPeriodQuery($period)
+        $totalAed = $this->labJobsInPeriodQuery($period)
             ->sum('lab_jobs.total_cost_aed');
 
-        return $this->decimal($total);
+        return $this->fromStoredTotal($totalAed, $clinicCurrency);
+    }
+
+    private function fromStoredTotal(mixed $amountAed, string $clinicCurrency): string
+    {
+        return ClinicCurrencySupport::fromStoredAedEquivalent(
+            $this->decimal($amountAed),
+            $clinicCurrency,
+        );
     }
 
     /**
@@ -112,7 +120,7 @@ class ClinicFinancialOverviewService
         $amounts = [];
 
         foreach ($periods as $period) {
-            $amounts[$period->label] = $this->sumRevenue($period);
+            $amounts[$period->label] = $this->sumRevenue($period, $currency);
         }
 
         $max = '0.00';
@@ -143,7 +151,7 @@ class ClinicFinancialOverviewService
     /**
      * @return list<TreatmentRevenueData>
      */
-    private function buildTopTreatments(FinancialPeriod $period): array
+    private function buildTopTreatments(FinancialPeriod $period, string $clinicCurrency): array
     {
         $rows = DB::table('daily_work_rows as dwr')
             ->join('daily_reports as dr', 'dwr.daily_report_id', '=', 'dr.id')
@@ -191,7 +199,7 @@ class ClinicFinancialOverviewService
                 continue;
             }
 
-            $rowPaid = $this->decimal($paidByRow[$item->daily_work_row_id] ?? '0');
+            $rowPaid = $this->fromStoredTotal($paidByRow[$item->daily_work_row_id] ?? '0', $clinicCurrency);
             if (bccomp($rowPaid, '0', 2) === 0) {
                 continue;
             }
