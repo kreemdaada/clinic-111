@@ -3,7 +3,6 @@
 namespace Tests\Unit;
 
 use App\Exceptions\BusinessConfigurationIncompleteException;
-use App\Models\Clinic;
 use App\Models\User;
 use App\Services\Configuration\BusinessConfigurationService;
 use App\Support\SecurePassword;

@@ -4,6 +4,7 @@ namespace App\Services\DailyReport;
 
 use App\Enums\ReportSourceType;
 use App\Models\DailyReport;
+use App\Models\DailyWorkRow;
 use App\Services\Accounting\Concerns\ScopesAccountingQueries;
 use App\Services\Configuration\CurrentClinicResolver;
 use App\Support\AccountingScopedQuery;
@@ -68,7 +69,7 @@ class DailyReportQueryService
     }
 
     /**
-     * @return Builder<\App\Models\DailyWorkRow>
+     * @return Builder<DailyWorkRow>
      */
     public function workRowsQuery(DailyReport $dailyReport): Builder
     {

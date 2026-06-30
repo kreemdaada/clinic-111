@@ -2,8 +2,10 @@
 
 namespace App\Enums;
 
+use App\Models\User;
+
 /**
- * Application role for {@see \App\Models\User} access control.
+ * Application role for {@see User} access control.
  *
  * Enforced by `EnsureUserHasRole` middleware on API and web routes.
  */

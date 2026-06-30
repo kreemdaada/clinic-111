@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Exceptions\CurrentClinicException;
 use App\Models\Clinic;
 use App\Models\User;
+use App\Services\Accounting\LabManagementService;
 use App\Services\Configuration\CurrentClinicResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -60,7 +61,7 @@ class CurrentClinicResolverTest extends TestCase
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
         $this->actingAs($admin);
 
-        $lab = app(\App\Services\Accounting\LabManagementService::class)->create([
+        $lab = app(LabManagementService::class)->create([
             'name' => 'Resolver Lab',
             'code' => 'RESOLVER_LAB',
         ]);

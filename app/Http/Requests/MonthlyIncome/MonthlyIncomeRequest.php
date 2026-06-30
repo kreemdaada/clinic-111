@@ -2,12 +2,13 @@
 
 namespace App\Http\Requests\MonthlyIncome;
 
+use App\Http\Controllers\Api\MonthlyIncomeController;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * Validates the `month` query parameter for monthly income API requests.
  *
- * Used by {@see \App\Http\Controllers\Api\MonthlyIncomeController::index()}.
+ * Used by {@see MonthlyIncomeController::index()}.
  */
 class MonthlyIncomeRequest extends FormRequest
 {

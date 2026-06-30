@@ -1,0 +1,113 @@
+name: dentalfinance-production
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-app-image: &app-image
+  image: ${APP_IMAGE:?Set APP_IMAGE to ghcr.io/owner/repo:commit-sha}
+  env_file:
+    - ${APP_ENV_FILE:?Set APP_ENV_FILE to the server-side app.env path}
+  networks:
+    - dentalfinance_internal
+  restart: unless-stopped
+  logging: *default-logging
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  app:
+    <<: *app-image
+    container_name: dentalfinance_app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+      - app_storage:/app/storage/app
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/up"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+
+  worker:
+    <<: *app-image
+    container_name: dentalfinance_worker
+    user: www-data
+    entrypoint: ["php", "artisan"]
+    command:
+      - queue:work
+      - database
+      - --sleep=3
+      - --tries=3
+      - --timeout=3600
+      - --max-time=3600
+    volumes:
+      - app_storage:/app/storage/app
+    depends_on:
+      database:
+        condition: service_healthy
+      app:
+        condition: service_started
+    stop_grace_period: 3900s
+
+  scheduler:
+    <<: *app-image
+    container_name: dentalfinance_scheduler
+    user: www-data
+    entrypoint: ["php", "artisan"]
+    command: ["schedule:work"]
+    volumes:
+      - app_storage:/app/storage/app
+    depends_on:
+      database:
+        condition: service_healthy
+      app:
+        condition: service_started
+
+  database:
+    image: postgres:16-bookworm
+    container_name: dentalfinance_database
+    restart: unless-stopped
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
+    env_file:
+      - ${APP_ENV_FILE:?Set APP_ENV_FILE to the server-side app.env path}
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:?Set DB_DATABASE in app.env}
+      POSTGRES_USER: ${DB_USERNAME:?Set DB_USERNAME in app.env}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in app.env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - dentalfinance_internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+networks:
+  dentalfinance_internal:
+    name: dentalfinance_internal
+    driver: bridge
+
+volumes:
+  postgres_data:
+    name: dentalfinance_postgres_data
+  caddy_data:
+    name: dentalfinance_caddy_data
+  caddy_config:
+    name: dentalfinance_caddy_config
+  app_storage:
+    name: dentalfinance_app_storage

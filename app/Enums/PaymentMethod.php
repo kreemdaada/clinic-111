@@ -2,8 +2,10 @@
 
 namespace App\Enums;
 
+use App\Models\Payment;
+
 /**
- * Payment channel for a {@see \App\Models\Payment} row.
+ * Payment channel for a {@see Payment} row.
  *
  * DHS, cheque, Tabby, and VISA are stored in AED. USD is converted to AED for TOTAL.
  */

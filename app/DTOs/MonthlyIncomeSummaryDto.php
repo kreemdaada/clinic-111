@@ -2,13 +2,14 @@
 
 namespace App\DTOs;
 
+use App\Services\Accounting\MonthlyIncomeCalculationService;
 use App\Support\ClinicCurrencySupport;
 
 /**
  * Immutable monthly income summary for one doctor.
  *
  * All monetary values are decimal strings in AED (2 decimal places).
- * Produced by {@see \App\Services\Accounting\MonthlyIncomeCalculationService}.
+ * Produced by {@see MonthlyIncomeCalculationService}.
  */
 readonly class MonthlyIncomeSummaryDto
 {

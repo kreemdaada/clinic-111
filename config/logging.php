@@ -1,5 +1,6 @@
 <?php
 
+use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -142,7 +143,7 @@ return [
             'handler_with' => [
                 'stream' => 'php://stderr',
             ],
-            'formatter' => Monolog\Formatter\LineFormatter::class,
+            'formatter' => LineFormatter::class,
             'formatter_with' => [
                 'format' => "[%datetime%] %message%\n",
                 'dateFormat' => 'D M d H:i:s Y',

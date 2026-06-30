@@ -12,6 +12,7 @@ use Illuminate\Validation\Rule;
 class StoreDoctorRequest extends FormRequest
 {
     use ValidatesClinicScopedCode;
+
     public function authorize(): bool
     {
         return $this->user()?->isAdmin() ?? false;

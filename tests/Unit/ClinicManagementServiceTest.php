@@ -7,6 +7,7 @@ use App\Models\Clinic;
 use App\Models\User;
 use App\Services\Configuration\ClinicManagementService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 class ClinicManagementServiceTest extends TestCase
@@ -73,7 +74,7 @@ class ClinicManagementServiceTest extends TestCase
         ]);
         $this->actingAs($admin);
 
-        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectException(HttpException::class);
 
         $this->clinicManagementService->deactivate($clinic);
     }

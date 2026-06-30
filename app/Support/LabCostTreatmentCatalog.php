@@ -3,12 +3,13 @@
 namespace App\Support;
 
 use App\Models\Treatment;
+use Database\Seeders\TreatmentSeeder;
 
 /**
  * Resolves lab-cost treatment flags from the database catalog.
  *
  * Runtime business logic must not hardcode treatment codes.
- * Initial seed data lives in {@see \Database\Seeders\TreatmentSeeder}.
+ * Initial seed data lives in {@see TreatmentSeeder}.
  */
 final class LabCostTreatmentCatalog
 {

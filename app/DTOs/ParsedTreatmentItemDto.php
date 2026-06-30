@@ -2,11 +2,14 @@
 
 namespace App\DTOs;
 
+use App\Models\WorkItem;
+use App\Services\Accounting\TreatmentParserService;
+
 /**
  * One treatment line extracted from a daily report `treatment_text` field.
  *
- * Created by {@see \App\Services\Accounting\TreatmentParserService::parse()}.
- * Valid known codes are persisted as {@see \App\Models\WorkItem} rows during import.
+ * Created by {@see TreatmentParserService::parse()}.
+ * Valid known codes are persisted as {@see WorkItem} rows during import.
  */
 readonly class ParsedTreatmentItemDto
 {

@@ -136,8 +136,8 @@ class DailyReportEditorService
             /** @var DailyWorkRow $workRow */
             $workRow = $isCorrection
                 ? AccountingScopedQuery::workRows((int) $dailyReport->clinic_id, $dailyReport->id)
-                ->where('id', $payload['work_row_id'])
-                ->firstOrFail()
+                    ->where('id', $payload['work_row_id'])
+                    ->firstOrFail()
                 : new DailyWorkRow([
                     'clinic_id' => $dailyReport->clinic_id,
                     'daily_report_id' => $dailyReport->id,
@@ -377,7 +377,7 @@ class DailyReportEditorService
             foreach ($treatmentLines as $line) {
                 $code = strtoupper(trim((string) ($line['code'] ?? '')));
                 $qty = (int) ($line['quantity'] ?? 0);
-                $fee = $doctor->doctorFixedFees->first(fn($row) => $row->treatment?->code === $code);
+                $fee = $doctor->doctorFixedFees->first(fn ($row) => $row->treatment?->code === $code);
 
                 if ($fee === null || $qty < 1 || ! in_array($code, WaelFixedFeeCalculator::BILLABLE_CODES, true)) {
                     continue;

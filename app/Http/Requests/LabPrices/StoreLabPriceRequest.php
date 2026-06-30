@@ -4,7 +4,6 @@ namespace App\Http\Requests\LabPrices;
 
 use App\Models\Doctor;
 use App\Models\Lab;
-use App\Models\LabPrice;
 use App\Models\Treatment;
 use App\Rules\BelongsToCurrentClinic;
 use App\Rules\SupportedCurrency;

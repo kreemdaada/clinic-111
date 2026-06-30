@@ -4,7 +4,6 @@ namespace App\Services\Import;
 
 use Carbon\Carbon;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Reader\IReader;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
@@ -732,7 +731,7 @@ class ExcelDailyReportParser
      */
     private function readCellValue(Worksheet $worksheet, string $columnLetter, int $rowIndex): ?string
     {
-        $value = trim((string) $worksheet->getCell($columnLetter . $rowIndex)->getCalculatedValue());
+        $value = trim((string) $worksheet->getCell($columnLetter.$rowIndex)->getCalculatedValue());
 
         return $value === '' ? null : $value;
     }

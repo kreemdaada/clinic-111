@@ -9,8 +9,14 @@ use App\Models\Clinic;
 use App\Models\DailyReport;
 use App\Models\DailyWorkRow;
 use App\Models\Doctor;
+use App\Models\DoctorLabBilling;
+use App\Models\Lab;
+use App\Models\LabPrice;
+use App\Models\Treatment;
 use App\Models\User;
+use App\Models\WorkItem;
 use App\Services\Export\DoctorsIncomeExcelExportService;
+use App\Services\Import\DailyReportImportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
@@ -137,7 +143,7 @@ class DoctorsIncomeExcelExportClinicTest extends TestCase
         $doctor->is_active = true;
         $doctor->save();
 
-        $treatment = \App\Models\Treatment::query()->create([
+        $treatment = Treatment::query()->create([
             'clinic_id' => $clinic->id,
             'code' => 'IMPL-ZIR',
             'name' => 'Implant Zircon',
@@ -146,13 +152,13 @@ class DoctorsIncomeExcelExportClinicTest extends TestCase
         $treatment->is_active = true;
         $treatment->save();
 
-        \App\Models\DoctorLabBilling::query()->create([
+        DoctorLabBilling::query()->create([
             'doctor_id' => $doctor->id,
             'treatment_id' => $treatment->id,
             'bill_lab_job' => true,
         ]);
 
-        $lab = \App\Models\Lab::query()->create([
+        $lab = Lab::query()->create([
             'clinic_id' => $clinic->id,
             'name' => 'Main Lab',
             'code' => 'MAIN',
@@ -160,7 +166,7 @@ class DoctorsIncomeExcelExportClinicTest extends TestCase
         $lab->is_active = true;
         $lab->save();
 
-        $price = \App\Models\LabPrice::query()->create([
+        $price = LabPrice::query()->create([
             'clinic_id' => $clinic->id,
             'lab_id' => $lab->id,
             'treatment_id' => $treatment->id,
@@ -193,7 +199,7 @@ class DoctorsIncomeExcelExportClinicTest extends TestCase
             'paid_total_aed' => '383.25',
         ]);
 
-        \App\Models\WorkItem::query()->create([
+        WorkItem::query()->create([
             'clinic_id' => $clinic->id,
             'daily_work_row_id' => $workRow->id,
             'treatment_id' => $treatment->id,
@@ -201,7 +207,7 @@ class DoctorsIncomeExcelExportClinicTest extends TestCase
             'confidence' => 100,
         ]);
 
-        app(\App\Services\Import\DailyReportImportService::class)->processParsedReport($report->fresh());
+        app(DailyReportImportService::class)->processParsedReport($report->fresh());
 
         $path = app(DoctorsIncomeExcelExportService::class)->exportForReport($report->fresh());
         $spreadsheet = IOFactory::load($path);

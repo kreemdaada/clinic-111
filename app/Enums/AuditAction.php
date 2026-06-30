@@ -2,8 +2,10 @@
 
 namespace App\Enums;
 
+use App\Models\AuditLog;
+
 /**
- * Action type recorded in {@see \App\Models\AuditLog}.
+ * Action type recorded in {@see AuditLog}.
  *
  * Used for traceability of imports, price changes, and manual corrections.
  */

@@ -8,8 +8,8 @@ use App\Models\LabPrice;
 use App\Models\Treatment;
 use App\Rules\BelongsToCurrentClinic;
 use App\Rules\SupportedCurrency;
-use App\Support\LabPriceOverlapValidator;
 use App\Services\Configuration\CurrentClinicResolver;
+use App\Support\LabPriceOverlapValidator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 

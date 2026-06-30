@@ -45,7 +45,7 @@ class DoctorIncomeExportProfileProvisioner
             $label = trim($doctor->code);
         }
 
-        return 'Dr. ' . $label;
+        return 'Dr. '.$label;
     }
 
     /**

@@ -2,11 +2,14 @@
 
 namespace App\Enums;
 
+use App\Models\Doctor;
+use App\Services\Accounting\MonthlyIncomeCalculationService;
+
 /**
- * How {@see \App\Models\Doctor} income is calculated for a reporting period.
+ * How {@see Doctor} income is calculated for a reporting period.
  *
  * Stored in `doctors.commission_type`. Drives
- * {@see \App\Services\Accounting\MonthlyIncomeCalculationService}.
+ * {@see MonthlyIncomeCalculationService}.
  */
 enum CommissionType: string
 {

@@ -2,9 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\DailyReport;
 use App\Models\DailyReportImportWarning;
-use App\Models\DailyWorkRow;
 use App\Models\Doctor;
 use Tests\TestCase;
 

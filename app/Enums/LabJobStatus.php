@@ -2,8 +2,10 @@
 
 namespace App\Enums;
 
+use App\Models\LabJob;
+
 /**
- * Lifecycle status of a {@see \App\Models\LabJob} (calculated lab cost row).
+ * Lifecycle status of a {@see LabJob} (calculated lab cost row).
  *
  * Financial records are never deleted; status changes preserve audit history.
  */

@@ -2,10 +2,13 @@
 
 namespace Tests\Unit;
 
+use App\Models\Clinic;
 use App\Models\Doctor;
 use App\Models\Lab;
+use App\Models\LabPrice;
 use App\Models\Treatment;
 use App\Services\Accounting\LabPriceResolver;
+use Carbon\Carbon;
 use Tests\TestCase;
 
 class LabPriceResolverTest extends TestCase
@@ -126,7 +129,7 @@ class LabPriceResolverTest extends TestCase
 
     public function test_resolves_price_on_onboarding_lab_code_not_main_lab(): void
     {
-        $clinic = \App\Models\Clinic::query()->create([
+        $clinic = Clinic::query()->create([
             'name' => 'Harbor Dental',
             'code' => 'HARBOR',
             'currency' => 'USD',
@@ -153,7 +156,7 @@ class LabPriceResolverTest extends TestCase
         $treatment->is_active = true;
         $treatment->save();
 
-        $price = \App\Models\LabPrice::query()->create([
+        $price = LabPrice::query()->create([
             'clinic_id' => $clinic->id,
             'lab_id' => $lab->id,
             'treatment_id' => $treatment->id,
@@ -190,7 +193,7 @@ class LabPriceResolverTest extends TestCase
         $treatment = $this->createLabCostTreatment('LP_BOUNDARY', 'Boundary LP Test');
         $mainLab = Lab::query()->where('code', 'MAIN_LAB')->firstOrFail();
 
-        $price = \App\Models\LabPrice::query()->create([
+        $price = LabPrice::query()->create([
             'clinic_id' => $doctorJack->clinic_id,
             'lab_id' => $mainLab->id,
             'treatment_id' => $treatment->id,
@@ -206,7 +209,7 @@ class LabPriceResolverTest extends TestCase
             $doctorJack,
             $treatment,
             $mainLab,
-            \Carbon\Carbon::parse('2026-06-01'),
+            Carbon::parse('2026-06-01'),
         );
 
         $this->assertNotNull($resolved);

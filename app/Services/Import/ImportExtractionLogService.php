@@ -129,7 +129,7 @@ class ImportExtractionLogService
             $event['visa_aed'] ?? '0',
             $this->formatPaymentTotal($event),
         ));
-        $this->terminal('        TEXT: ' . $this->truncateTreatmentText((string) ($event['treatment_text'] ?? ''), 120));
+        $this->terminal('        TEXT: '.$this->truncateTreatmentText((string) ($event['treatment_text'] ?? ''), 120));
     }
 
     /**
@@ -277,7 +277,7 @@ class ImportExtractionLogService
 
         $treatments = array_merge(
             $diagnostics['treatments_lab'] ?? [],
-            array_map(fn(array $t): array => array_merge($t, ['counts_for_job' => false]), $diagnostics['treatments_ignored'] ?? []),
+            array_map(fn (array $t): array => array_merge($t, ['counts_for_job' => false]), $diagnostics['treatments_ignored'] ?? []),
         );
 
         $patch = [
@@ -323,7 +323,7 @@ class ImportExtractionLogService
         $this->document['unknown_doctor_errors'] = ExtractionLogDoctorGrouper::unknownDoctorErrors($this->document);
         $this->document['issue_summary'] = $this->buildIssueSummary();
 
-        $relativePath = 'import-extractions/report-' . $dailyReport->id . '.json';
+        $relativePath = 'import-extractions/report-'.$dailyReport->id.'.json';
         Storage::disk('local')->put($relativePath, json_encode($this->document, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
         $absolutePath = Storage::disk('local')->path($relativePath);
@@ -369,8 +369,8 @@ class ImportExtractionLogService
         ));
 
         $this->terminal('[IMPORT] --- Done ---');
-        $this->terminal('[IMPORT] JSON log: ' . $absolutePath);
-        $this->terminal('[IMPORT] Web UI: /logs/extraction/' . $dailyReport->id);
+        $this->terminal('[IMPORT] JSON log: '.$absolutePath);
+        $this->terminal('[IMPORT] Web UI: /logs/extraction/'.$dailyReport->id);
 
         return $absolutePath;
     }
@@ -383,7 +383,7 @@ class ImportExtractionLogService
      */
     public function getLogPath(DailyReport $dailyReport): ?string
     {
-        $relativePath = 'import-extractions/report-' . $dailyReport->id . '.json';
+        $relativePath = 'import-extractions/report-'.$dailyReport->id.'.json';
 
         if (! Storage::disk('local')->exists($relativePath)) {
             return null;
@@ -400,7 +400,7 @@ class ImportExtractionLogService
      */
     public function loadForReport(DailyReport $dailyReport): ?array
     {
-        $relativePath = 'import-extractions/report-' . $dailyReport->id . '.json';
+        $relativePath = 'import-extractions/report-'.$dailyReport->id.'.json';
 
         if (! Storage::disk('local')->exists($relativePath)) {
             return null;
@@ -442,7 +442,7 @@ class ImportExtractionLogService
             $paymentOk ? '' : ' ⚠ TOTAL mismatch',
         ));
 
-        $this->terminal('  TEXT     ' . ($row['treatment_text'] ?? '-'));
+        $this->terminal('  TEXT     '.($row['treatment_text'] ?? '-'));
 
         if ($diag !== null && ($diag['job']['lines'] ?? []) !== []) {
             foreach ($diag['job']['lines'] as $line) {
@@ -463,13 +463,13 @@ class ImportExtractionLogService
         if ($diag !== null && ($diag['treatments_ignored'] ?? []) !== []) {
             $parts = [];
             foreach ($diag['treatments_ignored'] as $t) {
-                $parts[] = ($t['code'] ?? '?') . '×' . ($t['quantity'] ?? 0);
+                $parts[] = ($t['code'] ?? '?').'×'.($t['quantity'] ?? 0);
             }
-            $this->terminal('  IGNORED  ' . implode(', ', $parts) . ' (no JOB — e.g. CF/RCT/SxP)');
+            $this->terminal('  IGNORED  '.implode(', ', $parts).' (no JOB — e.g. CF/RCT/SxP)');
         }
 
         if ($flags !== []) {
-            $this->terminal('  FLAGS    ' . implode(', ', $flags));
+            $this->terminal('  FLAGS    '.implode(', ', $flags));
         }
 
         foreach ($row['issues'] ?? [] as $issue) {
@@ -544,7 +544,7 @@ class ImportExtractionLogService
         }
 
         if (strlen($text) > $maxLength) {
-            return substr($text, 0, $maxLength - 3) . '...';
+            return substr($text, 0, $maxLength - 3).'...';
         }
 
         return $text;
@@ -613,7 +613,7 @@ class ImportExtractionLogService
     private function detectFlags(?string $treatmentText, mixed $gCell): array
     {
         $flags = [];
-        $haystack = strtoupper(trim((string) $treatmentText . ' ' . (string) $gCell));
+        $haystack = strtoupper(trim((string) $treatmentText.' '.(string) $gCell));
 
         if ($haystack === '') {
             return $flags;
@@ -648,7 +648,7 @@ class ImportExtractionLogService
      */
     private function rowKey(int $sheetDay, string $doctor, int $excelRow): string
     {
-        return $sheetDay . '|' . strtoupper(trim($doctor)) . '|' . $excelRow;
+        return $sheetDay.'|'.strtoupper(trim($doctor)).'|'.$excelRow;
     }
 
     /**

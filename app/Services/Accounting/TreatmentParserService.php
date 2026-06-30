@@ -163,7 +163,7 @@ class TreatmentParserService
             $trimmed = trim($segment);
 
             if (preg_match('/^\d+$/', $trimmed) && $merged !== []) {
-                $merged[count($merged) - 1] .= '|' . $trimmed;
+                $merged[count($merged) - 1] .= '|'.$trimmed;
 
                 continue;
             }
@@ -240,31 +240,31 @@ class TreatmentParserService
     {
         $codePattern = preg_quote($code, '/');
 
-        if (preg_match('/\b' . $codePattern . '\b\s*[xX×]\s*(\d+)/', $part, $matches) === 1) {
+        if (preg_match('/\b'.$codePattern.'\b\s*[xX×]\s*(\d+)/', $part, $matches) === 1) {
             return $this->fillingItem($code, (int) $matches[1], 100);
         }
 
-        if (preg_match('/\b' . $codePattern . '[xX×](\d+)/', $part, $matches) === 1) {
+        if (preg_match('/\b'.$codePattern.'[xX×](\d+)/', $part, $matches) === 1) {
             return $this->fillingItem($code, (int) $matches[1], 100);
         }
 
-        if (preg_match('/\b' . $codePattern . '\b\s*\|\s*(\d+)/', $part, $matches) === 1) {
+        if (preg_match('/\b'.$codePattern.'\b\s*\|\s*(\d+)/', $part, $matches) === 1) {
             return $this->fillingItem($code, $this->interpretPipeDigits($matches[1]), 85);
         }
 
-        if (preg_match('/\b' . $codePattern . '\s*\|\s*(\d+)/', $part, $matches) === 1) {
+        if (preg_match('/\b'.$codePattern.'\s*\|\s*(\d+)/', $part, $matches) === 1) {
             return $this->fillingItem($code, $this->interpretPipeDigits($matches[1]), 85);
         }
 
-        if (preg_match('/\b' . $codePattern . '\b\s+([\d|]+)/', $part, $matches) === 1) {
+        if (preg_match('/\b'.$codePattern.'\b\s+([\d|]+)/', $part, $matches) === 1) {
             $quantity = $this->countTeethFromPipeGroups($matches[1]);
 
             return $this->fillingItem($code, $quantity, 85);
         }
 
         if (
-            preg_match('/\b' . $codePattern . '\b(?!\s*[xX×0-9|\s])/i', $part) === 1
-            && preg_match('/\b' . $codePattern . '\b/', $part) === 1
+            preg_match('/\b'.$codePattern.'\b(?!\s*[xX×0-9|\s])/i', $part) === 1
+            && preg_match('/\b'.$codePattern.'\b/', $part) === 1
         ) {
             return $this->fillingItem($code, 1, 85);
         }
@@ -300,15 +300,15 @@ class TreatmentParserService
     {
         $knownCodes = $this->getKnownTreatmentCodes();
         $sortedCodes = $knownCodes->keys()
-            ->reject(fn(string $code) => in_array($code, self::FILLING_CODES, true))
-            ->sortByDesc(fn(string $code) => strlen($code))
+            ->reject(fn (string $code) => in_array($code, self::FILLING_CODES, true))
+            ->sortByDesc(fn (string $code) => strlen($code))
             ->values();
 
         $parsedItems = [];
         $matchedRanges = [];
 
         foreach ($sortedCodes as $code) {
-            $pattern = '/\b' . preg_quote($code, '/') . '\b(?:\s*[xX×]\s*(\d+)|\s*\((\d+)\)|\s+(\d{1,2})(?!\d)(?!\s*\|)(?!\|))?/';
+            $pattern = '/\b'.preg_quote($code, '/').'\b(?:\s*[xX×]\s*(\d+)|\s*\((\d+)\)|\s+(\d{1,2})(?!\d)(?!\s*\|)(?!\|))?/';
 
             if (! preg_match_all($pattern, $part, $matches, PREG_OFFSET_CAPTURE)) {
                 continue;
@@ -398,7 +398,7 @@ class TreatmentParserService
     {
         $codePattern = preg_quote($code, '/');
 
-        if (preg_match('/\b' . $codePattern . '\b(?:\s+(?:CR|BR))?\s+([\d|]+)/', $normalizedSegment, $toothListMatch) === 1) {
+        if (preg_match('/\b'.$codePattern.'\b(?:\s+(?:CR|BR))?\s+([\d|]+)/', $normalizedSegment, $toothListMatch) === 1) {
             $toothGroups = trim($toothListMatch[1], '|');
 
             if ($toothGroups === '') {
@@ -406,7 +406,7 @@ class TreatmentParserService
             }
 
             if (str_contains($toothGroups, '|')) {
-                $parts = array_values(array_filter(explode('|', $toothGroups), fn(string $part): bool => $part !== ''));
+                $parts = array_values(array_filter(explode('|', $toothGroups), fn (string $part): bool => $part !== ''));
                 $lastPart = $parts[array_key_last($parts)] ?? '';
 
                 if ($this->looksLikeTrailingFileNumber($parts[0], $lastPart) && count($parts) > 1) {
@@ -424,15 +424,15 @@ class TreatmentParserService
             return $this->countTeethFromPipeGroups($toothGroups);
         }
 
-        if (preg_match('/\b' . $codePattern . '\b[^|]*(\d+)\|\s*(?:\s+\+|$)/', $normalizedSegment, $trailingToothMatch) === 1) {
+        if (preg_match('/\b'.$codePattern.'\b[^|]*(\d+)\|\s*(?:\s+\+|$)/', $normalizedSegment, $trailingToothMatch) === 1) {
             return $this->interpretTrailingPipeQuantity($code, $trailingToothMatch[1]);
         }
 
-        if (preg_match('/\b' . $codePattern . '\b\s*\|\s*(\d+)(?:\s|$|\+)/', $normalizedSegment, $directPipeMatch) === 1) {
+        if (preg_match('/\b'.$codePattern.'\b\s*\|\s*(\d+)(?:\s|$|\+)/', $normalizedSegment, $directPipeMatch) === 1) {
             return $this->interpretDirectPipeQuantity($code, $directPipeMatch[1]);
         }
 
-        if (preg_match('/\b' . $codePattern . '\b[^|]+\|\s*(\d+)(?:\s|$|\+)/', $normalizedSegment, $pipeMatch) === 1) {
+        if (preg_match('/\b'.$codePattern.'\b[^|]+\|\s*(\d+)(?:\s|$|\+)/', $normalizedSegment, $pipeMatch) === 1) {
             return $this->interpretPipeDigits($pipeMatch[1]);
         }
 
@@ -571,12 +571,12 @@ class TreatmentParserService
         $normalized = preg_replace('/\bDEEP\s+SXP\b/', 'SXP', $normalized) ?? $normalized;
 
         $aliasKeys = array_keys(self::CODE_ALIASES);
-        usort($aliasKeys, fn(string $a, string $b): int => strlen($b) <=> strlen($a));
+        usort($aliasKeys, fn (string $a, string $b): int => strlen($b) <=> strlen($a));
 
         foreach ($aliasKeys as $alias) {
             $canonicalCode = self::CODE_ALIASES[$alias];
             $normalized = preg_replace(
-                '/\b' . preg_quote($alias, '/') . '\b/i',
+                '/\b'.preg_quote($alias, '/').'\b/i',
                 $canonicalCode,
                 $normalized,
             ) ?? $normalized;

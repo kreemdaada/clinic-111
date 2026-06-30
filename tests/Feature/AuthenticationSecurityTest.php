@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Enums\AuditAction;
-use App\Models\AuditLog;
 use App\Models\Clinic;
 use App\Models\User;
 use App\Services\Auth\AuthenticationService;

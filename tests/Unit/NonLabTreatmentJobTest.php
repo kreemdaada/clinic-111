@@ -2,12 +2,10 @@
 
 namespace Tests\Unit;
 
-use App\Models\DailyReport;
-use App\Models\DailyWorkRow;
 use App\Models\Doctor;
 use App\Models\Treatment;
-use App\Models\WorkItem;
 use App\Services\Accounting\LabJobCalculationService;
+use App\Services\Accounting\TreatmentParserService;
 use Tests\TestCase;
 
 class NonLabTreatmentJobTest extends TestCase
@@ -35,7 +33,7 @@ class NonLabTreatmentJobTest extends TestCase
             'treatment_text' => 'SxP x1 + CF x3',
         ]);
 
-        app(\App\Services\Accounting\TreatmentParserService::class)->parseAndPersist($dailyWorkRow);
+        app(TreatmentParserService::class)->parseAndPersist($dailyWorkRow);
 
         $this->assertSame(2, $dailyWorkRow->workItems()->count());
         $this->assertSame(0, $dailyWorkRow->workItems()->whereHas('labJob')->count());

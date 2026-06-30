@@ -10,6 +10,7 @@ use Illuminate\Validation\Rule;
 class UpdateTreatmentRequest extends FormRequest
 {
     use ValidatesClinicScopedCode;
+
     public function authorize(): bool
     {
         return $this->user()?->isAdmin() ?? false;
