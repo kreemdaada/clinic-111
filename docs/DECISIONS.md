@@ -2933,6 +2933,101 @@ External off-site backup copy is an operational requirement — local VPS backup
 
 ---
 
+## ADR-038
+
+**Title:** Use Resend for Production Transactional Email
+
+**Status:** Accepted
+
+**Date:** 2026-06-30
+
+**Milestone:** Milestone 16 — Production Deployment Foundation
+
+**Context:**
+
+DentalFinance production email is configured via Laravel 13 (`symfony/mailer` v7.4.12) SMTP in `config/mail.php`, with secrets in server-side `/opt/dentalfinance/app.env` only (ADR-037).
+
+During production launch preparation, **Brevo SMTP** (`smtp-relay.brevo.com:587`) connected successfully with STARTTLS and authentication, but outbound delivery was blocked with:
+
+```text
+502 5.7.0 Your SMTP account is not yet activated
+```
+
+Brevo required manual support activation before any production send — blocking go-live.
+
+**Resend** was evaluated as an alternative transactional provider:
+
+* Domain `dentalfinance.eu` verified in Resend.
+* SMTP test from the production server succeeded.
+* Resend is used **only for outbound transactional mail** (verification, password reset, system notifications).
+* **Inbound mail** remains at IONOS (MX on apex domain unchanged).
+
+This ADR records the mail-provider decision only. It **does not modify ADR-037**; ADR-037 deployment architecture (Docker, Compose, CI/CD, VPS) remains unchanged. The Brevo SMTP bullet in ADR-037 is superseded **only for mail provider choice** by this ADR.
+
+**Decision:**
+
+* **SMTP host:** `smtp.resend.com`
+* **Port:** `587`
+* **Laravel mailer:** `MAIL_MAILER=smtp`
+* **Scheme:** `MAIL_SCHEME=smtp` (STARTTLS on port 587; Laravel 13 does not read `MAIL_ENCRYPTION`)
+* **Username:** `resend` (fixed Resend SMTP username)
+* **Password:** Resend API key — stored **only** in production `app.env`, never in git or Docker images
+* **EHLO domain:** `MAIL_EHLO_DOMAIN=dentalfinance.eu`
+* **From address:** `MAIL_FROM_ADDRESS=system@dentalfinance.eu`
+* **From name:** `MAIL_FROM_NAME=DentalFinance`
+* **Resend Sending:** enabled
+* **Resend Receiving:** disabled (inbound mail not handled by Resend)
+* **IONOS:** remains authoritative for inbound email to `@dentalfinance.eu`
+
+**DNS (Resend / Amazon SES sending subdomain):**
+
+| Type | Host / name | Value |
+|---|---|---|
+| TXT | `resend._domainkey` | Resend-provided DKIM record |
+| MX | `send` | `feedback-smtp.eu-west-1.amazonses.com`, priority 10 |
+| TXT | `send` | `v=spf1 include:amazonses.com ~all` |
+
+Apex-domain **MX records stay at IONOS** for inbound mail. Resend DNS applies to the sending subdomain configuration only.
+
+**Alternatives Considered:**
+
+1. **Brevo SMTP** — rejected for production launch: account activation gate blocked sends despite working SMTP handshake.
+2. **IONOS mailbox SMTP authentication** — rejected: not used for application transactional sending (ADR-037).
+3. **Resend HTTP API only (no SMTP)** — rejected: existing Laravel SMTP configuration and ops tooling already validated on port 587.
+
+**Consequences:**
+
+* Positive: no Brevo support activation dependency; verified domain; successful production SMTP test; Resend dashboard logs aid delivery diagnostics.
+* Positive: clear separation — Resend outbound transactional, IONOS inbound.
+* Negative: API key rotation must be documented and performed on the server (`app.env` update + container recycle).
+* Operational: remove obsolete Brevo DNS records and Brevo credentials from production secrets when fully decommissioned.
+* Operational: monitor Resend quotas and delivery logs for verification/reset failures.
+
+**Affected Components:**
+
+* `/opt/dentalfinance/app.env` (production secrets)
+* `deploy/app.env.example`
+* `docs/PRODUCTION_DEPLOYMENT.md`
+* IONOS DNS (Resend sending records; apex MX unchanged)
+
+**Related Documentation:**
+
+* ADR-037 (production deployment — mail provider bullet superseded by this ADR only)
+* `config/mail.php`, `docs/LEGAL_SETUP.md`
+
+**Implementation:**
+
+* `deploy/app.env.example` and `docs/PRODUCTION_DEPLOYMENT.md` updated to Resend SMTP settings.
+* `tests/Unit/ProductionDeploymentArtifactsTest.php` asserts Resend production mail configuration.
+* Production server `app.env` configured with Resend API key (server-side only).
+* Resend domain verification and SMTP send test completed on production VPS.
+
+**Notes:**
+
+When rotating the Resend API key: update `MAIL_PASSWORD` in `/opt/dentalfinance/app.env`, then restart application containers (`docker compose … up -d`). Do not commit keys to git.
+
+---
+
 # ADR Index
 
 | ADR     | Title                                  | Status   |
@@ -2974,6 +3069,7 @@ External off-site backup copy is an operational requirement — local VPS backup
 | ADR-035 | PostgreSQL Production Readiness        | Accepted |
 | ADR-036 | Clinic Financial Overview              | Accepted |
 | ADR-037 | Production Deployment Architecture   | Accepted |
+| ADR-038 | Use Resend for Production Transactional Email | Accepted |
 
 ---
 
@@ -2981,9 +3077,9 @@ External off-site backup copy is an operational requirement — local VPS backup
 
 The following architectural topics are expected to receive future ADRs.
 
-**ADR-038** — Subscription & Licensing (Proposed)
+**ADR-039** — Subscription & Licensing (Proposed)
 
-**ADR-039** — Public SaaS Platform (Proposed)
+**ADR-040** — Public SaaS Platform (Proposed)
 
 ---
 
