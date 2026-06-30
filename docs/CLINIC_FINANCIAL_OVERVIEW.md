@@ -43,6 +43,8 @@ Optional query: `?month=YYYY-MM`
 
 Clinic base currency via `ClinicCurrencySupport` / `CurrencyFormatter` (ADR-034).
 
+Amounts are aggregated from AED-normalized storage columns (`amount_aed`, `paid_total_aed`, `total_cost_aed`) and converted back to the clinic base currency with `ClinicCurrencySupport::fromStoredAedEquivalent()` before display. This matches Daily Report and Monthly Income presentation.
+
 ## Empty state
 
 No revenue, lab cost, or reports → link to `imports.index`.
