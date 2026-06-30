@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - main
-      - 'feature/**'
+      - "feature/**"
 
 permissions:
   contents: read
@@ -21,12 +21,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630cea73d4c0218315b0900c9 # v4.2.2
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup PHP
         uses: shivammathur/setup-php@2.36.0
         with:
-          php-version: '8.3'
+          php-version: "8.3"
           extensions: bcmath, dom, fileinfo, gd, intl, mbstring, pdo_sqlite, sqlite3, zip
           coverage: none
 
@@ -35,7 +35,7 @@ jobs:
         run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
 
       - name: Cache Composer dependencies
-        uses: actions/cache@1bd71e49b041a6864980ecf0857f565e9bb6a4e4 # v4.2.0
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
           key: composer-${{ hashFiles('composer.lock') }}
@@ -83,7 +83,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630cea73d4c0218315b0900c9 # v4.2.2
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@b5ca514318bd6eac0ab2d0a8bdfb3e61e9626a35 # v3.10.0
