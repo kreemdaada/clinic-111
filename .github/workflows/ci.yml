@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630cea73d4c0218315b0900c9 # v4.2.2
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@2.36.0
+        with:
+          php-version: '8.3'
+          extensions: bcmath, dom, fileinfo, gd, intl, mbstring, pdo_sqlite, sqlite3, zip
+          coverage: none
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@1bd71e49b041a6864980ecf0857f565e9bb6a4e4 # v4.2.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Prepare SQLite test database
+        run: touch database/testing.sqlite
+
+      - name: Run tests
+        run: php artisan test
+
+      - name: Run Pint (check)
+        run: vendor/bin/pint --test
+
+      - name: Validate deployment shell scripts
+        run: |
+          bash -n deploy/scripts/deploy.sh
+          bash -n deploy/scripts/backup-database.sh
+          bash -n deploy/scripts/restore-database.sh
+          bash -n deploy/scripts/lib/deploy-common.sh
+
+      - name: Shellcheck deployment scripts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          shellcheck deploy/scripts/*.sh deploy/scripts/lib/*.sh
+
+      - name: Validate production compose file
+        run: |
+          APP_IMAGE=dentalfinance:ci \
+          DB_PASSWORD=test-password \
+          APP_ENV_FILE=deploy/app.env.example \
+          docker compose --env-file deploy/app.env.example -f compose.production.yml config
+
+  docker-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630cea73d4c0218315b0900c9 # v4.2.2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6eac0ab2d0a8bdfb3e61e9626a35 # v3.10.0
+
+      - name: Build production image
+        uses: docker/build-push-action@14487bd46dc620161a62ee3f071d614cafdadb76 # v6.15.0
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: dentalfinance:ci-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
