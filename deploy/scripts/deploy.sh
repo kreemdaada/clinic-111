@@ -78,6 +78,9 @@ docker pull "${APP_IMAGE}"
 
 wait_for_database
 
+log "Stopping background services before backup and migration..."
+stop_background_services_for_deploy
+
 log "Creating pre-migration backup..."
 "${BACKUP_SCRIPT}"
 
@@ -85,7 +88,7 @@ log "Running migrations..."
 compose run --rm --no-deps --entrypoint php app artisan migrate --force --no-interaction
 
 log "Starting application containers..."
-compose up -d --remove-orphans
+compose_up_application
 
 log "Optimizing Laravel..."
 compose exec -T app php artisan optimize --no-interaction
@@ -95,7 +98,7 @@ if ! wait_for_internal_health "${HEALTH_RETRIES}" "${HEALTH_INTERVAL}"; then
     if [[ -n "${PREVIOUS_IMAGE}" ]]; then
         log "Healthcheck failed — rolling back application to previous image: ${PREVIOUS_IMAGE}"
         export APP_IMAGE="${PREVIOUS_IMAGE}"
-        compose up -d --remove-orphans
+        compose_up_application
 
         if wait_for_internal_health "${HEALTH_RETRIES}" "${HEALTH_INTERVAL}"; then
             fail "Deployment failed. Rollback to ${PREVIOUS_IMAGE} succeeded. Database was NOT rolled back — review migrations manually."
