@@ -144,6 +144,16 @@ PROJECT_OVERVIEW.md, SERVICES.md, WORKFLOWS.md, API.md, etc.
 ### Notes
 
 (optional) Dependencies, follow-up ADRs, clarifications.
+
+Implementation verification:
+
+- 491 Laravel tests passed with 1697 assertions.
+- Laravel Pint validation passed.
+- Bash syntax validation passed.
+- ShellCheck validation passed.
+- Docker Compose production configuration validation passed.
+- Local production Docker image build passed.
+- GitHub Actions production Docker image build passed.
 ```
 
 ---
@@ -2963,7 +2973,7 @@ External off-site backup copy is an operational requirement — local VPS backup
 | ADR-034 | Multi-Currency Strategy                | Accepted |
 | ADR-035 | PostgreSQL Production Readiness        | Accepted |
 | ADR-036 | Clinic Financial Overview              | Accepted |
-| ADR-037 | Production Deployment Architecture   | Proposed |
+| ADR-037 | Production Deployment Architecture   | Accepted |
 
 ---
 
