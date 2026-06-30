@@ -318,7 +318,38 @@ docker compose \
   logs --tail=50 worker
 ```
 
-Imports currently run synchronously via HTTP; worker is ready for future queued jobs (`database` connection).
+Imports currently run synchronously via HTTP; **there are no production long-running queue jobs in v1**. The worker is ready for future queued jobs (`database` connection).
+
+### 23a. PCNTL and queue timeouts
+
+The production image installs the PHP **pcntl** extension (`install-php-extensions pcntl` in the Dockerfile). Laravel uses PCNTL to enforce per-job timeouts when `queue:work --timeout=…` is set. Without PCNTL, timeout enforcement is unreliable even though the flag is present.
+
+### 23b. Worker shutdown during deploy
+
+`deploy.sh` stops background services **before** backup and migration:
+
+1. If the app container is running: `php artisan queue:restart` (via `compose exec`)
+2. Wait up to 10 seconds for workers to observe the signal
+3. `compose stop -t 120 worker`
+4. `compose stop -t 30 scheduler`
+
+Containers use `restart: unless-stopped`. Explicit `compose stop` prevents the worker from blocking deployment; `compose up -d` starts fresh containers afterward. **Do not** use `docker compose down` in deploy scripts.
+
+**Why 120 seconds is sufficient today:** no productive long-running queue jobs exist yet. When long-running jobs are introduced, re-evaluate together:
+
+- `stop_grace_period` on the worker service
+- job idempotency
+- `retry_after` in queue configuration
+- `--timeout` on `queue:work`
+
+Compose settings (v1):
+
+| Service | `stop_grace_period` | Healthcheck |
+|---|---|---|
+| `app` | default | HTTP `127.0.0.1:8080/up` |
+| `worker` | `120s` | disabled (no HTTP server) |
+| `scheduler` | `30s` | disabled (no HTTP server) |
+| `database` | default | `pg_isready` |
 
 ## 24. Scheduler
 
@@ -413,10 +444,11 @@ Laravel logs go to stderr → Docker json-file driver (10 MB × 5 files rotation
 
 Push to `main` triggers CI → build → deploy. Each deploy:
 
-1. Backup DB
-2. Migrate
-3. Restart containers
-4. Internal healthcheck at `http://127.0.0.1:8080/up`
+1. Stop worker and scheduler gracefully (`queue:restart`, then `compose stop`)
+2. Backup DB
+3. Migrate
+4. `compose up -d --timeout 30 --wait --wait-timeout 180 --remove-orphans`
+5. Internal healthcheck at `http://127.0.0.1:8080/up`
 
 ## 33. Security checklist
 

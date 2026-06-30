@@ -9,7 +9,8 @@ RUN install-php-extensions \
     bcmath \
     gd \
     zip \
-    intl
+    intl \
+    pcntl
 
 FROM php_base AS vendor
 

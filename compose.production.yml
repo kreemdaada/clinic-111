@@ -57,7 +57,9 @@ services:
         condition: service_healthy
       app:
         condition: service_started
-    stop_grace_period: 3900s
+    healthcheck:
+      disable: true
+    stop_grace_period: 120s
 
   scheduler:
     <<: *app-image
@@ -72,6 +74,9 @@ services:
         condition: service_healthy
       app:
         condition: service_started
+    healthcheck:
+      disable: true
+    stop_grace_period: 30s
 
   database:
     image: postgres:16-bookworm

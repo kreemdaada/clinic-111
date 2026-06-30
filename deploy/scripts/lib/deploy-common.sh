@@ -119,3 +119,56 @@ terminate_database_connections() {
         -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid();" \
         >/dev/null
 }
+
+container_exists() {
+    docker container inspect "$1" >/dev/null 2>&1
+}
+
+container_is_running() {
+    [[ "$(docker inspect -f '{{.State.Running}}' "$1" 2>/dev/null || echo false)" == "true" ]]
+}
+
+stop_compose_service_if_present() {
+    local service="$1"
+    local stop_timeout="$2"
+    local container_name="dentalfinance_${service}"
+
+    if ! container_exists "${container_name}"; then
+        log "Container ${container_name} not found — skipping ${service} stop."
+        return 0
+    fi
+
+    if ! container_is_running "${container_name}"; then
+        log "Container ${container_name} already stopped."
+        return 0
+    fi
+
+    log "Stopping ${service} (grace ${stop_timeout}s)..."
+    compose stop -t "${stop_timeout}" "${service}"
+}
+
+stop_background_services_for_deploy() {
+    local app_container="dentalfinance_app"
+
+    if ! container_is_running "${app_container}"; then
+        log "App container not running — skipping queue:restart and worker/scheduler stop."
+        return 0
+    fi
+
+    log "Signalling queue workers to restart after the current job..."
+    compose exec -T app php artisan queue:restart
+
+    log "Waiting up to 10s for workers to observe queue:restart..."
+    sleep 10
+
+    stop_compose_service_if_present worker 120
+    stop_compose_service_if_present scheduler 30
+}
+
+compose_up_application() {
+    compose up -d \
+        --timeout 30 \
+        --wait \
+        --wait-timeout 180 \
+        --remove-orphans
+}

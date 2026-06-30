@@ -102,7 +102,7 @@ jobs:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
           rsync -az \
-            -e "ssh -i ~/.ssh/deploy_key -p ${DEPLOY_PORT} -o StrictHostKeyChecking=yes" \
+            -e "ssh -i ~/.ssh/deploy_key -p ${DEPLOY_PORT} -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -o TCPKeepAlive=yes" \
             compose.production.yml \
             "${DEPLOY_USER}@${DEPLOY_HOST}:/opt/dentalfinance/compose.production.yml"
 
@@ -113,7 +113,7 @@ jobs:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
           rsync -az --delete \
-            -e "ssh -i ~/.ssh/deploy_key -p ${DEPLOY_PORT} -o StrictHostKeyChecking=yes" \
+            -e "ssh -i ~/.ssh/deploy_key -p ${DEPLOY_PORT} -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -o TCPKeepAlive=yes" \
             deploy/ \
             "${DEPLOY_USER}@${DEPLOY_HOST}:/opt/dentalfinance/deploy/"
 
@@ -125,6 +125,7 @@ jobs:
           GITHUB_SHA: ${{ github.sha }}
         run: |
           ssh -i ~/.ssh/deploy_key -p "${DEPLOY_PORT}" -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -o TCPKeepAlive=yes \
             "${DEPLOY_USER}@${DEPLOY_HOST}" \
             "APP_ENV_FILE=/opt/dentalfinance/app.env /opt/dentalfinance/deploy/scripts/deploy.sh ${GITHUB_SHA}"
 
