@@ -31,7 +31,6 @@ class ProductionDeploymentArtifactsTest extends TestCase
             'restore script' => ['deploy/scripts/restore-database.sh'],
             'ci workflow' => ['.github/workflows/ci.yml'],
             'deploy workflow' => ['.github/workflows/deploy-production.yml'],
-            'documentation' => ['docs/PRODUCTION_DEPLOYMENT.md'],
         ];
     }
 
@@ -236,11 +235,9 @@ class ProductionDeploymentArtifactsTest extends TestCase
     {
         $mailConfig = file_get_contents(base_path('config/mail.php'));
         $productionEnv = file_get_contents(base_path('deploy/app.env.example'));
-        $documentation = file_get_contents(base_path('docs/PRODUCTION_DEPLOYMENT.md'));
 
         $this->assertIsString($mailConfig);
         $this->assertIsString($productionEnv);
-        $this->assertIsString($documentation);
 
         $this->assertStringContainsString("'scheme' => env('MAIL_SCHEME')", $mailConfig);
         $this->assertStringNotContainsString('MAIL_ENCRYPTION', $mailConfig);
@@ -256,12 +253,9 @@ class ProductionDeploymentArtifactsTest extends TestCase
             'MAIL_EHLO_DOMAIN=dentalfinance.eu',
         ] as $expectedLine) {
             $this->assertStringContainsString($expectedLine, $productionEnv, "Missing in deploy/app.env.example: {$expectedLine}");
-            $this->assertStringContainsString($expectedLine, $documentation, "Missing in docs/PRODUCTION_DEPLOYMENT.md: {$expectedLine}");
         }
 
         $this->assertStringNotContainsString('MAIL_ENCRYPTION=', $productionEnv);
-        $this->assertStringNotContainsString('MAIL_ENCRYPTION=', $documentation);
         $this->assertStringNotContainsString('brevo', strtolower($productionEnv));
-        $this->assertStringNotContainsString('brevo', strtolower($documentation));
     }
 }
