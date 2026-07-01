@@ -25,3 +25,7 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Production operations docs — local/server only, not in public repo
+/docs/PRODUCTION_DEPLOYMENT.md
+/docs/PRODUCTION_OPERATIONS_RUNBOOK.md
