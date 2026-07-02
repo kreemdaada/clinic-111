@@ -72,6 +72,7 @@ class ImportExtractionLogService
      */
     public function recordParserEvents(array $events): void
     {
+        $this->normalizeDocument();
         $this->parserEvents = $events;
 
         foreach ($events as $event) {
@@ -105,6 +106,8 @@ class ImportExtractionLogService
      */
     public function recordReconciliationIssues(array $issues): void
     {
+        $this->bootstrapDocumentIfNeeded();
+        $this->normalizeDocument();
         $this->document['reconciliation_issues'] = $issues;
 
         foreach ($issues as $issue) {
@@ -155,6 +158,8 @@ class ImportExtractionLogService
      */
     public function recordUnresolvedDoctorRow(array $parsedRow): void
     {
+        $this->normalizeDocument();
+
         $entry = [
             'status' => 'unresolved_doctor',
             'reason' => 'unknown_doctor_label',
@@ -213,6 +218,8 @@ class ImportExtractionLogService
      */
     public function recordPersistedRow(DailyWorkRow $dailyWorkRow, array $parsedRow): void
     {
+        $this->normalizeDocument();
+
         $dailyWorkRow->loadMissing('doctor');
 
         $excelRow = (int) ($parsedRow['raw_row_number'] ?? $parsedRow['excel_row'] ?? 0);
@@ -263,6 +270,8 @@ class ImportExtractionLogService
             return;
         }
 
+        $this->normalizeDocument();
+
         $dailyWorkRow->loadMissing(['doctor', 'workItems.treatment', 'workItems.labJob']);
 
         $parsedRow = is_array($dailyWorkRow->raw_data_json) ? $dailyWorkRow->raw_data_json : [];
@@ -299,6 +308,9 @@ class ImportExtractionLogService
             'work_row_id' => $dailyWorkRow->id,
             'work_date' => $dailyWorkRow->work_date?->toDateString(),
             'doctor_code' => $dailyWorkRow->doctor?->code,
+            'doctor_label' => $parsedRow['doctor'] ?? $dailyWorkRow->doctor?->code,
+            'sheet_day' => (int) ($parsedRow['sheet_day'] ?? 0),
+            'excel_row' => $excelRow,
             'paid_total_aed' => (string) $dailyWorkRow->paid_total_aed,
             'treatment_text' => $dailyWorkRow->treatment_text,
             'treatments_parsed' => $treatments,
@@ -307,7 +319,8 @@ class ImportExtractionLogService
             'issues' => $diagnostics['issues'] ?? [],
         ], $patch);
 
-        $this->terminalImportedRow($this->findImportedRow($key));
+        $appendedRow = $this->document['imported_rows'][array_key_last($this->document['imported_rows'])];
+        $this->terminalImportedRow(is_array($appendedRow) ? $appendedRow : []);
     }
 
     /**
@@ -318,6 +331,8 @@ class ImportExtractionLogService
      */
     public function finalize(DailyReport $dailyReport): string
     {
+        $this->normalizeDocument();
+
         $this->document['finished_at'] = now()->toIso8601String();
         $this->document['doctor_totals'] = ExtractionLogDoctorGrouper::knownDoctorTotals($this->document);
         $this->document['unknown_doctor_errors'] = ExtractionLogDoctorGrouper::unknownDoctorErrors($this->document);
@@ -500,6 +515,8 @@ class ImportExtractionLogService
      */
     private function buildIssueSummary(): array
     {
+        $this->normalizeDocument();
+
         $summary = ['error' => 0, 'warning' => 0, 'info' => 0];
 
         foreach ($this->document['imported_rows'] as $row) {
@@ -588,6 +605,8 @@ class ImportExtractionLogService
      */
     private function findImportedRow(string $key): ?array
     {
+        $this->normalizeDocument();
+
         foreach ($this->document['imported_rows'] as $row) {
             $existingKey = $this->rowKey(
                 (int) ($row['sheet_day'] ?? 0),
@@ -658,8 +677,53 @@ class ImportExtractionLogService
      * @param  array<string, mixed>  $data  Fields to merge into the existing entry.
      * @return bool True when an existing row was updated; false when no match was found.
      */
+    /**
+     * Ensure list-shaped document keys exist as arrays without discarding other data.
+     */
+    private function normalizeDocument(): void
+    {
+        foreach ($this->canonicalListDefaults() as $key => $default) {
+            if (! isset($this->document[$key]) || ! is_array($this->document[$key])) {
+                $this->document[$key] = $default;
+            }
+        }
+
+        if (! is_array($this->document['issue_summary'] ?? null)) {
+            $this->document['issue_summary'] = ['error' => 0, 'warning' => 0, 'info' => 0];
+        }
+    }
+
+    /**
+     * Initialize an in-memory log document for manual editor flows that skip Excel import.
+     */
+    private function bootstrapDocumentIfNeeded(): void
+    {
+        if ($this->document !== []) {
+            return;
+        }
+
+        $this->document = $this->canonicalListDefaults();
+        $this->document['issue_summary'] = ['error' => 0, 'warning' => 0, 'info' => 0];
+    }
+
+    /**
+     * @return array<string, array<int, mixed>>
+     */
+    private function canonicalListDefaults(): array
+    {
+        return [
+            'imported_rows' => [],
+            'skipped_rows' => [],
+            'unresolved_rows' => [],
+            'reconciliation_issues' => [],
+            'doctor_totals' => [],
+        ];
+    }
+
     private function upsertImportedRow(string $key, array $data): bool
     {
+        $this->normalizeDocument();
+
         foreach ($this->document['imported_rows'] as $index => $row) {
             $existingKey = $this->rowKey(
                 (int) ($row['sheet_day'] ?? 0),

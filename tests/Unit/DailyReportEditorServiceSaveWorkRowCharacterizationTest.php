@@ -19,9 +19,9 @@ use App\Models\User;
 use App\Models\WorkItem;
 use App\Services\DailyReport\DailyReportEditorService;
 use App\Support\AccountingScopedQuery;
-use ErrorException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use ReflectionClass;
 use RuntimeException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Tests\TestCase;
@@ -339,27 +339,68 @@ class DailyReportEditorServiceSaveWorkRowCharacterizationTest extends TestCase
         $this->assertSame($updated->workItems->first()->id, $labJobs->first()->work_item_id);
     }
 
-    public function test_second_consecutive_save_work_row_on_manual_report_throws_undefined_imported_rows_error(): void
+    public function test_manual_report_supports_consecutive_saves_updates_and_consistent_extraction_log(): void
     {
         $doctor = Doctor::query()->where('code', 'JACK')->firstOrFail();
+        $zir = Treatment::query()->where('code', 'ZIR')->firstOrFail();
         $report = $this->createEditableReport();
 
-        $this->editorService->saveWorkRow($report, $this->payload([
+        $firstRow = $this->editorService->saveWorkRow($report, $this->payload([
             'doctor_id' => $doctor->id,
             'day' => 22,
             'dhs_amount' => '100.00',
             'treatment_lines' => [['code' => 'CF', 'quantity' => 1]],
         ]));
 
-        $this->expectException(ErrorException::class);
-        $this->expectExceptionMessage('imported_rows');
-
-        $this->editorService->saveWorkRow($report, $this->payload([
+        $secondRow = $this->editorService->saveWorkRow($report, $this->payload([
             'doctor_id' => $doctor->id,
             'day' => 23,
             'dhs_amount' => '200.00',
+            'treatment_lines' => [['code' => 'ZIR', 'quantity' => 1]],
+        ]));
+
+        $this->assertNotSame($firstRow->id, $secondRow->id);
+        $this->assertSame(2, DailyWorkRow::query()->where('daily_report_id', $report->id)->count());
+
+        $firstPaymentIds = Payment::query()
+            ->where('daily_work_row_id', $firstRow->id)
+            ->pluck('id')
+            ->all();
+
+        $updatedFirstRow = $this->editorService->saveWorkRow($report, $this->payload([
+            'work_row_id' => $firstRow->id,
+            'doctor_id' => $doctor->id,
+            'day' => 22,
+            'dhs_amount' => '150.00',
             'treatment_lines' => [['code' => 'CF', 'quantity' => 1]],
         ]));
+
+        $paymentsAfterUpdate = Payment::query()->where('daily_work_row_id', $firstRow->id)->get();
+
+        $this->assertSame($firstRow->id, $updatedFirstRow->id);
+        $this->assertSame('150.00', (string) $updatedFirstRow->paid_total_aed);
+        $this->assertCount(1, $paymentsAfterUpdate);
+        $this->assertEmpty(array_intersect($firstPaymentIds, $paymentsAfterUpdate->pluck('id')->all()));
+        $this->assertCount(1, $updatedFirstRow->workItems);
+        $this->assertNull($updatedFirstRow->workItems->first()->labJob);
+
+        $secondRow->refresh()->load('workItems.treatment', 'workItems.labJob');
+        $this->assertCount(1, $secondRow->workItems);
+        $this->assertSame($zir->id, $secondRow->workItems->first()->treatment_id);
+        $this->assertNotNull($secondRow->workItems->first()->labJob);
+        $this->assertSame('360.00', (string) $secondRow->workItems->first()->labJob->total_cost_aed);
+
+        $document = $this->extractionLogDocument();
+
+        $this->assertIsArray($document['imported_rows']);
+        $this->assertGreaterThanOrEqual(2, count($document['imported_rows']));
+        $this->assertArrayHasKey('reconciliation_issues', $document);
+        $this->assertIsArray($document['reconciliation_issues']);
+
+        $loggedWorkRowIds = array_column($document['imported_rows'], 'work_row_id');
+
+        $this->assertContains($firstRow->id, $loggedWorkRowIds);
+        $this->assertContains($secondRow->id, $loggedWorkRowIds);
     }
 
     public function test_save_work_row_creates_lab_job_with_resolved_price_for_zir_treatment(): void
@@ -810,5 +851,19 @@ class DailyReportEditorServiceSaveWorkRowCharacterizationTest extends TestCase
         $this->assertSame($currency, $payment->currency);
         $this->assertSame($exchangeRate, (string) $payment->exchange_rate);
         $this->assertSame($amountAed, (string) $payment->amount_aed);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function extractionLogDocument(): array
+    {
+        $importProperty = (new ReflectionClass($this->editorService))->getProperty('dailyReportImportService');
+        $importService = $importProperty->getValue($this->editorService);
+        $logProperty = (new ReflectionClass($importService))->getProperty('importExtractionLogService');
+        $logService = $logProperty->getValue($importService);
+        $documentProperty = (new ReflectionClass($logService))->getProperty('document');
+
+        return $documentProperty->getValue($logService);
     }
 }
