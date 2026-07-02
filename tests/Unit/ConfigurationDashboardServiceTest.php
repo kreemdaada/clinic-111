@@ -34,7 +34,7 @@ class ConfigurationDashboardServiceTest extends TestCase
         $keys = array_column($modules, 'key');
 
         $this->assertSame(
-            ['doctors', 'labs', 'treatments', 'lab_prices', 'doctor_fixed_fees', 'users'],
+            ['doctors', 'labs', 'treatments', 'nurses', 'lab_prices', 'doctor_fixed_fees', 'users'],
             $keys,
         );
 
@@ -104,6 +104,6 @@ class ConfigurationDashboardServiceTest extends TestCase
         $this->assertArrayHasKey('modules', $dashboard);
         $this->assertArrayHasKey('recent_activity', $dashboard);
         $this->assertArrayHasKey('health_warnings', $dashboard);
-        $this->assertCount(6, $dashboard['modules']);
+        $this->assertCount(7, $dashboard['modules']);
     }
 }
