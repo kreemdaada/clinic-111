@@ -42,7 +42,7 @@ pg_dump clinic_accounting > backup.sql
 
 **Relationships:**
 
-- `hasMany` users, doctors, labs, treatments, lab_prices, doctor_fixed_fees, nurses, treatment_prices, nurse_commission_rates, nurse_commissions
+- `hasMany` users, doctors, labs, treatments, lab_prices, doctor_fixed_fees, nurses, nurse_commission_rates, nurse_commissions
 
 **Example data (seeded):**
 
@@ -160,6 +160,8 @@ pg_dump clinic_accounting > backup.sql
 | `description` | text nullable | Optional admin notes |
 | `has_lab_cost` | boolean | If false, no lab_job is created |
 | `requires_nurse_commission` | boolean | Default `false`; if true, work item may receive nurse commission snapshot |
+| `treatment_price` | decimal(12,2) nullable | Patient/list price for the treatment (ADR-039); not lab cost |
+| `treatment_price_currency` | char(3) nullable | ISO 4217 currency of `treatment_price`; no automatic default |
 | `is_active` | boolean | |
 | `created_at`, `updated_at` | timestamps | |
 
@@ -169,9 +171,15 @@ pg_dump clinic_accounting > backup.sql
 - `hasMany` work_items
 - `hasMany` lab_prices
 - `hasMany` doctor_fixed_fees
-- `hasMany` treatment_prices
 - `hasMany` nurse_commission_rates
 - `hasMany` nurse_commissions
+
+**Price semantics (ADR-039):**
+
+- **Treatment price** (`treatment_price` + `treatment_price_currency`) — patient/list price configured on the treatment; basis for nurse commission when `requires_nurse_commission = true`
+- **Lab price** (`lab_prices.unit_cost`) — external laboratory unit cost; used only when `has_lab_cost = true`; must not be used as patient price or nurse-commission basis
+
+Nullable treatment price fields allow existing treatments without immediate pricing. When `requires_nurse_commission = true`, application validation (future branch) will require a valid price and currency.
 
 **Admin rules (Milestone 02):**
 
@@ -216,29 +224,6 @@ pg_dump clinic_accounting > backup.sql
 
 - Never physically deleted — use `is_active = false`
 - Same `code` may exist in different clinics
-
----
-
-### `treatment_prices`
-
-**Purpose:** Patient/list price per treatment (separate from `lab_prices.unit_cost`).
-
-| Field | Type | Notes |
-|---|---|---|
-| `id` | bigint PK | |
-| `clinic_id` | FK → clinics | Required |
-| `treatment_id` | FK → treatments | Required |
-| `unit_price` | decimal(12,2) | Patient/list price |
-| `currency` | char(3) | ISO 4217; not part of active-uniqueness key |
-| `is_active` | boolean | Default `true`; soft deactivate only |
-| `created_at`, `updated_at` | timestamps | |
-
-**Indexes:** `(clinic_id, treatment_id, is_active)` — at most one active row per clinic + treatment enforced in application layer
-
-**Relationships:**
-
-- `belongsTo` clinic
-- `belongsTo` treatment
 
 ---
 
@@ -673,16 +658,20 @@ daily_reports ── daily_work_rows ── work_items ────┘
 
 doctor_fixed_fees ── doctors + treatments
 nurses ── nurse_commission_rates ── treatments
-treatment_prices ── treatments
 ```
 
 ---
 
 ## What Changed
 
+**Updated — 2026-07-02**
+
+- Treatment price moved to `treatments.treatment_price` and `treatments.treatment_price_currency` (nullable; ADR-039 correction)
+- Obsolete `treatment_prices` table removed when empty (migration `2026_07_02_000001_move_treatment_price_to_treatments_table`)
+
 **Updated — 2026-06-28**
 
-- Nurse commission schema (ADR-039): `nurses`, `treatment_prices`, `nurse_commission_rates`, `nurse_commissions`
+- Nurse commission schema (ADR-039): `nurses`, `nurse_commission_rates`, `nurse_commissions`
 - `treatments.requires_nurse_commission` boolean (default `false`)
 
 **Updated — 2026-06-27**

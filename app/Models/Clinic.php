@@ -68,11 +68,6 @@ class Clinic extends Model
         return $this->hasMany(Nurse::class);
     }
 
-    public function treatmentPrices(): HasMany
-    {
-        return $this->hasMany(TreatmentPrice::class);
-    }
-
     public function nurseCommissionRates(): HasMany
     {
         return $this->hasMany(NurseCommissionRate::class);
