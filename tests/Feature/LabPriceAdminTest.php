@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\AuditAction;
 use App\Models\Doctor;
 use App\Models\Lab;
+use App\Models\LabJob;
 use App\Models\LabPrice;
 use App\Models\Treatment;
 use App\Models\User;
@@ -241,25 +242,148 @@ class LabPriceAdminTest extends TestCase
         ]);
     }
 
-    public function test_future_valid_from_price_is_not_resolved_yet(): void
+    public function test_index_does_not_show_validity_columns(): void
     {
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
-        $mainLab = Lab::query()->where('code', 'MAIN_LAB')->firstOrFail();
-        $doctor = Doctor::query()->where('code', 'JACK')->firstOrFail();
-        $treatment = $this->createLabCostTreatment('FUTURE_LP', 'Future LP');
 
         $this->actingAs($admin)
-            ->post(route('lab-prices.store'), [
-                'lab_id' => $mainLab->id,
-                'treatment_id' => $treatment->id,
-                'unit_cost' => '111.00',
+            ->get(route('lab-prices.index'))
+            ->assertOk()
+            ->assertDontSee('Valid from', false)
+            ->assertDontSee('Valid to', false)
+            ->assertDontSee('>Validity<', false);
+    }
+
+    public function test_historical_lab_job_keeps_snapshot_after_price_update_and_deactivation(): void
+    {
+        $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $price = $this->createPrice('HIST_SNAP');
+        $doctor = Doctor::query()->where('code', 'JACK')->firstOrFail();
+        $treatment = Treatment::query()->findOrFail($price->treatment_id);
+        $lab = Lab::query()->findOrFail($price->lab_id);
+        $report = $this->createDailyReport([
+            'report_date' => '2026-06-01',
+            'source_type' => 'manual_entry',
+            'source_file_name' => 'hist-snap',
+            'status' => 'calculated',
+        ]);
+        $workRow = $this->createDailyWorkRow($report, [
+            'doctor_id' => $doctor->id,
+            'work_date' => '2026-06-01',
+            'treatment_text' => $treatment->code.' x 1',
+            'paid_total_aed' => '100.00',
+        ]);
+        $workItem = $this->createWorkItem($workRow, [
+            'treatment_id' => $treatment->id,
+            'quantity' => 1,
+            'confidence' => 100,
+        ]);
+        $job = $this->createLabJob($workItem, [
+            'lab_id' => $lab->id,
+            'lab_price_id' => $price->id,
+            'quantity' => 1,
+            'unit_cost' => $price->unit_cost,
+            'total_cost_aed' => $price->unit_cost,
+        ]);
+
+        $this->actingAs($admin)
+            ->put(route('lab-prices.update', $price), [
+                '_form' => 'edit',
+                'lab_id' => $price->lab_id,
+                'treatment_id' => $price->treatment_id,
+                'doctor_id' => '',
+                'unit_cost' => '999.00',
                 'currency' => 'AED',
-                'valid_from' => '2099-01-01',
+                'is_active' => '1',
             ])
             ->assertRedirect();
 
+        $this->actingAs($admin)
+            ->delete(route('lab-prices.destroy', $price))
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('lab_jobs', [
+            'id' => $job->id,
+            'lab_price_id' => $price->id,
+            'unit_cost' => '150.00',
+            'total_cost_aed' => '150.00',
+        ]);
+    }
+
+    public function test_new_active_price_does_not_change_historical_lab_job(): void
+    {
+        $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $price = $this->createPrice('HIST_NEW');
+        $doctor = Doctor::query()->where('code', 'JACK')->firstOrFail();
+        $treatment = Treatment::query()->findOrFail($price->treatment_id);
+        $lab = Lab::query()->findOrFail($price->lab_id);
+        $job = $this->createLabJobForTreatment($doctor, $treatment, $lab, $price);
+
+        $this->actingAs($admin)
+            ->delete(route('lab-prices.destroy', $price))
+            ->assertRedirect();
+
+        $this->actingAs($admin)
+            ->post(route('lab-prices.store'), [
+                'lab_id' => $lab->id,
+                'treatment_id' => $treatment->id,
+                'unit_cost' => '777.00',
+                'currency' => 'AED',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('lab_jobs', [
+            'id' => $job->id,
+            'lab_price_id' => $price->id,
+            'unit_cost' => '150.00',
+            'total_cost_aed' => '150.00',
+        ]);
+    }
+
+    public function test_api_response_excludes_validity_fields(): void
+    {
+        $this->actingAsRole('admin');
+
+        $response = $this->getJson('/api/admin/lab-prices?status=active');
+
+        $response->assertOk();
+        $first = $response->json('data.0');
+        $this->assertIsArray($first);
+        $this->assertArrayNotHasKey('valid_from', $first);
+        $this->assertArrayNotHasKey('valid_to', $first);
+    }
+
+    public function test_only_one_active_price_per_scope(): void
+    {
+        $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $existing = LabPrice::query()->where('is_active', true)->whereNull('doctor_id')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->from(route('lab-prices.index'))
+            ->post(route('lab-prices.store'), [
+                'lab_id' => $existing->lab_id,
+                'treatment_id' => $existing->treatment_id,
+                'unit_cost' => '888.00',
+                'currency' => $existing->currency,
+            ])
+            ->assertRedirect(route('lab-prices.index'))
+            ->assertSessionHasErrors('lab_id');
+    }
+
+    public function test_cross_clinic_price_is_never_used(): void
+    {
+        $tenant222 = $this->seedClinic222Tenant();
+        $doctor = Doctor::query()->where('code', 'JACK')->firstOrFail();
+        $treatment = Treatment::query()->where('code', 'ZIR')->firstOrFail();
+        $mainLab = Lab::query()->where('code', 'MAIN_LAB')->firstOrFail();
+
         $resolver = app(LabPriceResolver::class);
-        $this->assertNull($resolver->resolve($doctor, $treatment, $mainLab));
+        $resolved = $resolver->resolve($doctor, $treatment, $mainLab);
+
+        $this->assertNotNull($resolved);
+        $this->assertSame($doctor->clinic_id, $resolved->clinic_id);
+        $this->assertNotSame($tenant222['price']->id, $resolved->id);
+        $this->assertNotSame('100.00', number_format((float) $resolved->unit_cost, 2, '.', ''));
     }
 
     public function test_admin_can_update_lab_price_from_ui(): void
@@ -325,5 +449,34 @@ class LabPriceAdminTest extends TestCase
         $price->save();
 
         return $price->fresh();
+    }
+
+    private function createLabJobForTreatment(Doctor $doctor, Treatment $treatment, Lab $lab, LabPrice $price): LabJob
+    {
+        $report = $this->createDailyReport([
+            'report_date' => '2026-06-01',
+            'source_type' => 'manual_entry',
+            'source_file_name' => 'hist-new',
+            'status' => 'calculated',
+        ]);
+        $workRow = $this->createDailyWorkRow($report, [
+            'doctor_id' => $doctor->id,
+            'work_date' => '2026-06-01',
+            'treatment_text' => $treatment->code.' x 1',
+            'paid_total_aed' => '100.00',
+        ]);
+        $workItem = $this->createWorkItem($workRow, [
+            'treatment_id' => $treatment->id,
+            'quantity' => 1,
+            'confidence' => 100,
+        ]);
+
+        return $this->createLabJob($workItem, [
+            'lab_id' => $lab->id,
+            'lab_price_id' => $price->id,
+            'quantity' => 1,
+            'unit_cost' => $price->unit_cost,
+            'total_cost_aed' => $price->unit_cost,
+        ]);
     }
 }

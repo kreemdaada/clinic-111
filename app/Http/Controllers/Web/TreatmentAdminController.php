@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Concerns\PreservesConfigurationReturn;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Treatments\ListTreatmentsRequest;
 use App\Http\Requests\Treatments\StoreTreatmentRequest;
@@ -17,6 +18,8 @@ use Illuminate\View\View;
  */
 class TreatmentAdminController extends Controller
 {
+    use PreservesConfigurationReturn;
+
     private const PER_PAGE = 20;
 
     public function __construct(
@@ -39,6 +42,7 @@ class TreatmentAdminController extends Controller
             'treatments' => $treatments,
             'search' => $search,
             'status' => $status,
+            'showConfigurationBack' => $this->showConfigurationBack($request),
         ]);
     }
 
@@ -60,23 +64,23 @@ class TreatmentAdminController extends Controller
             ->with('success', "Treatment {$treatment->code} updated.");
     }
 
-    public function destroy(Treatment $treatment): RedirectResponse
+    public function destroy(Request $request, Treatment $treatment): RedirectResponse
     {
         $code = $treatment->code;
 
         $this->treatmentManagementService->deactivate($treatment);
 
         return redirect()
-            ->route('treatments.index')
+            ->route('treatments.index', $this->mergeConfigurationReturn($request))
             ->with('success', "Treatment {$code} deleted.");
     }
 
-    public function activate(Treatment $treatment): RedirectResponse
+    public function activate(Request $request, Treatment $treatment): RedirectResponse
     {
         $this->treatmentManagementService->activate($treatment);
 
         return redirect()
-            ->route('treatments.index')
+            ->route('treatments.index', $this->mergeConfigurationReturn($request))
             ->with('success', "Treatment {$treatment->code} activated.");
     }
 
@@ -85,10 +89,10 @@ class TreatmentAdminController extends Controller
      */
     private function filterRedirectParams(Request $request): array
     {
-        return array_filter([
+        return $this->mergeConfigurationReturn($request, array_filter([
             'search' => $request->input('return_search'),
             'status' => $request->input('return_status'),
             'page' => $request->input('return_page'),
-        ], fn ($value) => $value !== null && $value !== '');
+        ], fn ($value) => $value !== null && $value !== ''));
     }
 }

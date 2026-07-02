@@ -78,6 +78,7 @@
 @endpush
 
 @section('content')
+@include('partials.configuration-back-link', ['showConfigurationBack' => $showConfigurationBack ?? false])
 <h1 class="page-title">Doctors</h1>
 
 @if (session('success'))
@@ -96,6 +97,7 @@
     <h2 style="font-size:1rem;margin:0 0 1rem;">Create doctor</h2>
     <form method="POST" action="{{ route('doctors.store') }}" class="doctor-admin-form" id="doctor-create-form">
         @csrf
+        @include('partials.configuration-return-hidden')
         <div class="form-group" style="margin:0;">
             <label class="form-label">Code</label>
             <input class="form-input" type="text" name="code" value="{{ old('code') }}" placeholder="DRNAME" required style="text-transform:uppercase;">
@@ -151,6 +153,7 @@
 
         <form method="POST" action="{{ route('doctors.update', $doctor) }}" class="doctor-admin-form">
             @csrf
+        @include('partials.configuration-return-hidden')
             @method('PUT')
 
             <div class="form-group" style="margin:0;">
@@ -201,6 +204,7 @@
             data-confirm-danger="1"
             data-confirm="Soft delete {{ $doctor->code }}? The doctor record is kept for historical reports.">
             @csrf
+        @include('partials.configuration-return-hidden')
             @method('DELETE')
             <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Delete</button>
         </form>

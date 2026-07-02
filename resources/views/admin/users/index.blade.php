@@ -36,6 +36,7 @@
 @endpush
 
 @section('content')
+@include('partials.configuration-back-link', ['showConfigurationBack' => $showConfigurationBack ?? false])
 <h1 class="page-title">Users</h1>
 <p class="page-subtitle">Admin — manage roles and access. Delete soft-deactivates accounts; records are never physically removed.</p>
 
@@ -53,6 +54,7 @@
     <h2 style="font-size:1rem;margin:0 0 1rem;">Create user</h2>
     <form method="POST" action="{{ route('admin.users.store') }}" class="user-admin-form">
         @csrf
+        @include('partials.configuration-return-hidden')
         <div class="form-group" style="margin:0;">
             <label class="form-label">Name</label>
             <input class="form-input" type="text" name="name" value="{{ old('name') }}" required>
@@ -101,6 +103,7 @@
 
         <form method="POST" action="{{ route('admin.users.update', $user) }}" class="user-admin-form">
             @csrf
+        @include('partials.configuration-return-hidden')
             @method('PUT')
 
             <div class="form-group" style="margin:0;">
@@ -140,6 +143,7 @@
         <div class="user-admin-actions" style="margin-top:0.75rem;">
             <form method="POST" action="{{ route('admin.users.reset-password', $user) }}" class="user-admin-form" style="flex:1;">
                 @csrf
+        @include('partials.configuration-return-hidden')
                 <div class="form-group" style="margin:0;">
                     <label class="form-label">New password</label>
                     <input class="form-input" type="password" name="password" autocomplete="new-password">
@@ -163,6 +167,7 @@
                 data-confirm-danger="1"
                 data-confirm="Soft delete {{ $user->email }}? The account is kept but cannot log in.">
                 @csrf
+        @include('partials.configuration-return-hidden')
                 @method('DELETE')
                 <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Delete</button>
             </form>

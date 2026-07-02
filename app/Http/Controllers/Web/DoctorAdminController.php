@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Concerns\PreservesConfigurationReturn;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Doctors\StoreDoctorRequest;
 use App\Http\Requests\Doctors\UpdateDoctorRequest;
@@ -9,6 +10,7 @@ use App\Models\Doctor;
 use App\Services\Accounting\LabManagementService;
 use App\Services\DailyReport\DoctorManagementService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
@@ -16,16 +18,19 @@ use Illuminate\View\View;
  */
 class DoctorAdminController extends Controller
 {
+    use PreservesConfigurationReturn;
+
     public function __construct(
         private readonly DoctorManagementService $doctorManagementService,
         private readonly LabManagementService $labManagementService,
     ) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
         return view('doctors.index', [
             'doctors' => $this->doctorManagementService->listForAdministration(),
             'labs' => $this->labManagementService->listActive(),
+            'showConfigurationBack' => $this->showConfigurationBack($request),
         ]);
     }
 
@@ -34,7 +39,7 @@ class DoctorAdminController extends Controller
         $doctor = $this->doctorManagementService->create($request->validated());
 
         return redirect()
-            ->route('doctors.index')
+            ->route('doctors.index', $this->mergeConfigurationReturn($request))
             ->with('success', "Doctor {$doctor->code} created.");
     }
 
@@ -43,18 +48,18 @@ class DoctorAdminController extends Controller
         $this->doctorManagementService->update($doctor, $request->validated());
 
         return redirect()
-            ->route('doctors.index')
+            ->route('doctors.index', $this->mergeConfigurationReturn($request))
             ->with('success', "Doctor {$doctor->code} updated.");
     }
 
-    public function destroy(Doctor $doctor): RedirectResponse
+    public function destroy(Request $request, Doctor $doctor): RedirectResponse
     {
         $code = $doctor->code;
 
         $this->doctorManagementService->deactivate($doctor);
 
         return redirect()
-            ->route('doctors.index')
+            ->route('doctors.index', $this->mergeConfigurationReturn($request))
             ->with('success', "Doctor {$code} deleted.");
     }
 }

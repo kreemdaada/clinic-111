@@ -29,6 +29,7 @@
 @endpush
 
 @section('content')
+@include('partials.configuration-back-link', ['showConfigurationBack' => $showConfigurationBack ?? false])
 <h1 class="page-title">Treatments</h1>
 
 @if (session('success'))
@@ -40,6 +41,9 @@
 @endif
 
 <form method="GET" action="{{ route('treatments.index') }}" class="tx-toolbar card" style="padding:1rem;">
+    @if (request('from') === \App\Support\ConfigurationReturnContext::VALUE)
+    <input type="hidden" name="from" value="{{ \App\Support\ConfigurationReturnContext::VALUE }}">
+    @endif
     <div class="form-group" style="margin:0;min-width:200px;">
         <label class="form-label">Search</label>
         <input class="form-input" type="search" name="search" value="{{ $search }}" placeholder="Search by treatment code or name">
@@ -54,7 +58,7 @@
     </div>
     <div style="display:flex;gap:0.5rem;align-items:center;">
         <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
-        <a href="{{ route('treatments.index') }}" class="btn btn-ghost btn-sm">Reset</a>
+        <a href="{{ route('treatments.index', request()->only('from')) }}" class="btn btn-ghost btn-sm">Reset</a>
     </div>
 </form>
 
@@ -112,12 +116,14 @@
                             data-confirm-danger="1"
                             data-confirm="Soft delete {{ $treatment->code }}? Historical work items are preserved.">
                             @csrf
+                            @include('partials.configuration-return-hidden')
                             @method('DELETE')
                             <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Delete</button>
                         </form>
                         @else
                         <form method="POST" action="{{ route('treatments.activate', $treatment) }}" class="inline-form">
                             @csrf
+                            @include('partials.configuration-return-hidden')
                             <button type="submit" class="btn btn-secondary btn-sm">Activate</button>
                         </form>
                         @endif
@@ -141,9 +147,11 @@
         <h2>Create treatment</h2>
         <form method="POST" action="{{ route('treatments.store') }}">
             @csrf
+            @include('partials.configuration-return-hidden')
             <input type="hidden" name="_form" value="create">
             <input type="hidden" name="return_search" value="{{ $search }}">
             <input type="hidden" name="return_status" value="{{ $status }}">
+            @include('partials.configuration-return-hidden')
             <div class="form-group">
                 <label class="form-label">Code</label>
                 <input class="form-input" type="text" name="code" value="{{ old('code') }}" required>
@@ -176,6 +184,7 @@
         <h2>Edit treatment</h2>
         <form method="POST" id="tx-edit-form" action="{{ old('_update_url') }}">
             @csrf
+            @include('partials.configuration-return-hidden')
             @method('PUT')
             <input type="hidden" name="_form" value="edit">
             <input type="hidden" name="_update_url" id="tx-edit-update-url" value="{{ old('_update_url') }}">
@@ -183,6 +192,7 @@
             <input type="hidden" name="_destroy_url" id="tx-edit-destroy-url" value="{{ old('_destroy_url') }}">
             <input type="hidden" name="return_search" value="{{ $search }}">
             <input type="hidden" name="return_status" value="{{ $status }}">
+            @include('partials.configuration-return-hidden')
             <input type="hidden" name="return_page" value="{{ request('page') }}">
             <div class="form-group">
                 <label class="form-label">Code</label>
@@ -221,10 +231,12 @@
                 data-confirm-danger="1"
                 data-confirm="Soft delete this treatment? Historical work items are preserved.">
                 @csrf
+            @include('partials.configuration-return-hidden')
                 @method('DELETE')
             </form>
             <form method="POST" id="tx-activate-form">
                 @csrf
+            @include('partials.configuration-return-hidden')
             </form>
             <button type="submit" form="tx-deactivate-form" class="btn btn-ghost btn-sm" id="tx-deactivate-btn" style="color:var(--danger);">Delete</button>
             <button type="submit" form="tx-activate-form" class="btn btn-secondary btn-sm" id="tx-activate-btn">Activate</button>

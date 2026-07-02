@@ -30,6 +30,7 @@
 @endpush
 
 @section('content')
+@include('partials.configuration-back-link', ['showConfigurationBack' => $showConfigurationBack ?? false])
 <h1 class="page-title">Doctors without commission</h1>
 
 @if (session('success'))
@@ -41,6 +42,9 @@
 @endif
 
 <form method="GET" action="{{ route('doctor-fixed-fees.index') }}" class="dff-toolbar card" style="padding:1rem;">
+    @if (request('from') === \App\Support\ConfigurationReturnContext::VALUE)
+    <input type="hidden" name="from" value="{{ \App\Support\ConfigurationReturnContext::VALUE }}">
+    @endif
     <div class="form-group" style="margin:0;min-width:160px;">
         <label class="form-label">Search</label>
         <input class="form-input" type="search" name="search" value="{{ $search }}" placeholder="Doctor or treatment">
@@ -77,7 +81,7 @@
     </div>
     <div style="display:flex;gap:0.5rem;align-items:center;">
         <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
-        <a href="{{ route('doctor-fixed-fees.index') }}" class="btn btn-ghost btn-sm">Reset</a>
+        <a href="{{ route('doctor-fixed-fees.index', request()->only('from')) }}" class="btn btn-ghost btn-sm">Reset</a>
     </div>
 </form>
 
@@ -139,12 +143,14 @@
                             data-confirm-danger="1"
                             data-confirm="Soft delete fee rule #{{ $fee->id }}? Historical accounting data is preserved.">
                             @csrf
+            @include('partials.configuration-return-hidden')
                             @method('DELETE')
                             <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Delete</button>
                         </form>
                         @else
                         <form method="POST" action="{{ route('doctor-fixed-fees.activate', $fee) }}" class="inline-form">
                             @csrf
+            @include('partials.configuration-return-hidden')
                             <button type="submit" class="btn btn-secondary btn-sm">Activate</button>
                         </form>
                         @endif
@@ -168,6 +174,7 @@
         <h2>Add fee rule</h2>
         <form method="POST" action="{{ route('doctor-fixed-fees.store') }}">
             @csrf
+            @include('partials.configuration-return-hidden')
             <input type="hidden" name="_form" value="create">
             <input type="hidden" name="return_search" value="{{ $search }}">
             <input type="hidden" name="return_doctor_id" value="{{ $doctorId }}">
@@ -189,6 +196,7 @@
         <h2>Edit fee rule</h2>
         <form method="POST" id="dff-edit-form" action="{{ old('_update_url') }}">
             @csrf
+            @include('partials.configuration-return-hidden')
             @method('PUT')
             <input type="hidden" name="_form" value="edit">
             <input type="hidden" name="_update_url" id="dff-edit-update-url" value="{{ old('_update_url') }}">
@@ -221,13 +229,16 @@
                 data-confirm-danger="1"
                 data-confirm="Soft delete this fee rule? Historical accounting data is preserved.">
                 @csrf
+            @include('partials.configuration-return-hidden')
                 @method('DELETE')
             </form>
             <form method="POST" id="dff-activate-form">
                 @csrf
+            @include('partials.configuration-return-hidden')
             </form>
             <form method="POST" id="dff-duplicate-form">
                 @csrf
+            @include('partials.configuration-return-hidden')
             </form>
             <button type="submit" form="dff-deactivate-form" class="btn btn-ghost btn-sm" id="dff-deactivate-btn" style="color:var(--danger);">Delete</button>
             <button type="submit" form="dff-activate-form" class="btn btn-secondary btn-sm" id="dff-activate-btn">Activate</button>

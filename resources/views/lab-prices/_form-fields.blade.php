@@ -39,13 +39,3 @@
         </select>
     </div>
 </div>
-<div class="lp-grid-2">
-    <div class="form-group" style="margin:0;">
-        <label class="form-label">Valid from</label>
-        <input class="form-input" type="date" name="valid_from" id="lp-{{ $prefix }}-valid-from" value="{{ old('valid_from') }}">
-    </div>
-    <div class="form-group" style="margin:0;">
-        <label class="form-label">Valid to</label>
-        <input class="form-input" type="date" name="valid_to" id="lp-{{ $prefix }}-valid-to" value="{{ old('valid_to') }}">
-    </div>
-</div>

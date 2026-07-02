@@ -209,8 +209,6 @@ class LabPriceAdminUiTest extends TestCase
             'treatment_id' => $treatment->id,
             'unit_cost' => '150.00',
             'currency' => 'AED',
-            'valid_from' => '2035-01-01',
-            'valid_to' => '2035-12-31',
         ]));
         $price->is_active = true;
         $price->save();
