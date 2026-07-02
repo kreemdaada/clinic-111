@@ -18,10 +18,18 @@
     .nurse-modal-backdrop.is-open { display:flex; }
     .nurse-modal {
         background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
-        width:min(480px,100%); padding:1.25rem; max-height:90vh; overflow:auto;
+        width:min(640px,100%); padding:1.25rem; max-height:90vh; overflow:auto;
     }
     .nurse-modal h2 { font-size:1rem; margin:0 0 1rem; }
     .nurse-modal-actions { display:flex; gap:0.5rem; justify-content:flex-end; margin-top:1rem; }
+    .nurse-commission-rates { margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border); }
+    .nurse-commission-rates h3 { font-size:0.875rem; margin:0 0 0.75rem; }
+    .nurse-commission-rates table { width:100%; border-collapse:collapse; font-size:0.8125rem; margin-bottom:0.75rem; }
+    .nurse-commission-rates th, .nurse-commission-rates td { padding:0.4rem 0.35rem; border-bottom:1px solid var(--border); text-align:left; }
+    .nurse-commission-rates th { color:var(--text-muted); font-weight:500; font-size:0.75rem; }
+    .nurse-commission-rates tr:last-child td { border-bottom:none; }
+    .nurse-commission-rate-actions { display:flex; gap:0.35rem; flex-wrap:wrap; }
+    .nurse-commission-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; align-items:end; }
     tr.is-inactive { opacity:0.72; }
 </style>
 @endpush
@@ -96,6 +104,18 @@
                             data-update-url="{{ route('nurses.update', $nurse) }}"
                             data-activate-url="{{ route('nurses.activate', $nurse) }}"
                             data-destroy-url="{{ route('nurses.destroy', $nurse) }}"
+                            data-commission-rate-store-url="{{ route('nurses.commission-rates.store', $nurse) }}"
+                            data-commission-rates="{{ e(json_encode($nurse->nurseCommissionRates->map(fn ($rate) => [
+                                'id' => $rate->id,
+                                'treatment_id' => $rate->treatment_id,
+                                'treatment_code' => $rate->treatment?->code,
+                                'treatment_name' => $rate->treatment?->name,
+                                'commission_percentage' => (string) $rate->commission_percentage,
+                                'is_active' => $rate->is_active,
+                                'update_url' => route('nurses.commission-rates.update', [$nurse, $rate]),
+                                'destroy_url' => route('nurses.commission-rates.destroy', [$nurse, $rate]),
+                                'activate_url' => route('nurses.commission-rates.activate', [$nurse, $rate]),
+                            ])->values())) }}"
                         >Edit</button>
                         @if ($nurse->is_active)
                         <form method="POST" action="{{ route('nurses.destroy', $nurse) }}" class="inline-form"
@@ -163,7 +183,12 @@
 </div>
 
 <div class="nurse-modal-backdrop" id="nurse-edit-modal" aria-hidden="true"
-    data-open-on-load="{{ ($errors->any() && old('_form') === 'edit') ? '1' : '0' }}">
+    data-open-on-load="{{ ($errors->any() && old('_form') === 'edit') ? '1' : '0' }}"
+    data-commission-treatments="{{ e(json_encode($commissionTreatments->map(fn ($treatment) => [
+        'id' => $treatment->id,
+        'code' => $treatment->code,
+        'name' => $treatment->name,
+    ])->values())) }}">
     <div class="nurse-modal" role="dialog">
         <h2>Edit nurse</h2>
         <form method="POST" id="nurse-edit-form" action="{{ old('_update_url') }}">
@@ -190,6 +215,34 @@
                 <button type="submit" class="btn btn-primary btn-sm">Save</button>
             </div>
         </form>
+        <div class="nurse-commission-rates" id="nurse-commission-rates-section">
+            <h3>Nurse commission rates</h3>
+            <p style="color:var(--text-muted);font-size:0.8125rem;margin:0 0 0.75rem;">Assign a commission percentage per X-ray treatment. The nurse only appears in the daily report editor after a rate is added here.</p>
+            <div id="nurse-commission-rates-table-wrap"></div>
+            <form method="POST" id="nurse-commission-rate-create-form" class="nurse-commission-grid">
+                @csrf
+                @include('partials.configuration-return-hidden')
+                <input type="hidden" name="return_search" value="{{ $search }}">
+                <input type="hidden" name="return_status" value="{{ $status }}">
+                <input type="hidden" name="return_page" value="{{ request('page') }}">
+                <div class="form-group" style="margin:0;">
+                    <label class="form-label">Treatment</label>
+                    <select class="form-input" name="treatment_id" id="nurse-commission-treatment-select" required>
+                        <option value="">Select treatment</option>
+                        @foreach ($commissionTreatments as $treatment)
+                        <option value="{{ $treatment->id }}">{{ $treatment->name }} ({{ $treatment->code }})</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label class="form-label">Commission %</label>
+                    <input class="form-input" type="number" name="commission_percentage" min="0.01" max="100" step="0.01" required placeholder="5.00">
+                </div>
+                <div class="nurse-modal-actions" style="grid-column:1/-1;margin-top:0;">
+                    <button type="submit" class="btn btn-secondary btn-sm">Add rate</button>
+                </div>
+            </form>
+        </div>
         <div style="margin-top:0.75rem;display:flex;gap:0.5rem;">
             <form method="POST" id="nurse-deactivate-form"
                 data-confirm-title="Deactivate nurse"
@@ -221,9 +274,85 @@ document.addEventListener('DOMContentLoaded', function () {
     const activateForm = document.getElementById('nurse-activate-form');
     const deactivateBtn = document.getElementById('nurse-deactivate-btn');
     const activateBtn = document.getElementById('nurse-activate-btn');
+    const commissionRatesTableWrap = document.getElementById('nurse-commission-rates-table-wrap');
+    const commissionRateCreateForm = document.getElementById('nurse-commission-rate-create-form');
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
     if (!createModal || !editModal || !editForm) {
         return;
+    }
+
+    function parseCommissionRates(source) {
+        try {
+            return JSON.parse(source.dataset.commissionRates || '[]');
+        } catch (error) {
+            return [];
+        }
+    }
+
+    function renderCommissionRatesTable(rates) {
+        if (!commissionRatesTableWrap) {
+            return;
+        }
+
+        if (!rates.length) {
+            commissionRatesTableWrap.innerHTML = '<p style="color:var(--text-muted);font-size:0.8125rem;margin:0 0 0.75rem;">No commission rates yet.</p>';
+            return;
+        }
+
+        commissionRatesTableWrap.innerHTML = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Treatment</th>
+                        <th>Rate</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rates.map(rate => `
+                        <tr>
+                            <td>${rate.treatment_name || rate.treatment_code || '—'}</td>
+                            <td>
+                                <form method="POST" action="${rate.update_url}" class="nurse-commission-rate-actions">
+                                    <input type="hidden" name="_token" value="${csrf}">
+                                    <input type="hidden" name="_method" value="PUT">
+                                    <input class="form-input" type="number" name="commission_percentage" value="${rate.commission_percentage}" min="0.01" max="100" step="0.01" style="width:5.5rem;">
+                                    <button type="submit" class="btn btn-ghost btn-sm">Save</button>
+                                </form>
+                            </td>
+                            <td><span class="nurse-status-pill ${rate.is_active ? 'is-active' : ''}">${rate.is_active ? 'Active' : 'Inactive'}</span></td>
+                            <td>
+                                <div class="nurse-commission-rate-actions">
+                                    ${rate.is_active ? `
+                                        <form method="POST" action="${rate.destroy_url}">
+                                            <input type="hidden" name="_token" value="${csrf}">
+                                            <input type="hidden" name="_method" value="DELETE">
+                                            <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Deactivate</button>
+                                        </form>
+                                    ` : `
+                                        <form method="POST" action="${rate.activate_url}">
+                                            <input type="hidden" name="_token" value="${csrf}">
+                                            <button type="submit" class="btn btn-secondary btn-sm">Activate</button>
+                                        </form>
+                                    `}
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    }
+
+    function syncCommissionRatesSection(data, source) {
+        if (!commissionRateCreateForm) {
+            return;
+        }
+
+        commissionRateCreateForm.action = source?.dataset?.commissionRateStoreUrl || data.commission_rate_store_url || '';
+        renderCommissionRatesTable(data.commission_rates || []);
     }
 
     function openModal(modal) {
@@ -244,10 +373,12 @@ document.addEventListener('DOMContentLoaded', function () {
             code: source.dataset.code || '',
             name: source.dataset.name || '',
             is_active: source.dataset.isActive === '1',
+            commission_rates: parseCommissionRates(source),
+            commission_rate_store_url: source.dataset.commissionRateStoreUrl || '',
         };
     }
 
-    function populateEditForm(data) {
+    function populateEditForm(data, source) {
         editForm.action = data.update_url;
         document.getElementById('nurse-edit-update-url').value = data.update_url;
         document.getElementById('nurse-edit-activate-url').value = data.activate_url;
@@ -258,6 +389,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('nurse-edit-name').value = data.name;
         deactivateBtn.hidden = !data.is_active;
         activateBtn.hidden = data.is_active;
+        syncCommissionRatesSection(data, source);
     }
 
     document.querySelector('[data-open-create]')?.addEventListener('click', function () {
@@ -281,7 +413,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.querySelectorAll('.nurse-edit-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
-            populateEditForm(readEditData(btn));
+            populateEditForm(readEditData(btn), btn);
             openModal(editModal);
         });
     });
@@ -294,6 +426,8 @@ document.addEventListener('DOMContentLoaded', function () {
             code: document.getElementById('nurse-edit-code')?.value || '',
             name: document.getElementById('nurse-edit-name')?.value || '',
             is_active: true,
+            commission_rates: [],
+            commission_rate_store_url: '',
         });
         openModal(editModal);
     }

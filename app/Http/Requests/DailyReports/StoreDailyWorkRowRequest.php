@@ -2,14 +2,19 @@
 
 namespace App\Http\Requests\DailyReports;
 
+use App\Http\Requests\Concerns\ValidatesNurseCommissionWorkRow;
 use App\Models\DailyReport;
 use App\Models\Doctor;
 use App\Rules\BelongsToCurrentClinic;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\Rule;
 
 class StoreDailyWorkRowRequest extends FormRequest
 {
+    use ValidatesNurseCommissionWorkRow;
+
     public function authorize(): bool
     {
         return true;
@@ -42,6 +47,15 @@ class StoreDailyWorkRowRequest extends FormRequest
             'treatment_lines' => ['required', 'array', 'min:1'],
             'treatment_lines.*.code' => ['required', 'string', 'max:32'],
             'treatment_lines.*.quantity' => ['required', 'integer', 'min:1', 'max:50'],
+            'treatment_lines.*.nurse_id' => ['nullable', 'integer'],
         ];
+    }
+
+    protected function failedValidation(Validator $validator): void
+    {
+        throw new HttpResponseException(response()->json([
+            'message' => $validator->errors()->first(),
+            'errors' => $validator->errors(),
+        ], 422));
     }
 }

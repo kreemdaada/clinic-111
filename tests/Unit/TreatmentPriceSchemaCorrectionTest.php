@@ -18,6 +18,8 @@ use Tests\TestCase;
 
 class TreatmentPriceSchemaCorrectionTest extends TestCase
 {
+    private const TREATMENT_PRICE_MIGRATION = 'database/migrations/2026_07_02_000001_move_treatment_price_to_treatments_table.php';
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -178,7 +180,7 @@ class TreatmentPriceSchemaCorrectionTest extends TestCase
 
     public function test_rollback_recreates_treatment_prices_table_exactly(): void
     {
-        Artisan::call('migrate:rollback', ['--step' => 1]);
+        Artisan::call('migrate:rollback', ['--path' => self::TREATMENT_PRICE_MIGRATION]);
 
         $this->assertTrue(Schema::hasTable('treatment_prices'));
         $this->assertFalse(Schema::hasColumn('treatments', 'treatment_price'));
@@ -198,7 +200,7 @@ class TreatmentPriceSchemaCorrectionTest extends TestCase
 
     public function test_migrate_after_rollback_removes_empty_treatment_prices_table_again(): void
     {
-        Artisan::call('migrate:rollback', ['--step' => 1]);
+        Artisan::call('migrate:rollback', ['--path' => self::TREATMENT_PRICE_MIGRATION]);
         Artisan::call('migrate');
 
         $this->assertFalse(Schema::hasTable('treatment_prices'));
@@ -208,7 +210,7 @@ class TreatmentPriceSchemaCorrectionTest extends TestCase
 
     public function test_data_loss_guard_aborts_when_treatment_prices_contains_rows(): void
     {
-        Artisan::call('migrate:rollback', ['--step' => 1]);
+        Artisan::call('migrate:rollback', ['--path' => self::TREATMENT_PRICE_MIGRATION]);
 
         $clinic = $this->clinic111();
         $treatment = Treatment::query()->where('clinic_id', $clinic->id)->firstOrFail();
@@ -244,7 +246,7 @@ class TreatmentPriceSchemaCorrectionTest extends TestCase
 
     public function test_rollback_down_restores_original_treatment_prices_foreign_keys(): void
     {
-        Artisan::call('migrate:rollback', ['--step' => 1]);
+        Artisan::call('migrate:rollback', ['--path' => self::TREATMENT_PRICE_MIGRATION]);
 
         $clinic = $this->clinic111();
         $treatment = Treatment::query()->where('clinic_id', $clinic->id)->firstOrFail();

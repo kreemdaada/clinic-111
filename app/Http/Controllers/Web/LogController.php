@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\DailyReport;
+use App\Models\NurseCommission;
 use App\Services\DailyReport\DailyReportQueryService;
 use App\Services\Export\DoctorsIncomeExcelExportService;
 use App\Services\Import\ExtractionLogPresentationService;
@@ -126,7 +127,40 @@ class LogController extends Controller
             'unresolvedRows' => $unresolvedRows,
             'incomeDownloadFileName' => $this->incomeExporter->downloadFileName($dailyReport),
             'showImportComplete' => session()->pull('import_complete', false),
+            'nurseCommissionsByWorkRow' => $this->nurseCommissionsByWorkRow($dailyReport),
         ]);
+    }
+
+    /**
+     * @return array<int, list<array<string, mixed>>>
+     */
+    private function nurseCommissionsByWorkRow(DailyReport $dailyReport): array
+    {
+        $commissions = NurseCommission::query()
+            ->where('clinic_id', $dailyReport->clinic_id)
+            ->whereHas('workItem.dailyWorkRow', fn ($query) => $query->where('daily_report_id', $dailyReport->id))
+            ->with('workItem.treatment')
+            ->get();
+
+        $grouped = [];
+
+        foreach ($commissions as $commission) {
+            $workRowId = (int) $commission->workItem->daily_work_row_id;
+
+            $grouped[$workRowId][] = [
+                'treatment_name' => $commission->treatment_name_snapshot,
+                'treatment_code' => $commission->treatment_code_snapshot,
+                'quantity' => (int) $commission->quantity,
+                'nurse_name' => $commission->nurse_name_snapshot,
+                'treatment_price' => (string) $commission->treatment_price_original,
+                'treatment_price_currency' => $commission->treatment_price_currency,
+                'commission_percentage' => (string) $commission->commission_percentage,
+                'unit_commission_aed' => (string) $commission->unit_commission_aed,
+                'total_commission_aed' => (string) $commission->total_commission_aed,
+            ];
+        }
+
+        return $grouped;
     }
 
     /**

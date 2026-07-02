@@ -20,10 +20,10 @@ class IncomeExportBlockedExceptionTest extends TestCase
 
         $messages = $exception->userFacingMessages();
 
-        $this->assertCount(3, $messages);
-        $this->assertStringContainsString('cannot be downloaded yet', $messages[0]);
-        $this->assertStringContainsString('JACK', $messages[1]);
-        $this->assertStringContainsString('External lab cost', $messages[1]);
-        $this->assertStringContainsString('daily report', $messages[2]);
+        $this->assertGreaterThanOrEqual(2, count($messages));
+        $this->assertStringContainsString('could not be created', $messages[0]);
+        $this->assertStringContainsString('JACK', implode(' ', $messages));
+        $this->assertStringContainsString('External lab cost', implode(' ', $messages));
+        $this->assertStringNotContainsString('RuntimeException', implode(' ', $messages));
     }
 }

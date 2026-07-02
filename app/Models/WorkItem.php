@@ -22,6 +22,7 @@ class WorkItem extends Model
         'clinic_id',
         'daily_work_row_id',
         'treatment_id',
+        'nurse_id',
         'quantity',
         'confidence',
         'warning_message',
@@ -54,6 +55,11 @@ class WorkItem extends Model
     public function treatment(): BelongsTo
     {
         return $this->belongsTo(Treatment::class);
+    }
+
+    public function nurse(): BelongsTo
+    {
+        return $this->belongsTo(Nurse::class);
     }
 
     /**

@@ -16,6 +16,7 @@ use App\Services\Accounting\LabPriceResolver;
 use App\Services\Accounting\PaymentCalculationService;
 use App\Services\Accounting\TreatmentParserService;
 use App\Services\Accounting\WaelFixedFeeCalculator;
+use App\Services\Accounting\WorkItemNurseAssignmentService;
 use App\Services\Audit\AuditLogService;
 use App\Services\Configuration\CurrentClinicResolver;
 use App\Services\Import\DailyReportImportService;
@@ -40,6 +41,7 @@ class DailyReportEditorService
         private readonly LabBillingResolver $labBillingResolver,
         private readonly LabPriceResolver $labPriceResolver,
         private readonly DailyReportImportService $dailyReportImportService,
+        private readonly WorkItemNurseAssignmentService $workItemNurseAssignmentService,
         private readonly AuditLogService $auditLogService,
         private readonly CurrentClinicResolver $currentClinicResolver,
     ) {}
@@ -69,7 +71,7 @@ class DailyReportEditorService
      * @param  array{
      *     doctor_id: int,
      *     day: int,
-     *     treatment_lines: array<int, array{code: string, quantity: int}>,
+     *     treatment_lines: array<int, array{code: string, quantity: int, nurse_id?: int|null}>,
      *     dhs_amount?: string|float,
      *     usd_amount?: string|float,
      *     visa_amount?: string|float,
@@ -182,6 +184,10 @@ class DailyReportEditorService
             }
 
             $workRow->save();
+            $this->workItemNurseAssignmentService->storeAssignmentsOnRow(
+                $workRow,
+                $payload['treatment_lines'] ?? [],
+            );
             AccountingScopedQuery::payments((int) $workRow->clinic_id, $workRow->id)->delete();
             $this->paymentCalculationService->createPaymentsForWorkRow($workRow);
 
@@ -205,7 +211,7 @@ class DailyReportEditorService
                 );
             }
 
-            return $workRow->fresh(['doctor', 'workItems.treatment', 'workItems.labJob', 'payments']);
+            return $workRow->fresh(['doctor', 'workItems.treatment', 'workItems.labJob', 'workItems.nurseCommission', 'payments']);
         });
     }
 

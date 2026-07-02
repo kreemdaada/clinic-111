@@ -130,7 +130,7 @@ class DailyReportEditorController extends Controller
         $doctors = $this->referenceDataService->activeDoctors();
 
         $rows = $this->dailyReportQueryService->workRowsQuery($dailyReport)
-            ->with(['doctor', 'workItems.treatment', 'workItems.labJob'])
+            ->with(['doctor', 'workItems.treatment', 'workItems.labJob', 'workItems.nurseCommission'])
             ->orderBy('work_date')
             ->orderBy('id')
             ->get();
@@ -176,7 +176,7 @@ class DailyReportEditorController extends Controller
         $workDate = $monthStart->copy()->day(min($day, $monthStart->daysInMonth));
 
         $rows = $this->dailyReportQueryService->workRowsQuery($dailyReport)
-            ->with(['workItems.treatment', 'workItems.labJob'])
+            ->with(['workItems.treatment', 'workItems.labJob', 'workItems.nurseCommission'])
             ->where('doctor_id', $validated['doctor_id'])
             ->whereDate('work_date', $workDate->toDateString())
             ->orderBy('id')
@@ -332,6 +332,15 @@ class DailyReportEditorController extends Controller
                 ->map(fn ($workItem) => [
                     'code' => $workItem->treatment->code,
                     'quantity' => (int) $workItem->quantity,
+                    'nurse_id' => $workItem->nurse_id,
+                    'nurse_name' => $workItem->nurseCommission?->nurse_name_snapshot,
+                    'nurse_commission' => $workItem->nurseCommission !== null ? [
+                        'treatment_price' => (string) $workItem->nurseCommission->treatment_price_original,
+                        'treatment_price_currency' => $workItem->nurseCommission->treatment_price_currency,
+                        'commission_percentage' => (string) $workItem->nurseCommission->commission_percentage,
+                        'unit_commission_aed' => (string) $workItem->nurseCommission->unit_commission_aed,
+                        'total_commission_aed' => (string) $workItem->nurseCommission->total_commission_aed,
+                    ] : null,
                 ])
                 ->values()
                 ->all(),

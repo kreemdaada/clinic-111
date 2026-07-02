@@ -12,7 +12,9 @@ use App\Models\Doctor;
 use App\Services\Accounting\Concerns\ScopesAccountingQueries;
 use App\Services\Accounting\IncomeReconciliationService;
 use App\Services\Accounting\LabJobCalculationService;
+use App\Services\Accounting\NurseCommissionCalculationService;
 use App\Services\Accounting\PaymentCalculationService;
+use App\Services\Accounting\WorkItemNurseAssignmentService;
 use App\Services\Configuration\CurrentClinicResolver;
 use App\Support\AccountingScopedQuery;
 use App\Support\DoctorLabelNormalizer;
@@ -49,6 +51,8 @@ class DailyReportImportService
         private readonly ExcelDailyReportParser $excelParser,
         private readonly PaymentCalculationService $paymentCalculationService,
         private readonly LabJobCalculationService $labJobCalculationService,
+        private readonly NurseCommissionCalculationService $nurseCommissionCalculationService,
+        private readonly WorkItemNurseAssignmentService $workItemNurseAssignmentService,
         private readonly IncomeReconciliationService $incomeReconciliationService,
         private readonly ImportActivityLogger $importActivityLogger,
         private readonly ImportExtractionLogService $importExtractionLogService,
@@ -170,15 +174,17 @@ class DailyReportImportService
         foreach ($workRows as $dailyWorkRow) {
             $result = $this->treatmentImportValidationService->validateAndPersist($dailyWorkRow);
             $allWarnings = array_merge($allWarnings, $result->warnings);
+            $this->workItemNurseAssignmentService->applyFromWorkRow($dailyWorkRow->fresh());
         }
 
         $dailyReport->update(['status' => ReportStatus::Parsed]);
 
         $this->labJobCalculationService->calculateForReport($dailyReport);
+        $this->nurseCommissionCalculationService->calculateForReport($dailyReport);
 
         foreach ($workRows as $dailyWorkRow) {
             $workItems = AccountingScopedQuery::workItems($clinicId, $dailyWorkRow->id)
-                ->with(['treatment', 'labJob'])
+                ->with(['treatment', 'labJob', 'nurseCommission'])
                 ->get();
             $dailyWorkRow->setRelation('workItems', $workItems);
             $dailyWorkRow->loadMissing('doctor');
@@ -186,6 +192,10 @@ class DailyReportImportService
             $allWarnings = array_merge(
                 $allWarnings,
                 $this->treatmentImportValidationService->collectLabPriceWarnings($dailyWorkRow),
+            );
+            $allWarnings = array_merge(
+                $allWarnings,
+                $this->treatmentImportValidationService->collectNurseCommissionWarnings($dailyWorkRow),
             );
             $this->importExtractionLogService->recordCalculatedRow($dailyWorkRow);
         }

@@ -50,11 +50,11 @@ class ConfigurationProgressServiceTest extends TestCase
         $status = $this->progressService->status();
 
         $this->assertFalse($status['ready_for_import']);
-        $this->assertSame(25, $status['progress_percentage']);
+        $this->assertSame(50, $status['progress_percentage']);
         $this->assertSame(ConfigurationProgressService::STEP_DOCTORS, $status['current_step']);
         $this->assertContains(ConfigurationProgressService::STEP_DOCTORS, $status['missing_modules']);
-        $this->assertContains(ConfigurationProgressService::STEP_TREATMENTS, $status['missing_modules']);
         $this->assertContains(ConfigurationProgressService::STEP_LAB_PRICES, $status['missing_modules']);
+        $this->assertNotContains(ConfigurationProgressService::STEP_TREATMENTS, $status['missing_modules']);
     }
 
     public function test_progress_updates_as_required_modules_are_added(): void
@@ -75,8 +75,8 @@ class ConfigurationProgressServiceTest extends TestCase
             'is_active' => true,
         ]);
 
-        $this->assertSame(50, $this->progressService->status()['progress_percentage']);
-        $this->assertSame(ConfigurationProgressService::STEP_TREATMENTS, $this->progressService->status()['current_step']);
+        $this->assertSame(75, $this->progressService->status()['progress_percentage']);
+        $this->assertSame(ConfigurationProgressService::STEP_LAB_PRICES, $this->progressService->status()['current_step']);
 
         $treatment = Treatment::query()->create([
             'clinic_id' => $clinic->id,

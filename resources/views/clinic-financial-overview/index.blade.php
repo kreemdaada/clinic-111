@@ -246,6 +246,9 @@
             $kpis = [
                 ['label' => 'Total revenue', 'kpi' => $overview->revenue],
                 ['label' => 'Lab costs', 'kpi' => $overview->labCost],
+                ['label' => 'OPG-Normal value', 'kpi' => $overview->opgNormalValue],
+                ['label' => 'OPG-3D value', 'kpi' => $overview->opg3dValue],
+                ['label' => 'Nurse commission', 'kpi' => $overview->nurseCommission],
                 ['label' => 'Calculated result', 'kpi' => $overview->calculatedResult, 'highlight' => true],
             ];
         @endphp
@@ -313,8 +316,9 @@
     </div>
 
     <p class="pov-note">
-        <strong>Calculated result</strong> = total collected revenue minus lab costs (JOB) only.
+        <strong>Calculated result</strong> = total collected revenue minus lab costs (JOB) minus nurse commission.
         Doctor commissions, overhead, taxes, and other operating costs are not included.
+        OPG-Normal and OPG-3D values are informative treatment list prices from nurse commission snapshots, not collected revenue.
         Treatment allocated revenue uses quantity-weighted allocation from row-level payments when multiple treatments appear on one line — not payment-level totals per treatment.
     </p>
 @endif

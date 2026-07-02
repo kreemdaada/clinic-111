@@ -6,6 +6,7 @@ use App\Enums\CommissionType;
 use App\Models\Doctor;
 use App\Models\DoctorLabBilling;
 use App\Models\Lab;
+use App\Models\NurseCommissionRate;
 use App\Models\Treatment;
 use App\Services\Accounting\DoctorFixedFeeResolver;
 use App\Services\Accounting\LabBillingResolver;
@@ -66,9 +67,15 @@ class DoctorTreatmentCatalogService
                     'code' => $treatment->code,
                     'name' => $treatment->name,
                     'has_lab_cost' => $treatment->has_lab_cost,
+                    'requires_nurse_commission' => $treatment->requires_nurse_commission,
+                    'treatment_price' => $treatment->treatment_price !== null ? (string) $treatment->treatment_price : null,
+                    'treatment_price_currency' => $treatment->treatment_price_currency,
                     'bills_lab_job' => $billsLab,
                     'fixed_fee' => $fixedFee,
                     'lab_price' => $labPrice,
+                    'nurses' => $treatment->requires_nurse_commission
+                        ? $this->activeNursesWithRates($treatment)
+                        : [],
                 ];
             })
             ->values();
@@ -141,5 +148,26 @@ class DoctorTreatmentCatalogService
             'amount' => (string) $fee->fee_amount,
             'currency' => $fee->currency,
         ];
+    }
+
+    /**
+     * @return list<array{id: int, name: string, commission_percentage: string}>
+     */
+    private function activeNursesWithRates(Treatment $treatment): array
+    {
+        return NurseCommissionRate::query()
+            ->where('clinic_id', $treatment->clinic_id)
+            ->where('treatment_id', $treatment->id)
+            ->where('is_active', true)
+            ->whereHas('nurse', fn ($query) => $query->where('is_active', true))
+            ->with('nurse')
+            ->get()
+            ->map(fn (NurseCommissionRate $rate) => [
+                'id' => $rate->nurse_id,
+                'name' => $rate->nurse->name,
+                'commission_percentage' => (string) $rate->commission_percentage,
+            ])
+            ->values()
+            ->all();
     }
 }

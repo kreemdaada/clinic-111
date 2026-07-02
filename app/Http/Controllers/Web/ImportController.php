@@ -87,7 +87,7 @@ class ImportController extends Controller
             return $this->incomeExporter->downloadResponse($dailyReport);
         } catch (IncomeExportBlockedException $exception) {
             return redirect()
-                ->back(fallback: route('daily-report.edit', $dailyReport))
+                ->back(fallback: route('logs.extraction', $dailyReport))
                 ->withErrors([
                     'income_export' => $exception->userFacingMessages(),
                 ]);

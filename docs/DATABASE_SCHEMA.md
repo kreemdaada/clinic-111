@@ -179,7 +179,7 @@ pg_dump clinic_accounting > backup.sql
 - **Treatment price** (`treatment_price` + `treatment_price_currency`) — patient/list price configured on the treatment; basis for nurse commission when `requires_nurse_commission = true`
 - **Lab price** (`lab_prices.unit_cost`) — external laboratory unit cost; used only when `has_lab_cost = true`; must not be used as patient price or nurse-commission basis
 
-Nullable treatment price fields allow existing treatments without immediate pricing. When `requires_nurse_commission = true`, application validation (future branch) will require a valid price and currency.
+Nullable treatment price fields allow existing treatments without immediate pricing. When `requires_nurse_commission = true`, editor validation requires treatment price, active nurse, and active commission rate before save.
 
 **Admin rules (Milestone 02):**
 
@@ -483,6 +483,7 @@ Nullable treatment price fields allow existing treatments without immediate pric
 | `clinic_id` | FK → clinics | Required; inherits from parent work row (Milestone 10) |
 | `daily_work_row_id` | FK → daily_work_rows | |
 | `treatment_id` | FK → treatments | |
+| `nurse_id` | FK → nurses nullable | Selected nurse for commission-eligible treatments (editor/import) |
 | `quantity` | integer | Default 1 |
 | `confidence` | integer | 100 = certain; lower = inferred from tooth notation |
 | `warning_message` | text nullable | Parser note (e.g. quantity inferred) |
@@ -492,6 +493,7 @@ Nullable treatment price fields allow existing treatments without immediate pric
 
 - `belongsTo` dailyWorkRow
 - `belongsTo` treatment
+- `belongsTo` nurse (nullable)
 - `hasOne` labJob (only when treatment `has_lab_cost = true` and price resolved)
 - `hasOne` nurseCommission (only when treatment `requires_nurse_commission = true` and snapshot created)
 

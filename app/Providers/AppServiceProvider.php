@@ -73,6 +73,7 @@ class AppServiceProvider extends ServiceProvider
             'imports.*',
             'configuration.dashboard',
             'clinic-financial-overview.*',
+            'monthly-income.*',
             'lab-prices.*',
             'doctor-fixed-fees.*',
             'doctors.*',
