@@ -42,7 +42,7 @@
 <form method="GET" action="{{ route('treatments.index') }}" class="tx-toolbar card" style="padding:1rem;">
     <div class="form-group" style="margin:0;min-width:200px;">
         <label class="form-label">Search</label>
-        <input class="form-input" type="search" name="search" value="{{ $search }}" placeholder="Search by treatment code or name">
+        <input class="form-input" type="search" id="tx-search-input" name="search" value="{{ $search }}" placeholder="Search by treatment code or name" data-treatment-search-reset>
     </div>
     <div class="form-group" style="margin:0;">
         <label class="form-label">Status</label>
@@ -329,6 +329,44 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (createModal.dataset.openOnLoad === '1') {
         openModal(createModal);
+    }
+
+    const searchInput = document.getElementById('tx-search-input');
+    if (searchInput) {
+        let previousValue = searchInput.value.trim();
+
+        function redirectWhenSearchCleared() {
+            const current = searchInput.value.trim();
+
+            if (current !== '') {
+                previousValue = current;
+
+                return;
+            }
+
+            if (previousValue === '') {
+                return;
+            }
+
+            const url = new URL(window.location.href);
+
+            if (! url.searchParams.get('search')) {
+                previousValue = '';
+
+                return;
+            }
+
+            previousValue = '';
+            url.searchParams.delete('search');
+            url.searchParams.delete('page');
+
+            const query = url.searchParams.toString();
+            window.location.assign(url.pathname + (query ? '?' + query : ''));
+        }
+
+        searchInput.addEventListener('input', redirectWhenSearchCleared);
+        searchInput.addEventListener('search', redirectWhenSearchCleared);
+        searchInput.addEventListener('change', redirectWhenSearchCleared);
     }
 });
 </script>
