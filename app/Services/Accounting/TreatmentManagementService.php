@@ -77,6 +77,9 @@ class TreatmentManagementService
      *     name: string,
      *     description?: string|null,
      *     has_lab_cost?: bool,
+     *     treatment_price?: string|float|null,
+     *     treatment_price_currency?: string|null,
+     *     requires_nurse_commission?: bool,
      * }  $data
      */
     public function create(array $data): Treatment
@@ -87,8 +90,12 @@ class TreatmentManagementService
                 'code' => strtoupper(trim($data['code'])),
                 'name' => trim($data['name']),
                 'description' => isset($data['description']) ? trim((string) $data['description']) : null,
+                'treatment_price' => $this->normalizeTreatmentPrice($data['treatment_price'] ?? null),
+                'treatment_price_currency' => $this->normalizeTreatmentPriceCurrency($data['treatment_price_currency'] ?? null),
             ]);
             $treatment->has_lab_cost = (bool) ($data['has_lab_cost'] ?? false);
+            $treatment->requires_nurse_commission = (bool) ($data['requires_nurse_commission'] ?? false);
+            $this->applyTreatmentFlagRules($treatment);
             $treatment->is_active = true;
             $treatment->save();
 
@@ -106,6 +113,9 @@ class TreatmentManagementService
      *     description?: string|null,
      *     has_lab_cost?: bool,
      *     is_active?: bool,
+     *     treatment_price?: string|float|null,
+     *     treatment_price_currency?: string|null,
+     *     requires_nurse_commission?: bool,
      * }  $data
      */
     public function update(Treatment $treatment, array $data): Treatment
@@ -123,13 +133,27 @@ class TreatmentManagementService
                     : $treatment->description,
             ]);
 
+            if (array_key_exists('treatment_price', $data)) {
+                $treatment->treatment_price = $this->normalizeTreatmentPrice($data['treatment_price']);
+            }
+
+            if (array_key_exists('treatment_price_currency', $data)) {
+                $treatment->treatment_price_currency = $this->normalizeTreatmentPriceCurrency($data['treatment_price_currency']);
+            }
+
             if (array_key_exists('has_lab_cost', $data)) {
                 $treatment->has_lab_cost = (bool) $data['has_lab_cost'];
+            }
+
+            if (array_key_exists('requires_nurse_commission', $data)) {
+                $treatment->requires_nurse_commission = (bool) $data['requires_nurse_commission'];
             }
 
             if (array_key_exists('is_active', $data)) {
                 $treatment->is_active = (bool) $data['is_active'];
             }
+
+            $this->applyTreatmentFlagRules($treatment);
 
             $treatment->save();
 
@@ -169,5 +193,30 @@ class TreatmentManagementService
             'has_lab_cost' => $treatment->has_lab_cost,
             'is_active' => true,
         ]);
+    }
+
+    private function applyTreatmentFlagRules(Treatment $treatment): void
+    {
+        if ($treatment->requires_nurse_commission) {
+            $treatment->has_lab_cost = false;
+        }
+    }
+
+    private function normalizeTreatmentPrice(string|float|null $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return number_format((float) $value, 2, '.', '');
+    }
+
+    private function normalizeTreatmentPriceCurrency(?string $value): ?string
+    {
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+
+        return strtoupper(trim($value));
     }
 }

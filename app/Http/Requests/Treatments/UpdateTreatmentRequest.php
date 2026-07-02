@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Treatments;
 
 use App\Http\Requests\Concerns\ValidatesClinicScopedCode;
+use App\Http\Requests\Concerns\ValidatesTreatmentPriceFields;
 use App\Models\Treatment;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -10,10 +11,16 @@ use Illuminate\Validation\Rule;
 class UpdateTreatmentRequest extends FormRequest
 {
     use ValidatesClinicScopedCode;
+    use ValidatesTreatmentPriceFields;
 
     public function authorize(): bool
     {
         return $this->user()?->isAdmin() ?? false;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->prepareTreatmentPriceFieldsForValidation();
     }
 
     /**
@@ -36,6 +43,15 @@ class UpdateTreatmentRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:2000'],
             'has_lab_cost' => ['sometimes', 'boolean'],
             'is_active' => ['sometimes', 'boolean'],
+            ...$this->treatmentPriceFieldRules(),
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return $this->treatmentPriceFieldMessages();
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Exceptions\IncomeExportBlockedException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DailyReports\ImportDailyReportRequest;
 use App\Models\DailyReport;
@@ -76,13 +77,21 @@ class ImportController extends Controller
      * Re-download Server Income Excel for a previously imported report.
      *
      * @param  DailyReport  $dailyReport  Route-model-bound report.
-     * @return BinaryFileResponse Generated `Server Income {Month Year}.xlsx`.
+     * @return BinaryFileResponse|RedirectResponse Generated Excel or redirect with guidance.
      */
-    public function downloadIncome(DailyReport $dailyReport): BinaryFileResponse
+    public function downloadIncome(DailyReport $dailyReport): BinaryFileResponse|RedirectResponse
     {
         $this->dailyReportQueryService->assertAccessible($dailyReport);
 
-        return $this->incomeExporter->downloadResponse($dailyReport);
+        try {
+            return $this->incomeExporter->downloadResponse($dailyReport);
+        } catch (IncomeExportBlockedException $exception) {
+            return redirect()
+                ->back(fallback: route('daily-report.edit', $dailyReport))
+                ->withErrors([
+                    'income_export' => $exception->userFacingMessages(),
+                ]);
+        }
     }
 
     /**

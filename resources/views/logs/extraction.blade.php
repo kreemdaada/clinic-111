@@ -686,6 +686,14 @@
 </div>
 @endif
 
+@if ($errors->has('income_export'))
+<div class="alert alert-error" style="margin-bottom:1rem;">
+    @foreach ($errors->get('income_export') as $message)
+        <p style="margin:0 0 0.5rem;">{{ $message }}</p>
+    @endforeach
+</div>
+@endif
+
 @if ($log !== null)
 <div class="card">
     <div class="extraction-export-card">
