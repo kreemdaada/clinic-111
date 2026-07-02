@@ -31,7 +31,6 @@
 
 @section('content')
 <h1 class="page-title">Lab prices</h1>
-<p class="page-subtitle">Admin — configure unit costs per lab and treatment. Delete soft-deactivates; historical lab jobs keep their references.</p>
 
 @if (session('success'))
 <div class="alert alert-success">{{ session('success') }}</div>

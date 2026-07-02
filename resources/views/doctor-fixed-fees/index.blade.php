@@ -31,7 +31,6 @@
 
 @section('content')
 <h1 class="page-title">Doctors without commission</h1>
-<p class="page-subtitle">Admin — per-treatment fees for doctors who are <strong>not</strong> paid by percentage (e.g. Dr Wa: IMPL, BG, SINUS). Percentage doctors ignore these rules. Delete soft-deactivates.</p>
 
 @if (session('success'))
 <div class="alert alert-success">{{ session('success') }}</div>
