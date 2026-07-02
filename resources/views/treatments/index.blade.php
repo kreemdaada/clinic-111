@@ -30,7 +30,6 @@
 
 @section('content')
 <h1 class="page-title">Treatments</h1>
-<p class="page-subtitle">Admin — configure procedure codes. Delete soft-deactivates; historical work items keep their references.</p>
 
 @if (session('success'))
 <div class="alert alert-success">{{ session('success') }}</div>

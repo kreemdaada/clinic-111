@@ -79,7 +79,6 @@
 
 @section('content')
 <h1 class="page-title">Doctors</h1>
-<p class="page-subtitle">Admin — commission rates are read from the database. Delete soft-deactivates doctors; historical report entries are preserved.</p>
 
 @if (session('success'))
 <div class="alert alert-success">{{ session('success') }}</div>
