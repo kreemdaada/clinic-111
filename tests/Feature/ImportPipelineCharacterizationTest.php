@@ -21,6 +21,7 @@ use App\Support\AccountingScopedQuery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Tests\Support\ImportExcelFixtureBuilder;
 use Tests\TestCase;
 
@@ -210,29 +211,7 @@ class ImportPipelineCharacterizationTest extends TestCase
         $this->assertSame(2, $this->countReportsForMonth('2026-06-01'));
     }
 
-    public function test_import_duplicate_month_guard_query_does_not_match_sqlite_datetime_storage(): void
-    {
-        $this->createDailyReport([
-            'report_date' => '2026-06-01',
-            'source_type' => ReportSourceType::ExcelUpload,
-            'status' => ReportStatus::Approved,
-        ]);
-
-        $this->assertTrue(
-            DailyReport::query()
-                ->whereDate('report_date', '2026-06-01')
-                ->where('status', ReportStatus::Approved)
-                ->exists(),
-        );
-        $this->assertFalse(
-            DailyReport::query()
-                ->where('report_date', '2026-06-01')
-                ->whereIn('status', [ReportStatus::Approved, ReportStatus::Locked])
-                ->exists(),
-        );
-    }
-
-    public function test_import_proceeds_when_approved_report_exists_on_sqlite_test_database(): void
+    public function test_import_rejects_month_with_approved_report(): void
     {
         $existing = $this->createDailyReport([
             'report_date' => '2026-06-01',
@@ -243,15 +222,25 @@ class ImportPipelineCharacterizationTest extends TestCase
         $fixture = ImportExcelFixtureBuilder::legacyClinic111Workbook();
         $this->tempFiles[] = $fixture;
 
-        $report = $this->importFixture($fixture);
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('An approved or locked report already exists for this month.');
 
-        $this->assertNotSame($existing->id, $report->id);
-        $existing->refresh();
-        $this->assertSame(ReportStatus::Approved, $existing->status);
-        $this->assertSame(2, $this->countReportsForMonth('2026-06-01'));
+        try {
+            $this->importFixture($fixture);
+        } finally {
+            $existing->refresh();
+            $this->assertSame(ReportStatus::Approved, $existing->status);
+            $this->assertSame(1, $this->countReportsForMonth('2026-06-01'));
+            $this->assertSame(0, DailyWorkRow::query()->count());
+            $this->assertSame(0, Payment::query()->count());
+            $this->assertSame(0, WorkItem::query()->count());
+            $this->assertSame(0, LabJob::query()->count());
+            $this->assertSame(0, DailyReportImportWarning::query()->count());
+            $this->assertSame(0, count(Storage::disk('local')->allFiles()));
+        }
     }
 
-    public function test_import_proceeds_when_locked_report_exists_on_sqlite_test_database(): void
+    public function test_import_rejects_month_with_locked_report(): void
     {
         $existing = $this->createDailyReport([
             'report_date' => '2026-06-01',
@@ -262,11 +251,81 @@ class ImportPipelineCharacterizationTest extends TestCase
         $fixture = ImportExcelFixtureBuilder::legacyClinic111Workbook();
         $this->tempFiles[] = $fixture;
 
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('An approved or locked report already exists for this month.');
+
+        try {
+            $this->importFixture($fixture);
+        } finally {
+            $this->assertSame(ReportStatus::Locked, $existing->fresh()->status);
+            $this->assertSame(1, $this->countReportsForMonth('2026-06-01'));
+            $this->assertSame(0, DailyWorkRow::query()->count());
+            $this->assertSame(0, count(Storage::disk('local')->allFiles()));
+        }
+    }
+
+    public function test_import_succeeds_when_approved_report_exists_for_different_month(): void
+    {
+        $this->createDailyReport([
+            'report_date' => '2026-06-01',
+            'source_type' => ReportSourceType::ExcelUpload,
+            'status' => ReportStatus::Approved,
+        ]);
+
+        $fixture = ImportExcelFixtureBuilder::legacyClinic111Workbook();
+        $this->tempFiles[] = $fixture;
+
+        $report = $this->importFixture($fixture, 'daily report July 2026.xlsx');
+
+        $this->assertSame('2026-07-01', $report->report_date->toDateString());
+        $this->assertSame(1, $this->countReportsForMonth('2026-07-01'));
+        $this->assertSame(1, $this->countReportsForMonth('2026-06-01'));
+    }
+
+    public function test_import_succeeds_when_other_clinic_has_approved_report_for_same_month(): void
+    {
+        $tenant222 = $this->seedClinic222Tenant();
+
+        DailyReport::query()->create([
+            'clinic_id' => $tenant222['clinic']->id,
+            'report_date' => '2026-06-01',
+            'source_type' => ReportSourceType::ExcelUpload,
+            'status' => ReportStatus::Approved,
+        ]);
+
+        $fixture = ImportExcelFixtureBuilder::legacyClinic111Workbook();
+        $this->tempFiles[] = $fixture;
+
         $report = $this->importFixture($fixture);
 
-        $this->assertNotSame($existing->id, $report->id);
-        $this->assertSame(ReportStatus::Locked, $existing->fresh()->status);
-        $this->assertSame(2, $this->countReportsForMonth('2026-06-01'));
+        $this->assertSame($this->clinic111()->id, $report->clinic_id);
+        $this->assertSame(1, DailyReport::query()
+            ->where('clinic_id', $this->clinic111()->id)
+            ->whereDate('report_date', '2026-06-01')
+            ->count());
+        $this->assertSame(1, DailyReport::query()
+            ->where('clinic_id', $tenant222['clinic']->id)
+            ->whereDate('report_date', '2026-06-01')
+            ->count());
+    }
+
+    public function test_duplicate_guard_matches_report_date_with_sqlite_datetime_storage(): void
+    {
+        $existing = $this->createDailyReport([
+            'report_date' => '2026-06-01',
+            'source_type' => ReportSourceType::ExcelUpload,
+            'status' => ReportStatus::Approved,
+        ]);
+
+        $this->assertSame('2026-06-01 00:00:00', $existing->getRawOriginal('report_date'));
+
+        $fixture = ImportExcelFixtureBuilder::legacyClinic111Workbook();
+        $this->tempFiles[] = $fixture;
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('An approved or locked report already exists for this month.');
+
+        $this->importFixture($fixture);
     }
 
     public function test_unknown_doctor_row_is_logged_unresolved_and_not_persisted(): void
