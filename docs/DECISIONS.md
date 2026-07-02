@@ -3028,6 +3028,466 @@ When rotating the Resend API key: update `MAIL_PASSWORD` in `/opt/dentalfinance/
 
 ---
 
+## ADR-039
+
+**Title:** X-Ray Treatments and Nurse Commission Accounting
+
+**Status:** Proposed
+
+**Date:** 2026-06-26
+
+**Milestone:** Milestone 17 — X-Ray Treatments and Nurse Commission (planned)
+
+**Context:**
+
+DentalFinance must support X-ray procedures (initially **OPG-Normal** and **OPG-3D**) and track a **nurse commission** for the nurse who performed each X-ray.
+
+Business requirements:
+
+* OPG-Normal has an initial list price of **200 AED**; OPG-3D has **360 AED**. These are **clinic-configurable defaults**, not global service hardcodes.
+* Each recorded X-ray work item requires selecting the performing nurse.
+* Nurse commission is a **percentage of the treatment list price**, not of collected payments.
+* Current target rate: **5 %** for both OPG types, manually configurable per nurse/treatment.
+* Historical daily reports must remain stable when prices, rates, nurses, or exchange rates change later.
+
+The existing accounting engine (ADR-001, ADR-002, ADR-014, ADR-034) already defines:
+
+* **TOTAL** = collected payments (`payments.amount_aed`)
+* **LAB COST** = lab unit prices (`lab_prices` / `lab_jobs`) — **not** patient treatment prices
+* **NET TOTAL** = TOTAL − LAB COST
+* **DOCTOR INCOME** = percentage of NET TOTAL or fixed fees (`doctor_fixed_fees`)
+* **CLINIC INCOME** = NET TOTAL − DOCTOR INCOME
+
+`lab_prices.unit_cost` is the **laboratory unit cost**, not the patient-facing treatment price (`docs/CODEBASE_GUIDE.md`). Nurse commission therefore requires a **new treatment-price configuration** distinct from lab pricing.
+
+`work_items` already represent one parsed treatment line per row (`ADR-018`). `lab_jobs` attach 1:1 to work items when `treatments.has_lab_cost = true` (`ADR-002`). Nurse commission should follow the same **per-work-item** attachment pattern.
+
+There is **no** existing Nurse model, employee table, or nurse commission logic in production code.
+
+**Decision:**
+
+Introduce clinic-scoped **Nurses**, **treatment list prices**, **nurse commission configuration**, and **immutable nurse commission snapshots** on X-ray work items. Extend clinic income accounting to subtract total nurse commission from the clinic share after doctor income.
+
+---
+
+### Business Rules
+
+1. **Eligible treatments** — A treatment participates in nurse commission when `treatments.requires_nurse_commission = true`. Initial codes: `OPG_NORMAL`, `OPG_3D`. Display names: `OPG-Normal`, `OPG 3D`.
+2. **Treatment list price** — Configured per clinic and treatment in a dedicated price catalog (not `lab_prices`). Initial defaults: OPG-Normal **200 AED**, OPG-3D **360 AED** (see **Initial OPG Configuration** below). Prices may be stored in any supported currency; accounting always normalizes to **AED** at snapshot time.
+3. **Commission basis** — Nurse commission is calculated from the **snapshotted treatment unit price in AED**, never from TOTAL, payments, NET TOTAL, lab cost, doctor income, or proportional revenue allocation.
+4. **Commission formula (per work item)** — AED is the accounting source of truth:
+
+   ```text
+   treatment_price_aed_snapshot =
+       convert_to_aed(
+           treatment_price_original_snapshot,
+           treatment_price_currency_snapshot,
+           exchange_rate_to_aed_snapshot
+       )
+
+   unit_nurse_commission_aed =
+       MoneyCalculator::percentage(
+           treatment_price_aed_snapshot,
+           nurse_commission_rate_snapshot
+       )
+
+   total_nurse_commission_aed =
+       MoneyCalculator::multiply(unit_nurse_commission_aed, work_item.quantity)
+   ```
+
+   `MoneyCalculator::percentage()` applies half-up rounding to 2 decimal places (`ADR-014`). `MoneyCalculator::multiply()` normalizes the quantity product to **2 decimal places** via `bcmul(..., 2)` (same pattern as `lab_jobs.total_cost_aed`).
+
+   **Display in clinic currency** is derived from the AED snapshot at read time (e.g. `ClinicCurrencySupport::fromStoredAedEquivalent()`), not stored as the commission calculation basis.
+
+5. **Payment independence** — If treatment list price is 200 AED and the patient pays 100 AED, nurse commission at 5 % remains **10 AED** (per unit), because basis is list price, not payment.
+6. **Quantity** — `quantity > 1` uses the **same nurse** and the **same snapshot set** for all units. Commission is `unit_nurse_commission_aed × quantity` (see formula above). Different nurses require **separate work items**; there is no automatic split of quantity across nurses.
+7. **Nurse selection** — Exactly **one** nurse per commission-eligible work item. Selection is **mandatory** before save when `requires_nurse_commission = true` (see **Required Configuration**). Deactivated nurses are rejected for new/edited rows; historical rows keep snapshots. Nurse assignment is **not** applied at work-row level.
+8. **Mixed rows** — If a work row contains multiple treatments, only work items whose treatment requires nurse commission need a nurse. Non-X-ray work items are unaffected.
+9. **Multiple X-rays in one row** — Each X-ray work item has its own nurse selection and commission snapshot (not one nurse for the entire row).
+10. **Doctor commission priority** — Nurse commission does **not** replace or reuse doctor commission rules (`ADR-001`, `ADR-024`). OPG treatments in v1 have **`has_lab_cost = false`** (no lab JOB).
+11. **Clinic income (extended)**
+
+    ```text
+    NURSE_COMMISSION_TOTAL = SUM(nurse_commission_snapshots.total_nurse_commission_aed) for the scope
+    CLINIC_INCOME = NET_TOTAL − DOCTOR_INCOME − NURSE_COMMISSION_TOTAL
+    ```
+
+    NET TOTAL and doctor income formulas remain unchanged.
+
+---
+
+### Data Ownership
+
+| Entity | Owner | Notes |
+| --- | --- | --- |
+| `nurses` | Clinic | Master data; soft-deactivate only (`ADR-010`) |
+| `treatment_prices` | Clinic + treatment | Patient/list price; separate from `lab_prices` |
+| `nurse_commission_rates` | Clinic + nurse + treatment | Active configuration; mirrors `doctor_fixed_fees` lifecycle |
+| `nurse_commission_snapshots` (name TBD) | Clinic + work item | 1:1 with eligible `work_items`; immutable after save on approved/locked reports (`ADR-009`) |
+| `work_items` | Clinic + daily work row | Unchanged ownership; gains optional nurse snapshot child |
+| `treatments` | Clinic | Gains `requires_nurse_commission` flag |
+
+**Nurse master data (minimum):** `clinic_id`, `code`, `name`, `is_active`. **No login** in v1 — nurses are accounting master data, not application users.
+
+**Rejected:** Reusing `users` with a nurse role — nurses do not need authentication and would conflate access control with payroll master data.
+
+---
+
+### Currency and Rounding
+
+Aligned with **ADR-014**, **ADR-034**, `ClinicCurrencySupport`, and `MoneyCalculator`. **AED is the central accounting and aggregation currency** for nurse commission (consistent with existing `payments.amount_aed`, `lab_jobs.total_cost_aed`, and internal pivot storage).
+
+1. **Treatment price storage** — `treatment_prices.unit_price` + `treatment_prices.currency` (ISO 4217, validated like `lab_prices.currency`). The **original** price and currency are preserved on the snapshot.
+2. **AED as calculation basis** — When the nurse commission snapshot is created, the treatment price is converted to AED using the **existing FX mechanism** (`MoneyCalculator::convertToAed()` / `ClinicCurrencySupport::toStoredAedEquivalent()` and the same config-driven rates as payments). All commission math and monthly aggregation use the **snapshotted AED amount**.
+3. **Conversion at snapshot time**
+
+   ```text
+   treatment_price_aed_snapshot =
+       convert_to_aed(
+           treatment_price_original_snapshot,
+           treatment_price_currency_snapshot,
+           exchange_rate_to_aed_snapshot
+       )
+   ```
+
+4. **Exchange rate provider (v1)** — Reuse the existing accounting rate source (`PaymentCalculationService`, `MoneyCalculator::rateToAed()`, `config('accounting.usd_exchange_rate')`, and future per-currency config keys). **Do not** introduce a separate live FX provider in v1.
+5. **Exchange rate snapshot moment** — `exchange_rate_to_aed_snapshot` is stored **once at work-item save**. Payment-row `exchange_rate` values are **not** reused for treatment-price conversion — treatment list price conversion is independent of how the patient paid.
+6. **Payment currency irrelevance** — Patient paying in USD while treatment list price is 200 AED does not change commission basis (200 × 5 % = 10 AED).
+7. **Foreign-currency treatment price example** — Treatment price 100 USD, rate 1 USD = 3.65 AED → `treatment_price_aed_snapshot = 365.00` → 5 % commission = **18.25 AED** (half-up via `percentage()`).
+8. **Rounding** — `MoneyCalculator::percentage()`: half-up to 2 decimal places (`ADR-014`). `MoneyCalculator::multiply()` for quantity: `bcmul` at scale 2. Aggregations use `MoneyCalculator::add()` at 2 decimal places.
+9. **Clinic currency display** — UI and export show amounts in the clinic's configured currency by **deriving from AED snapshots** at presentation time (`CurrencyFormatter`, `ClinicCurrencySupport::fromStoredAedEquivalent()`). Clinic currency is **not** the commission calculation basis.
+
+---
+
+### Historical Snapshot Strategy
+
+When an eligible work item is saved, persist an immutable snapshot (conceptual fields; **exact database column names** are decided in the architecture analysis, not in this ADR):
+
+| Snapshot field | Purpose |
+| --- | --- |
+| `nurse_id` | FK for drill-down; may reference deactivated nurse |
+| `nurse_name_snapshot` | Display when nurse renamed/deactivated |
+| `treatment_id` | FK |
+| `treatment_code_snapshot` | Parser/audit stability |
+| `treatment_name_snapshot` | Display when treatment renamed |
+| `treatment_price_original_snapshot` | List price at save time in original currency |
+| `treatment_price_currency_snapshot` | ISO currency of list price |
+| `exchange_rate_to_aed_snapshot` | Rate used for AED conversion |
+| `treatment_price_aed_snapshot` | AED-normalized unit price — **commission basis** |
+| `nurse_commission_rate_snapshot` | % applied (e.g. 5.00) |
+| `unit_nurse_commission_aed` | Per-unit commission in AED |
+| `quantity_snapshot` | Work item quantity at save (or unambiguous reference to work-item quantity) |
+| `total_nurse_commission_aed` | `unit_nurse_commission_aed × quantity_snapshot` in AED |
+
+**Recalculation policy:**
+
+* **Draft / calculated / needs_review reports** — Recompute snapshots when the work item, nurse, or underlying configuration changes on save (same pattern as lab job recalculation).
+* **Approved / locked reports** — No silent recalculation (`ADR-009`). Admin unlock required before edits.
+* **Configuration changes** — Never retroactively update existing snapshots.
+
+---
+
+### Nurse Commission Configuration Model
+
+**Chosen: Option B — rate per nurse and per X-ray treatment** (table `nurse_commission_rates` or equivalent).
+
+Structure (conceptual): `clinic_id`, `nurse_id`, `treatment_id`, `commission_percentage`, `is_active`.
+
+| Option | Verdict |
+| --- | --- |
+| **A — single % on nurse** | Rejected — cannot support different OPG-Normal vs OPG-3D rates without schema change |
+| **B — % per nurse + treatment** | **Accepted** — matches `doctor_fixed_fees` / `lab_prices` patterns; supports 5 % today and different rates later |
+| **C — clinic-wide % copied at save** | Rejected — loses per-nurse manual configuration; harder admin UX for multi-nurse clinics |
+
+Admin UI: nurse-centric screen (“Nurses” under Configuration) listing commission % per X-ray treatment. Default seed: **5.00 %** for `OPG_NORMAL` and `OPG_3D` for each active nurse when rates are provisioned.
+
+At most **one active rate** per `(clinic, nurse, treatment)` — same active/inactive pattern as simplified lab prices.
+
+---
+
+### X-Ray Treatment Identification
+
+**Chosen: Option B — boolean treatment flag `requires_nurse_commission`** (alongside existing `has_lab_cost`).
+
+| Option | Verdict |
+| --- | --- |
+| **A — hardcoded codes** | Rejected — fragile; blocks clinic-specific codes |
+| **B — `requires_nurse_commission` flag** | **Accepted** — mirrors `has_lab_cost`; admin-visible; parser uses treatment catalog |
+| **C — separate commission config only** | Rejected — no explicit treatment eligibility signal for editor/import |
+
+Standard codes `OPG_NORMAL` / `OPG_3D` are **seed defaults**, not runtime `if (code === …)` checks in services.
+
+---
+
+### Nurse Selection and Work Item Flow
+
+Based on `WorkItem` + `DailyReportEditorService::saveWorkRow()`:
+
+**v1 nurse and quantity rules:**
+
+* Nurse commission attaches **per work item**, analogous to `lab_jobs`.
+* Exactly **one** nurse per commission-eligible work item.
+* **`quantity > 1`** — the same nurse and the same snapshot apply to all units; total commission = unit commission × quantity. No per-unit nurse split.
+* **Different nurses** on the same row require **separate work items** (separate treatment lines). No automatic quantity allocation across nurses.
+* Nurse assignment is **not** applied at the entire **work row** level.
+* Multiple X-ray work items on the same row each require their own nurse and snapshot.
+* Editing a row revalidates nurse belongs to current clinic and is active.
+
+Historical reports display `nurse_name_snapshot` even if the nurse was later deactivated.
+
+---
+
+### Required Configuration
+
+For every **new or edited** work item where `requires_nurse_commission = true`, the following must exist **before save**:
+
+| Requirement | Rule |
+| --- | --- |
+| **Active nurse** | `nurse_id` references an **active** nurse of the **same clinic** |
+| **Active treatment price** | An **active** `treatment_prices` row for the treatment (same clinic) |
+| **Active commission rate** | An **active** `nurse_commission_rates` row for the **same nurse + treatment** |
+
+If any requirement is missing:
+
+* **Save is rejected** with a validation error (fachliche Validierung).
+* **No incomplete snapshot** is written.
+* **No silent zero commission** — never default to 0 % or skip the snapshot.
+* **No partial persistence** of nurse commission data.
+
+**Exception — pre-feature historical reports:** Work items created **before** nurse commission was introduced have **no snapshot**. They remain valid and contribute **nurse commission 0** to aggregates. No retroactive backfill of snapshots for old reports unless explicitly edited under unlock rules (`ADR-009`).
+
+---
+
+### Tenant Isolation
+
+Mandatory rules (implementation uses existing guards):
+
+* `nurses.clinic_id`, `treatment_prices.clinic_id`, `nurse_commission_rates.clinic_id` — always set from `CurrentClinicResolver`
+* Request validation: `BelongsToCurrentClinic` on nurse/treatment IDs
+* `TenantResourceGuard::findAccessibleOrAbort()` in management services
+* `ImmutableClinicOwnership` on accounting snapshot rows (payments, lab_jobs pattern)
+* Cross-clinic nurse or price IDs in API/editor payloads → **403/422**, never silent fallback
+
+---
+
+### Accounting Integration
+
+**Current production formula** (`MonthlyIncomeCalculationService`, `docs/BUSINESS_RULES.md`):
+
+```text
+TOTAL = SUM(payments.amount_aed)
+LAB_COST = SUM(lab_jobs.total_cost_aed)
+NET_TOTAL = TOTAL − LAB_COST
+DOCTOR_INCOME = f(NET_TOTAL, commission_type, fixed fees)
+CLINIC_INCOME = NET_TOTAL − DOCTOR_INCOME
+```
+
+**Extended formula (this ADR):**
+
+```text
+NURSE_COMMISSION = SUM(nurse_commission_snapshots.total_nurse_commission_aed)
+CLINIC_INCOME = NET_TOTAL − DOCTOR_INCOME − NURSE_COMMISSION
+```
+
+**Invariants:**
+
+* Nurse commission is **not** subtracted from TOTAL or NET TOTAL before doctor income.
+* Nurse commission is **not** doctor commission.
+* Nurse commission does **not** modify `payments` or `lab_jobs`.
+* Percentage doctors still calculate commission on NET TOTAL only — nurse commission does not enter that base.
+
+**Practice Overview (ADR-036):** v1 “Calculated result” currently excludes doctor and nurse costs. A follow-up change should add a **Nurse commission** KPI and extend calculated result documentation — out of scope for the first implementation PR unless bundled explicitly.
+
+---
+
+### Reporting and Export
+
+| Surface | v1 visibility |
+| --- | --- |
+| **Daily Report Editor** | Nurse dropdown per eligible work item; live commission preview from current config |
+| **Daily Report Detail** | Nurse name, treatment, rate %, commission amount (AED; clinic currency derived for display) |
+| **Monthly Income** | New aggregate: total nurse commission per doctor or per clinic month (exact layout TBD) |
+| **Practice Overview** | Nurse commission KPI + optional MoM (follow-up to ADR-036) |
+| **Doctors Income Excel Export** | New columns/section for nurse commission on X-ray lines (layout TBD; respect `doctor_income_export_profiles`) |
+| **Extraction Log** | Optional informational line when X-ray parsed without nurse (warning on manual entry) |
+| **Audit Log** | Nurse CRUD, commission rate changes, snapshot-creating saves |
+
+Minimum exported fields: nurse name, treatment code, treatment unit price (original + AED), commission %, commission amount in AED, clinic-currency display derived from AED.
+
+---
+
+### Initial OPG Configuration
+
+Idempotent seed/onboarding defaults — **not** accounting hardcodes in services:
+
+| Code | Name | Initial treatment price | `requires_nurse_commission` | `has_lab_cost` |
+| --- | --- | --- | --- | --- |
+| `OPG_NORMAL` | OPG-Normal | 200 AED | `true` | `false` |
+| `OPG_3D` | OPG-3D | 360 AED | `true` | `false` |
+
+**Provisioning rules:**
+
+| Channel | Behaviour |
+| --- | --- |
+| **New clinics (`ClinicOnboardingService`)** | After default lab creation, provision OPG treatments and default prices if absent |
+| **Existing clinics** | Idempotent **backfill command** or seeder: create only **missing** treatments/prices |
+| **Manual admin** | Full override via Treatments, Treatment Prices, and Nurses admin |
+
+**Backfill must not:**
+
+* duplicate treatments that already exist (match by `clinic_id` + `code`)
+* overwrite individually customized prices
+* rename existing treatment codes
+
+Never hardcode 200/360 inside `NurseCommissionCalculationService` — read from `treatment_prices` at save time, then snapshot to AED.
+
+Configuration module **Nurses** (admin only):
+
+* Create / edit nurse (code, name)
+* Set commission % per X-ray treatment
+* Activate / deactivate (soft delete, `ADR-010`)
+* Deactivated nurses hidden from new selections; historical references preserved
+
+Included in Configuration Dashboard readiness checks (`ADR-031`) once implemented.
+
+Included in Configuration Dashboard readiness checks (`ADR-031`) once implemented.
+
+---
+
+### Nurse Management
+
+Recommended order:
+
+1. **Schema + models** — `nurses`, `treatment_prices`, `nurse_commission_rates`, `treatments.requires_nurse_commission`, `nurse_commission_snapshots` (nullable FKs initially)
+2. **Admin UI** — nurse management, treatment prices, commission rates
+3. **Idempotent backfill** — OPG treatments/prices for existing clinics
+4. **Daily Report Editor** — nurse selection UI + validation
+5. **Snapshot service** — `NurseCommissionCalculationService` (name TBD) on save
+6. **Accounting aggregation** — extend `MonthlyIncomeCalculationService`, `docs/BUSINESS_RULES.md`
+7. **Reporting/export** — editor detail, monthly income, Excel
+8. **Production migration** — deploy schema, backfill, smoke test
+
+**Compatibility:**
+
+* Nullable snapshot tables → old reports remain valid with zero nurse commission
+* Old imports without nurse data remain readable; new manual entries require nurse
+* Staged deployment: schema first, UI second, accounting third — safe because snapshots are additive
+* Rollback: disable UI validation flag; snapshots optional; do not delete historical snapshot rows
+
+---
+
+### Privacy and Audit
+
+* Nurse **name** is personal data — store in master data and snapshots only where needed for payroll reporting; avoid verbose extraction logs.
+* Audit actions: nurse created/updated/deactivated; commission rate created/updated/deactivated; treatment price changes.
+* Export restricted to clinic-authenticated admin/accountant roles (existing authorization).
+* Deactivation over hard delete (`ADR-010`).
+
+---
+
+### Alternatives Considered
+
+1. **Hardcoded 5 % in service** — Rejected — violates configurability requirement.
+2. **Commission from paid amount** — Rejected — contradicts treatment-price basis rule.
+3. **Detect X-ray by name “OPG”** — Rejected — fragile for i18n and clinic naming.
+4. **Snapshot-free storage (live join to nurse)** — Rejected — breaks historical integrity.
+5. **One nurse per work row** — Rejected — incorrect when row has multiple X-rays or mixed treatments.
+6. **Reuse doctor commission for nurses** — Rejected — different basis (NET TOTAL vs treatment price) and different stakeholders.
+7. **Retroactive recalculation from current config** — Rejected — violates accounting immutability (`ADR-009`).
+8. **Store treatment price in `lab_prices`** — Rejected — conflates lab cost (ADR-002) with patient list price.
+9. **Nurse as `User` record** — Rejected — unnecessary auth coupling.
+
+---
+
+### Consequences
+
+**Advantages**
+
+* Clear separation: lab cost vs treatment list price vs nurse commission
+* Consistent with work-item + snapshot patterns (`lab_jobs`, `payments`)
+* Configurable without code deploys
+* Tenant-safe by construction
+
+**Disadvantages**
+
+* Additional admin surfaces (nurses, treatment prices, commission rates)
+* Clinic income may decrease when X-ray volume is high relative to collections
+* Monthly income and Excel layouts need coordinated updates
+* Practice Overview KPIs lag until ADR-036 extension
+
+---
+
+### Risks
+
+1. **Production clinics with custom OPG codes** — backfill must not duplicate; flag-based eligibility required.
+2. **Multiple active commission rates** — enforce uniqueness like lab prices.
+3. **Currency mismatch** — must snapshot exchange rate to avoid drift.
+4. **Incomplete editor validation** — X-ray work items saved without required configuration corrupt payroll — **Required Configuration** blocks save server-side.
+5. **Overview misinterpretation** — users may confuse revenue-based KPIs with list-price-based nurse cost until UI copy is clear.
+
+---
+
+### Test Strategy (planned)
+
+* Unit: `NurseCommissionCalculationService` — formula, rounding, currency conversion, quantity
+* Unit: resolver picks active rate per nurse + treatment; doctor override N/A
+* Feature: editor requires nurse for OPG work items; rejects cross-clinic nurse
+* Feature: approved report immutability
+* Regression: historical snapshot unchanged after price/rate/nurse config change
+* Regression: `MonthlyIncomeCalculationService` clinic income includes nurse commission
+* Characterization: payment amount does not affect commission
+* Tenant: Clinic 111 vs Clinic 222 isolation
+
+---
+
+### Open Questions
+
+Reserved for the **architecture analysis** (implementation planning):
+
+1. Exact **Monthly Income** presentation — per-doctor nurse subtotal vs clinic-wide line?
+2. Exact **Excel export** structure for Clinic 111 legacy layout vs standard layout?
+3. **Treatment price changes** while the daily report editor is open but **not yet saved** — preview vs snapshot source of truth?
+4. Future central **`exchange_rates`** table (ADR-034) — migrate snapshot FX source from config to versioned rates?
+
+---
+
+### Affected Components (planned)
+
+**Database:** `nurses`, `treatment_prices`, `nurse_commission_rates`, `nurse_commission_snapshots`, `treatments.requires_nurse_commission`
+
+**Models:** `Nurse`, `TreatmentPrice`, `NurseCommissionRate`, `NurseCommissionSnapshot` (names TBD)
+
+**Services:** `NurseManagementService`, `TreatmentPriceManagementService`, `NurseCommissionRateManagementService`, `NurseCommissionCalculationService`, extensions to `MonthlyIncomeCalculationService`, `DailyReportEditorService`
+
+**UI:** Configuration → Nurses; treatment price admin; daily report editor nurse selector
+
+**Tests:** new Feature/Unit suites listed above
+
+**Documentation:** `docs/BUSINESS_RULES.md`, `docs/DATABASE_SCHEMA.md`, `docs/SERVICES.md` (on implementation)
+
+---
+
+### Related Documentation
+
+* ADR-001 (TOTAL = payments), ADR-002 (JOB = lab cost), ADR-009 (approved read-only), ADR-010 (soft delete), ADR-014 (rounding), ADR-018 (work items), ADR-024 (doctor fixed fees pattern), ADR-028/029 (tenant isolation), ADR-031 (configuration dashboard), ADR-034 (multi-currency), ADR-036 (practice overview KPIs)
+* `docs/BUSINESS_RULES.md`, `docs/CODEBASE_GUIDE.md`, `app/Support/MoneyCalculator.php`, `app/Support/ClinicCurrencySupport.php`
+
+---
+
+### Implementation
+
+**Not started.** This ADR is documentation only. No migrations, models, or services are implemented on branch `docs/adr-xray-nurse-commission`.
+
+---
+
+### Notes
+
+* Initial OPG prices (200 / 360 AED) are **seed/onboarding defaults**, not constants in calculation services. v1: `has_lab_cost = false` for both OPG treatments.
+* Doctor commission rules remain unchanged.
+* Lab price validity simplification (if merged separately) does not affect this ADR.
+
+---
+
 # ADR Index
 
 | ADR     | Title                                  | Status   |
@@ -3070,6 +3530,7 @@ When rotating the Resend API key: update `MAIL_PASSWORD` in `/opt/dentalfinance/
 | ADR-036 | Clinic Financial Overview              | Accepted |
 | ADR-037 | Production Deployment Architecture   | Accepted |
 | ADR-038 | Use Resend for Production Transactional Email | Accepted |
+| ADR-039 | X-Ray Treatments and Nurse Commission Accounting | Proposed |
 
 ---
 
@@ -3077,9 +3538,9 @@ When rotating the Resend API key: update `MAIL_PASSWORD` in `/opt/dentalfinance/
 
 The following architectural topics are expected to receive future ADRs.
 
-**ADR-039** — Subscription & Licensing (Proposed)
+**ADR-040** — Subscription & Licensing (Proposed)
 
-**ADR-040** — Public SaaS Platform (Proposed)
+**ADR-041** — Public SaaS Platform (Proposed)
 
 ---
 
