@@ -152,6 +152,38 @@ class TreatmentImportValidationService
     }
 
     /**
+     * @return array<int, ImportParseWarningDto>
+     */
+    public function collectNurseCommissionWarnings(DailyWorkRow $dailyWorkRow): array
+    {
+        $dailyWorkRow->loadMissing(['doctor', 'workItems.treatment', 'workItems.nurseCommission']);
+
+        $doctorLabel = $dailyWorkRow->doctor?->name ?? $dailyWorkRow->doctor?->code ?? 'Unknown';
+        $excelRow = (int) ($dailyWorkRow->excel_row_number ?? 0);
+        $warnings = [];
+
+        foreach ($dailyWorkRow->workItems as $workItem) {
+            if (! $workItem->treatment->requires_nurse_commission) {
+                continue;
+            }
+
+            if ($workItem->nurseCommission !== null) {
+                continue;
+            }
+
+            $warnings[] = new ImportParseWarningDto(
+                excelRow: $excelRow,
+                doctor: $doctorLabel,
+                treatmentText: $dailyWorkRow->treatment_text,
+                warningCode: 'nurse_commission_incomplete',
+                message: "A nurse must be selected for {$workItem->treatment->name}.",
+            );
+        }
+
+        return $warnings;
+    }
+
+    /**
      * @return array<int, string>
      */
     private function splitTreatmentParts(string $treatmentText): array

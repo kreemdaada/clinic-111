@@ -2,12 +2,10 @@
 
 namespace App\Exceptions;
 
-use RuntimeException;
-
 /**
  * Thrown when income Excel export is blocked by reconciliation errors.
  */
-class IncomeExportBlockedException extends RuntimeException
+class IncomeExportBlockedException extends UserFacingException
 {
     /**
      * @param  array<int, array<string, mixed>>  $issues
@@ -34,7 +32,7 @@ class IncomeExportBlockedException extends RuntimeException
     public function userFacingMessages(): array
     {
         $messages = [
-            'The income Excel cannot be downloaded yet because some entries need correction.',
+            'The income export could not be created. Please check the report configuration and try again.',
         ];
 
         foreach ($this->issues as $issue) {

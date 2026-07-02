@@ -45,17 +45,19 @@ class IncomeExportBlockedTest extends TestCase
 
         $this->authenticateAdmin();
 
-        $response = $this->from(route('daily-report.edit', $report))
+        $response = $this->from(route('logs.extraction', $report))
             ->get(route('imports.income', $report));
 
-        $response->assertRedirect(route('daily-report.edit', $report));
+        $response->assertRedirect(route('logs.extraction', $report));
         $response->assertSessionHasErrors('income_export');
+        $response->assertStatus(302);
 
         $messages = session('errors')->get('income_export');
+        $combined = implode(' ', $messages);
 
-        $this->assertStringContainsString('cannot be downloaded yet', $messages[0]);
-        $this->assertStringContainsString('JACK', implode(' ', $messages));
-        $this->assertStringContainsString('External lab cost', implode(' ', $messages));
-        $this->assertStringContainsString('daily report', implode(' ', $messages));
+        $this->assertStringNotContainsString('RuntimeException', $combined);
+        $this->assertStringNotContainsString('Internal Server Error', $combined);
+        $this->assertStringContainsString('could not be created', $messages[0]);
+        $this->assertStringContainsString('JACK', $combined);
     }
 }

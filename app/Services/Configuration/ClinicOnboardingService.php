@@ -64,6 +64,8 @@ class ClinicOnboardingService
 
             $defaultLab = $this->createDefaultLab($clinic);
 
+            app(OpgTreatmentProvisioner::class)->provisionForClinic($clinic->fresh());
+
             return [
                 'clinic' => $clinic->fresh(),
                 'owner' => $owner->fresh(),

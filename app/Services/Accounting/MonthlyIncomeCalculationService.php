@@ -7,12 +7,14 @@ use App\Enums\CommissionType;
 use App\Enums\PaymentMethod;
 use App\Models\Doctor;
 use App\Models\LabJob;
+use App\Models\NurseCommission;
 use App\Models\Payment;
 use App\Models\WorkItem;
 use App\Services\Accounting\Concerns\ScopesAccountingQueries;
 use App\Services\Configuration\CurrentClinicResolver;
 use App\Support\ClinicCurrencySupport;
 use App\Support\MoneyCalculator;
+use App\Support\OpgTreatmentCodes;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -24,7 +26,7 @@ use Illuminate\Support\Collection;
  * NET_TOTAL = TOTAL - LAB_COST
  * DOCTOR_INCOME (percentage) = NET_TOTAL × commission_percentage / 100
  * DOCTOR_INCOME (fixed) = SUM(fixed_fee × quantity)
- * CLINIC_INCOME = NET_TOTAL - DOCTOR_INCOME
+ * CLINIC_INCOME = NET_TOTAL - DOCTOR_INCOME - NURSE_COMMISSION
  */
 class MonthlyIncomeCalculationService
 {
@@ -94,7 +96,13 @@ class MonthlyIncomeCalculationService
             $monthStart,
             $monthEnd,
         );
-        $clinicIncomeAed = MoneyCalculator::subtract($netTotalAed, $doctorIncomeAed);
+        $nurseCommissionAed = $this->calculateNurseCommissionForDoctor($doctor, $monthStart, $monthEnd);
+        $opgNormalValueAed = $this->calculateOpgTreatmentValueForDoctor($doctor, $monthStart, $monthEnd, 'OPG_NORMAL');
+        $opg3dValueAed = $this->calculateOpgTreatmentValueForDoctor($doctor, $monthStart, $monthEnd, 'OPG_3D');
+        $clinicIncomeAed = MoneyCalculator::subtract(
+            MoneyCalculator::subtract($netTotalAed, $doctorIncomeAed),
+            $nurseCommissionAed,
+        );
         $clinicCurrency = ClinicCurrencySupport::baseCurrency($this->currentClinicResolver->resolve());
 
         return new MonthlyIncomeSummaryDto(
@@ -109,6 +117,9 @@ class MonthlyIncomeCalculationService
             netTotalAed: $netTotalAed,
             doctorIncomeAed: $doctorIncomeAed,
             clinicIncomeAed: $clinicIncomeAed,
+            nurseCommissionAed: $nurseCommissionAed,
+            opgNormalValueAed: $opgNormalValueAed,
+            opg3dValueAed: $opg3dValueAed,
             treatmentCounts: $this->calculateTreatmentCounts($doctor, $monthStart, $monthEnd),
             currency: $clinicCurrency,
         );
@@ -253,6 +264,44 @@ class MonthlyIncomeCalculationService
         ksort($counts);
 
         return $counts;
+    }
+
+    private function calculateNurseCommissionForDoctor(Doctor $doctor, Carbon $monthStart, Carbon $monthEnd): string
+    {
+        $commissions = $this->forCurrentClinic(NurseCommission::class)
+            ->whereHas('workItem.dailyWorkRow', function ($query) use ($doctor, $monthStart, $monthEnd) {
+                $query
+                    ->where('doctor_id', $doctor->id)
+                    ->whereBetween('work_date', [$monthStart->toDateString(), $monthEnd->toDateString()]);
+            })
+            ->get();
+
+        return $this->sumAmountAed($commissions, 'total_commission_aed');
+    }
+
+    private function calculateOpgTreatmentValueForDoctor(
+        Doctor $doctor,
+        Carbon $monthStart,
+        Carbon $monthEnd,
+        string $treatmentCode,
+    ): string {
+        $commissions = $this->forCurrentClinic(NurseCommission::class)
+            ->whereHas('workItem.dailyWorkRow', function ($query) use ($doctor, $monthStart, $monthEnd) {
+                $query
+                    ->where('doctor_id', $doctor->id)
+                    ->whereBetween('work_date', [$monthStart->toDateString(), $monthEnd->toDateString()]);
+            })
+            ->get()
+            ->filter(fn (NurseCommission $commission) => OpgTreatmentCodes::matches($commission->treatment_code_snapshot, $treatmentCode));
+
+        $total = '0.00';
+
+        foreach ($commissions as $commission) {
+            $lineValue = MoneyCalculator::multiply((string) $commission->treatment_price_aed, (int) $commission->quantity);
+            $total = MoneyCalculator::add($total, $lineValue);
+        }
+
+        return $total;
     }
 
     /**

@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\UserFacingException;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\SecurityHeadersMiddleware;
 use Illuminate\Foundation\Application;
@@ -37,4 +38,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+
+        $exceptions->render(function (UserFacingException $exception, Request $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return response()->json([
+                    'message' => $exception->getMessage(),
+                ], $exception->httpStatusCode());
+            }
+
+            return null;
+        });
     })->create();

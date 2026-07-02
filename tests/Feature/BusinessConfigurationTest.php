@@ -82,8 +82,8 @@ class BusinessConfigurationTest extends TestCase
         $this->actingAs($owner)
             ->get(route('configuration.dashboard'))
             ->assertOk()
-            ->assertSee('50%', false)
-            ->assertSee('Treatments', false)
+            ->assertSee('75%', false)
+            ->assertSee('Lab Prices', false)
             ->assertSee('Next step', false);
     }
 

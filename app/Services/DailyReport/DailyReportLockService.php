@@ -21,6 +21,7 @@ class DailyReportLockService
     public function __construct(
         private readonly AuditLogService $auditLogService,
         private readonly CurrentClinicResolver $currentClinicResolver,
+        private readonly NurseCommissionApprovalGuard $nurseCommissionApprovalGuard,
     ) {}
 
     public function approve(DailyReport $dailyReport, User $user): DailyReport
@@ -34,6 +35,8 @@ class DailyReportLockService
         if (! in_array($dailyReport->status, [ReportStatus::Calculated, ReportStatus::NeedsReview], true)) {
             throw new RuntimeException('Only calculated reports can be approved.');
         }
+
+        $this->nurseCommissionApprovalGuard->assertCanApprove($dailyReport);
 
         return DB::transaction(function () use ($dailyReport, $user) {
             $oldStatus = $dailyReport->status->value;

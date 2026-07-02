@@ -4,10 +4,14 @@
 
 @push('styles')
 <style>
+    body:has(.dr-layout) main.container {
+        max-width: 1480px;
+    }
+
     .dr-layout {
         display: grid;
-        grid-template-columns: 220px 1fr;
-        gap: 1rem;
+        grid-template-columns: 240px minmax(0, 1fr);
+        gap: 1.25rem;
         align-items: start;
     }
 
@@ -73,16 +77,18 @@
     .dr-panel {
         display: grid;
         gap: 1rem;
+        min-width: 0;
     }
 
     .dr-treatment-grid {
         display: grid;
-        gap: 0.5rem;
-        max-height: 280px;
+        gap: 0.65rem;
+        max-height: min(52vh, 520px);
         overflow: auto;
         border: 1px solid var(--border);
         border-radius: var(--radius-sm);
-        padding: 0.5rem;
+        padding: 0.75rem;
+        background: var(--surface-muted);
     }
 
     .dr-entry-header {
@@ -99,33 +105,141 @@
     }
 
     .dr-treatment-search {
-        width: min(280px, 100%);
-        flex: 0 1 280px;
+        width: min(360px, 100%);
+        flex: 0 1 360px;
+    }
+
+    .dr-field-label {
+        display: block;
+        font-size: 0.6875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-subtle);
+        margin-bottom: 0.3rem;
     }
 
     .dr-treatment-item {
         display: grid;
-        grid-template-columns: 1fr 72px;
-        gap: 0.5rem;
+        grid-template-columns: minmax(0, 1fr) 96px;
+        gap: 1rem 1.5rem;
         align-items: center;
+        padding: 0.75rem 0.9rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--surface);
         font-size: 0.8125rem;
+        cursor: default;
+    }
+
+    .dr-treatment-item--nurse {
+        display: block;
+    }
+
+    .dr-treatment-item--nurse.is-active {
+        border-color: var(--accent);
+        background: linear-gradient(180deg, var(--accent-soft) 0%, var(--surface) 100%);
+        box-shadow: 0 0 0 1px rgba(2, 132, 199, 0.12);
+    }
+
+    .dr-treatment-main {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 96px;
+        gap: 1rem 1.5rem;
+        align-items: center;
+    }
+
+    .dr-treatment-info strong {
+        font-size: 0.875rem;
+    }
+
+    .dr-treatment-qty-input {
+        text-align: center;
+    }
+
+    .dr-treatment-nurse-panel {
+        margin-top: 0.85rem;
+        padding-top: 0.85rem;
+        border-top: 1px dashed var(--border);
+    }
+
+    .dr-nurse-panel-title {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--accent);
+        margin-bottom: 0.65rem;
+    }
+
+    .dr-nurse-panel-grid {
+        display: grid;
+        grid-template-columns: minmax(240px, 1fr) minmax(220px, 1fr);
+        gap: 1rem 1.5rem;
+        align-items: start;
+    }
+
+    @media (max-width: 720px) {
+        .dr-treatment-item,
+        .dr-treatment-main {
+            grid-template-columns: 1fr;
+        }
+
+        .dr-nurse-panel-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .dr-nurse-summary-value {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--text);
+        line-height: 1.35;
+    }
+
+    .dr-nurse-summary-detail {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 0.2rem;
+    }
+
+    .dr-nurse-config-hint {
+        font-size: 0.75rem;
+        color: var(--warning);
+        margin: 0.65rem 0 0;
+        line-height: 1.45;
+        padding: 0.55rem 0.65rem;
+        border-radius: var(--radius-sm);
+        background: rgba(245, 158, 11, 0.08);
+        border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+
+    .dr-nurse-config-hint a {
+        color: inherit;
+        font-weight: 600;
     }
 
     .dr-treatment-meta {
-        font-size: 0.7rem;
+        font-size: 0.75rem;
         color: var(--text-muted);
+        margin-top: 0.15rem;
+    }
+
+    .dr-payment-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.85rem;
+        margin-top: 0.85rem;
     }
 
     .dr-preview {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 0.5rem;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 0.65rem;
     }
 
     .dr-preview-box {
         border: 1px solid var(--border);
         border-radius: var(--radius-sm);
-        padding: 0.65rem;
+        padding: 0.75rem;
         background: var(--surface-muted);
     }
 
@@ -136,7 +250,7 @@
     }
 
     .dr-preview-value {
-        font-size: 1rem;
+        font-size: 1.0625rem;
         font-weight: 600;
         margin-top: 0.15rem;
     }
@@ -317,7 +431,7 @@
                 <p class="extraction-muted" id="dr-treatment-loading">Loading treatments…</p>
             </div>
 
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.75rem;margin-top:0.75rem;">
+            <div class="dr-payment-grid">
                 <div class="form-group" style="margin:0;">
                     <label class="form-label">Cash ({{ $clinicCurrency }})</label>
                     <input class="form-input" type="number" step="0.01" id="dr-dhs" value="0" @if($readOnly) disabled @endif>
@@ -467,6 +581,7 @@ $editorConfig = [
         let treatments = [];
         let treatmentSearchQuery = '';
         let previewTimer = null;
+        const treatmentNurseSelections = new Map();
 
         const doctorButtons = document.querySelectorAll('.dr-doctor-btn');
         const dayButtons = document.querySelectorAll('.dr-day-btn');
@@ -481,11 +596,34 @@ $editorConfig = [
         function selectedLines() {
             return Array.from(treatmentGrid.querySelectorAll('[data-treatment-code]')).map(row => {
                 const qty = parseInt(row.querySelector('[data-qty]')?.value, 10) || 0;
-                return {
-                    code: row.dataset.treatmentCode,
+                const code = row.dataset.treatmentCode;
+                const catalog = treatments.find(t => t.code === code);
+                const line = {
+                    code,
                     quantity: qty,
                 };
+
+                if (qty > 0 && catalog?.requires_nurse_commission) {
+                    const nurseSelect = row.querySelector('[data-nurse-id]');
+                    const nurseId = nurseSelect?.value || treatmentNurseSelections.get(code) || null;
+                    if (nurseId) {
+                        line.nurse_id = parseInt(nurseId, 10);
+                    }
+                }
+
+                return line;
             }).filter(l => l.quantity > 0);
+        }
+
+        function currentNurseSelections() {
+            const selections = {};
+            treatmentGrid.querySelectorAll('[data-treatment-code]').forEach(row => {
+                const nurseSelect = row.querySelector('[data-nurse-id]');
+                if (nurseSelect?.value) {
+                    selections[row.dataset.treatmentCode] = parseInt(nurseSelect.value, 10);
+                }
+            });
+            return selections;
         }
 
         function currentQuantities() {
@@ -503,9 +641,49 @@ $editorConfig = [
 
         function bindTreatmentQtyInputs(root = treatmentGrid) {
             root.querySelectorAll('[data-qty]').forEach(input => {
-                input.addEventListener('input', schedulePreview);
-                input.addEventListener('change', schedulePreview);
+                input.addEventListener('input', onTreatmentInputChange);
+                input.addEventListener('change', onTreatmentInputChange);
             });
+            root.querySelectorAll('[data-nurse-id]').forEach(select => {
+                select.addEventListener('change', onTreatmentInputChange);
+            });
+        }
+
+        function onTreatmentInputChange(event) {
+            const row = event.target.closest('[data-treatment-code]');
+            if (row) {
+                const nurseSelect = row.querySelector('[data-nurse-id]');
+                if (nurseSelect?.value) {
+                    treatmentNurseSelections.set(row.dataset.treatmentCode, parseInt(nurseSelect.value, 10));
+                }
+                toggleNurseSelectVisibility(row);
+            }
+            schedulePreview();
+        }
+
+        function toggleNurseSelectVisibility(row) {
+            const qty = parseInt(row.querySelector('[data-qty]')?.value, 10) || 0;
+            const nurseWrap = row.querySelector('[data-nurse-wrap]');
+            if (nurseWrap) {
+                nurseWrap.hidden = qty <= 0;
+            }
+            row.classList.toggle('is-active', qty > 0 && row.classList.contains('dr-treatment-item--nurse'));
+            updateNurseCommissionSummary(row);
+        }
+
+        function firstValidationError(body) {
+            if (!body?.errors || typeof body.errors !== 'object') {
+                return null;
+            }
+
+            const firstKey = Object.keys(body.errors)[0];
+            const messages = body.errors[firstKey];
+
+            if (Array.isArray(messages) && messages.length) {
+                return messages[0];
+            }
+
+            return null;
         }
 
         async function api(url, options = {}) {
@@ -519,7 +697,10 @@ $editorConfig = [
                 ...options,
             });
             const body = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(body.message || 'Request failed');
+            if (!response.ok) {
+                const validationError = response.status === 422 ? firstValidationError(body) : null;
+                throw new Error(validationError || body.message || 'Request failed');
+            }
             return body;
         }
 
@@ -552,6 +733,10 @@ $editorConfig = [
         }
 
         function formatTreatmentMeta(t) {
+            if (t.requires_nurse_commission && t.treatment_price) {
+                const currency = t.treatment_price_currency || clinicCurrency;
+                return `Price ${t.treatment_price} ${currency}`;
+            }
             if (t.bills_lab_job && t.lab_price) {
                 const labHint = t.lab_price.lab_code ? ` · ${t.lab_price.lab_code}` : '';
                 const currency = t.lab_price.currency || clinicCurrency;
@@ -567,11 +752,89 @@ $editorConfig = [
             return 'No lab';
         }
 
+        function nurseSelectOptions(t, selectedNurseId) {
+            const nurses = t.nurses || [];
+            if (nurses.length === 0) {
+                return '<option value="">No nurse rate configured</option>';
+            }
+            const options = ['<option value="">Select nurse</option>'];
+            nurses.forEach(nurse => {
+                const pct = nurse.commission_percentage ? ` — ${nurse.commission_percentage}%` : '';
+                const selected = String(selectedNurseId || '') === String(nurse.id) ? ' selected' : '';
+                options.push(`<option value="${nurse.id}"${selected}>${nurse.name}${pct}</option>`);
+            });
+            return options.join('');
+        }
+
+        function renderNurseSelectHtml(t, selectedNurseId) {
+            if (!t.requires_nurse_commission) {
+                return '';
+            }
+
+            const nurses = t.nurses || [];
+            const emptyHint = nurses.length === 0
+                ? `<p class="dr-nurse-config-hint">No nurse can be selected yet. Open <a href="{{ route('nurses.index') }}">Nurses</a>, edit the nurse (e.g. JiJi), and add a commission rate for ${t.name || t.code} (e.g. 5%).</p>`
+                : '';
+
+            return `
+                <div class="dr-treatment-nurse-panel" data-nurse-wrap hidden>
+                    <div class="dr-nurse-panel-title">X-ray nurse assignment</div>
+                    <div class="dr-nurse-panel-grid">
+                        <div class="dr-nurse-field">
+                            <span class="dr-field-label">Nurse</span>
+                            <select class="form-input" data-nurse-id ${readOnly || nurses.length === 0 ? 'disabled' : ''}>${nurseSelectOptions(t, selectedNurseId)}</select>
+                        </div>
+                        <div class="dr-nurse-summary" data-nurse-summary hidden>
+                            <span class="dr-field-label">Estimated commission</span>
+                            <div class="dr-nurse-summary-value" data-nurse-summary-value>—</div>
+                            <div class="dr-nurse-summary-detail" data-nurse-summary-detail></div>
+                        </div>
+                    </div>
+                    ${emptyHint}
+                </div>
+            `;
+        }
+
+        function updateNurseCommissionSummary(row) {
+            const code = row.dataset.treatmentCode;
+            const treatment = treatments.find(t => t.code === code);
+            const summary = row.querySelector('[data-nurse-summary]');
+            const valueEl = row.querySelector('[data-nurse-summary-value]');
+            const detailEl = row.querySelector('[data-nurse-summary-detail]');
+
+            if (!treatment?.requires_nurse_commission || !summary || !valueEl || !detailEl) {
+                return;
+            }
+
+            const qty = parseInt(row.querySelector('[data-qty]')?.value, 10) || 0;
+            const nurseId = row.querySelector('[data-nurse-id]')?.value;
+
+            if (qty <= 0 || !nurseId) {
+                summary.hidden = true;
+                return;
+            }
+
+            const nurse = (treatment.nurses || []).find(n => String(n.id) === String(nurseId));
+
+            if (!nurse || !treatment.treatment_price) {
+                summary.hidden = true;
+                return;
+            }
+
+            const priceCurrency = treatment.treatment_price_currency || clinicCurrency;
+            const lineValue = (parseFloat(treatment.treatment_price) * qty).toFixed(2);
+            const commission = (parseFloat(lineValue) * parseFloat(nurse.commission_percentage) / 100).toFixed(2);
+
+            valueEl.textContent = `${commission} ${clinicCurrency}`;
+            detailEl.textContent = `${nurse.commission_percentage}% of ${lineValue} ${priceCurrency} (${qty}× ${treatment.treatment_price} ${priceCurrency})`;
+            summary.hidden = false;
+        }
+
         function missingLabPriceTreatments() {
             const quantities = currentQuantities();
             return treatments.filter(t => {
                 const qty = quantities[t.code] || 0;
-                return qty > 0 && t.bills_lab_job && !t.lab_price;
+                return qty > 0 && t.bills_lab_job && !t.lab_price && !t.requires_nurse_commission;
             });
         }
 
@@ -596,6 +859,7 @@ $editorConfig = [
             const preserveQuantities = options.preserveQuantities ?? !!editingRowId;
             const query = treatmentSearchQuery.trim().toLowerCase();
             const quantities = preserveQuantities ? currentQuantities() : {};
+            const nurseSelections = preserveQuantities ? currentNurseSelections() : {};
             const orphans = preserveQuantities
                 ? Array.from(treatmentGrid.querySelectorAll('[data-orphan]')).map(row => ({
                     code: row.dataset.treatmentCode,
@@ -617,16 +881,31 @@ $editorConfig = [
             if (!visible.length && !selectedNotInCatalog.length) {
                 treatmentGrid.innerHTML = '<p class="extraction-muted" style="margin:0;">No treatments match your search.</p>';
             } else {
-                treatmentGrid.innerHTML = visible.map(t => `
-            <label class="dr-treatment-item" data-treatment-code="${t.code}">
-                <span>
-                    <strong>${t.code}</strong> — ${t.name}
-                    <div class="dr-treatment-meta">${formatTreatmentMeta(t)}</div>
-                </span>
-                <input class="form-input" type="number" min="0" max="50" step="1" value="${quantities[t.code] || 0}" data-qty ${readOnly ? 'disabled' : ''}>
+                treatmentGrid.innerHTML = visible.map(t => {
+                    const selectedNurseId = nurseSelections[t.code] ?? treatmentNurseSelections.get(t.code) ?? '';
+                    const qty = quantities[t.code] || 0;
+                    const nurseHtml = renderNurseSelectHtml(t, selectedNurseId);
+                    const itemClass = nurseHtml ? 'dr-treatment-item dr-treatment-item--nurse' : 'dr-treatment-item';
+                    const activeClass = nurseHtml && qty > 0 ? ' is-active' : '';
+
+                    return `
+            <label class="${itemClass}${activeClass}" data-treatment-code="${t.code}">
+                <div class="dr-treatment-main">
+                    <div class="dr-treatment-info">
+                        <strong>${t.code}</strong> — ${t.name}
+                        <div class="dr-treatment-meta">${formatTreatmentMeta(t)}</div>
+                    </div>
+                    <div class="dr-treatment-qty-wrap">
+                        <span class="dr-field-label">Qty</span>
+                        <input class="form-input dr-treatment-qty-input" type="number" min="0" max="50" step="1" value="${qty}" data-qty ${readOnly ? 'disabled' : ''}>
+                    </div>
+                </div>
+                ${nurseHtml}
             </label>
-        `).join('');
+        `;
+                }).join('');
                 bindTreatmentQtyInputs(treatmentGrid);
+                treatmentGrid.querySelectorAll('[data-treatment-code]').forEach(row => toggleNurseSelectVisibility(row));
             }
 
             selectedNotInCatalog.forEach(({ code, quantity }) => {
@@ -651,32 +930,52 @@ $editorConfig = [
             label.dataset.treatmentCode = code;
             label.dataset.orphan = 'true';
             label.innerHTML = `
-            <span>
+            <div class="dr-treatment-info">
                 <strong>${code}</strong>
                 <div class="dr-treatment-meta">From import — not in default catalog</div>
-            </span>
-            <input class="form-input" type="number" min="0" max="50" step="1" value="${quantity}" data-qty ${readOnly ? 'disabled' : ''}>
+            </div>
+            <div class="dr-treatment-qty-wrap">
+                <span class="dr-field-label">Qty</span>
+                <input class="form-input dr-treatment-qty-input" type="number" min="0" max="50" step="1" value="${quantity}" data-qty ${readOnly ? 'disabled' : ''}>
+            </div>
         `;
             bindTreatmentQtyInputs(label);
             treatmentGrid.appendChild(label);
         }
 
         function applyTreatmentLines(lines) {
-            const remaining = Object.fromEntries((lines || []).map(l => [l.code, l.quantity]));
+            treatmentNurseSelections.clear();
+            (lines || []).forEach(line => {
+                if (line.nurse_id) {
+                    treatmentNurseSelections.set(line.code, line.nurse_id);
+                }
+            });
+
+            const remaining = Object.fromEntries((lines || []).map(l => [l.code, l]));
             if (treatments.length) {
                 renderTreatmentGrid({ preserveQuantities: false });
             }
             treatmentGrid.querySelectorAll('[data-treatment-code]').forEach(row => {
                 const code = row.dataset.treatmentCode;
-                const qty = remaining[code] || 0;
+                const line = remaining[code];
+                const qty = line?.quantity || 0;
                 const input = row.querySelector('[data-qty]');
                 if (input) {
                     input.value = qty;
                 }
+                if (line?.nurse_id) {
+                    const nurseSelect = row.querySelector('[data-nurse-id]');
+                    if (nurseSelect) {
+                        nurseSelect.value = String(line.nurse_id);
+                    }
+                }
+                toggleNurseSelectVisibility(row);
                 delete remaining[code];
             });
-            Object.entries(remaining).forEach(([code, quantity]) => {
-                if (quantity > 0) appendOrphanTreatmentRow(code, quantity);
+            Object.entries(remaining).forEach(([code, line]) => {
+                if (line.quantity > 0) {
+                    appendOrphanTreatmentRow(code, line.quantity);
+                }
             });
         }
 
@@ -715,6 +1014,7 @@ $editorConfig = [
             cancelEditBtn.hidden = true;
             setPaymentInputs(null);
             treatmentSearchQuery = '';
+            treatmentNurseSelections.clear();
             if (treatmentSearch) {
                 treatmentSearch.value = '';
             }
@@ -830,7 +1130,19 @@ $editorConfig = [
                 }
                 return;
             }
-            rowList.innerHTML = rows.map(r => `
+            rowList.innerHTML = rows.map(r => {
+                const nurseLines = (r.treatment_lines || [])
+                    .filter(line => line.nurse_commission || line.nurse_name)
+                    .map(line => {
+                        const commission = line.nurse_commission;
+                        if (commission) {
+                            return `${line.code}: ${line.nurse_name || 'Nurse'} — ${commission.commission_percentage}% (${commission.total_commission_aed} ${clinicCurrency})`;
+                        }
+                        return `${line.code}: ${line.nurse_name || 'Nurse'}`;
+                    })
+                    .join(' · ');
+
+                return `
             <div class="dr-row-card" data-row-id="${r.id}">
                 <div style="display:flex;justify-content:space-between;gap:0.5rem;align-items:flex-start;">
                     <strong>${r.treatment_text}</strong>
@@ -840,12 +1152,14 @@ $editorConfig = [
                     Paid ${r.paid_total_aed} ${clinicCurrency} · Lab ${r.lab_total_aed} ${clinicCurrency}
                     · Cash ${r.dhs_amount} ${clinicCurrency}${foreignCashCurrency && Number(r.usd_amount) > 0 ? ` · ${foreignCashCurrency} ${r.usd_amount}` : ''} · Visa ${r.visa_amount} ${clinicCurrency}
                 </div>
+                ${nurseLines ? `<div class="extraction-muted" style="margin:0 0 0.35rem;">Nurse commission: ${nurseLines}</div>` : ''}
                 <div class="dr-row-actions">
                     ${readOnly ? '' : `<button type="button" class="btn btn-primary btn-sm" data-edit-row="${r.id}">Edit</button>`}
                     ${readOnly ? '' : `<button type="button" class="btn btn-secondary btn-sm" data-delete-row="${r.id}">Delete</button>`}
                 </div>
             </div>
-        `).join('');
+        `;
+            }).join('');
             if (!readOnly) {
                 rowList.querySelectorAll('[data-edit-row]').forEach(btn => {
                     btn.addEventListener('click', () => {
@@ -992,13 +1306,17 @@ $editorConfig = [
                 treatment_lines: lines,
             };
             if (editingRowId) payload.work_row_id = editingRowId;
-            await api(`/daily-report/${reportId}/rows`, {
-                method: 'POST',
-                body: JSON.stringify(payload),
-            });
-            clearForm();
-            await loadRows();
-            await loadTreatments();
+            try {
+                await api(`/daily-report/${reportId}/rows`, {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                });
+                clearForm();
+                await loadRows();
+                await loadTreatments();
+            } catch (error) {
+                alert(error.message || 'Could not save entry.');
+            }
         });
 
         cancelEditBtn.addEventListener('click', () => clearForm());

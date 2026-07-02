@@ -88,7 +88,8 @@ class ClinicOnboardingServiceTest extends TestCase
 
         $this->assertSame(1, Lab::query()->where('clinic_id', $clinicId)->count());
         $this->assertSame(0, Doctor::query()->where('clinic_id', $clinicId)->count());
-        $this->assertSame(0, Treatment::query()->where('clinic_id', $clinicId)->count());
+        $this->assertSame(2, Treatment::query()->where('clinic_id', $clinicId)->count());
+        Treatment::query()->where('clinic_id', $clinicId)->whereIn('code', ['OPG_NORMAL', 'OPG_3D'])->exists();
     }
 
     public function test_register_normalizes_clinic_code_and_currency(): void

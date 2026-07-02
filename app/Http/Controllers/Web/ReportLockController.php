@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Exceptions\NurseCommissionApprovalBlockedException;
+use App\Exceptions\UserFacingException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DailyReports\UnlockDailyReportRequest;
 use App\Models\DailyReport;
@@ -26,6 +28,8 @@ class ReportLockController extends Controller
 
         try {
             $this->lockService->approve($dailyReport, request()->user());
+        } catch (NurseCommissionApprovalBlockedException|UserFacingException $exception) {
+            return back()->withErrors(['approve' => $exception->getMessage()]);
         } catch (RuntimeException $exception) {
             return back()->withErrors(['approve' => $exception->getMessage()]);
         }

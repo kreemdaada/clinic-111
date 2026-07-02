@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\DailyWorkRow;
 use App\Models\LabJob;
+use App\Models\NurseCommission;
 use App\Models\Payment;
 use App\Models\WorkItem;
 use Illuminate\Database\Eloquent\Builder;
@@ -63,6 +64,20 @@ final class AccountingScopedQuery
     public static function labJobs(int $clinicId, ?int $workItemId = null): Builder
     {
         $query = LabJob::query()->where('clinic_id', $clinicId);
+
+        if ($workItemId !== null) {
+            $query->where('work_item_id', $workItemId);
+        }
+
+        return $query;
+    }
+
+    /**
+     * @return Builder<NurseCommission>
+     */
+    public static function nurseCommissions(int $clinicId, ?int $workItemId = null): Builder
+    {
+        $query = NurseCommission::query()->where('clinic_id', $clinicId);
 
         if ($workItemId !== null) {
             $query->where('work_item_id', $workItemId);

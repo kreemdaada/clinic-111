@@ -286,7 +286,16 @@ TOTAL COLLECTED  = SUM(payments.amount_aed)     WHERE paid_at in month
 LAB COST         = SUM(lab_jobs.total_cost_aed) WHERE work_date in month
 NET TOTAL        = TOTAL COLLECTED - LAB COST
 DOCTOR INCOME    = per commission_type rules above
-CLINIC INCOME    = NET TOTAL - DOCTOR INCOME
+CLINIC INCOME    = NET TOTAL - DOCTOR INCOME - NURSE COMMISSION
+```
+
+OPG-Normal and OPG-3D columns in monthly income, practice overview, and Excel export are **informative only** (treatment value from `treatment_price_aed × quantity` on nurse commission snapshots). They are **not** added to revenue.
+
+Nurse commission is subtracted **once** from clinic income:
+
+```
+NURSE COMMISSION = SUM(nurse_commissions.total_commission_aed)
+CLINIC INCOME    = NET TOTAL - DOCTOR INCOME - NURSE COMMISSION
 ```
 
 Payment breakdowns are also reported separately:
@@ -296,6 +305,51 @@ Payment breakdowns are also reported separately:
 - `total_visa` — sum of VISA payments
 
 Treatment counts are grouped by treatment code for the month.
+
+---
+
+## OPG Treatments and Nurse Commission (ADR-039)
+
+### Standard OPG catalog entries
+
+| Code | Name | Treatment price | Flags |
+|---|---|---|---|
+| `OPG_NORMAL` | OPG-Normal | 200.00 AED | `requires_nurse_commission=true`, `has_lab_cost=false` |
+| `OPG_3D` | OPG 3D | 360.00 AED | `requires_nurse_commission=true`, `has_lab_cost=false` |
+
+Provisioned idempotently for each new clinic via `OpgTreatmentProvisioner`. Custom prices on existing codes are not overwritten.
+
+### Treatment price vs lab cost
+
+`treatments.treatment_price` is the **nurse commission basis**, not a lab unit cost and not patient revenue. OPG treatments must not use external lab cost (`has_lab_cost=false`).
+
+### Nurse commission rate
+
+One active rate per nurse + treatment combination (`nurse_commission_rates`). Percentage range 0.01–100.00 with two decimal places.
+
+### Commission formula (per work item)
+
+```
+treatment_price_aed = convertToAed(treatment_price, treatment_price_currency)
+unit_commission_aed = percentage(treatment_price_aed, commission_percentage)
+total_commission_aed = unit_commission_aed × quantity
+```
+
+Payment amounts and lab prices do **not** affect nurse commission. Doctor commission rules are unchanged.
+
+### Daily report editor (V1)
+
+- One nurse per treatment code per work row; quantity > 1 applies to the same nurse.
+- Different nurses for the same treatment code require separate work rows.
+
+### Import and approval
+
+- Imported OPG without nurse: work item created, warning `nurse_commission_incomplete`, status `needs_review`, no commission snapshot until nurse is assigned in the editor.
+- Approve/lock blocked while any eligible work item lacks a complete nurse commission snapshot.
+
+### Expected business errors
+
+Configuration and validation problems (missing nurse, missing rate, incomplete OPG, export reconciliation failures) return friendly web flash messages or structured API 422 responses — never an uncaught HTTP 500 with stack traces for practice users.
 
 ---
 

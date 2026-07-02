@@ -139,7 +139,10 @@ class ClinicOnboardingTest extends TestCase
         $clinic = Clinic::query()->where('code', 'SUNRISE')->firstOrFail();
 
         $this->assertSame(0, Doctor::query()->where('clinic_id', $clinic->id)->count());
-        $this->assertSame(0, Treatment::query()->where('clinic_id', $clinic->id)->count());
+        $this->assertSame(2, Treatment::query()->where('clinic_id', $clinic->id)->count());
+        $this->assertTrue(
+            Treatment::query()->where('clinic_id', $clinic->id)->whereIn('code', ['OPG_NORMAL', 'OPG_3D'])->count() === 2
+        );
     }
 
     public function test_onboarding_creates_only_default_lab(): void

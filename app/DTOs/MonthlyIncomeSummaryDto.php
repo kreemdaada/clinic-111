@@ -24,7 +24,10 @@ readonly class MonthlyIncomeSummaryDto
      * @param  string  $labCostAed  Sum of lab job costs (JOB) for the month.
      * @param  string  $netTotalAed  TOTAL − LAB_COST.
      * @param  string  $doctorIncomeAed  Amount owed to the doctor (commission rules).
-     * @param  string  $clinicIncomeAed  NET_TOTAL − DOCTOR_INCOME.
+     * @param  string  $clinicIncomeAed  NET_TOTAL − DOCTOR_INCOME − NURSE_COMMISSION.
+     * @param  string  $nurseCommissionAed  Sum of nurse commission snapshots for the month.
+     * @param  string  $opgNormalValueAed  Informative OPG_NORMAL treatment value (not revenue).
+     * @param  string  $opg3dValueAed  Informative OPG_3D treatment value (not revenue).
      * @param  array<string, int>  $treatmentCounts  Work-item quantities grouped by treatment code.
      */
     public function __construct(
@@ -39,6 +42,9 @@ readonly class MonthlyIncomeSummaryDto
         public string $netTotalAed,
         public string $doctorIncomeAed,
         public string $clinicIncomeAed,
+        public string $nurseCommissionAed,
+        public string $opgNormalValueAed,
+        public string $opg3dValueAed,
         public array $treatmentCounts,
         public string $currency = 'AED',
     ) {}
@@ -84,6 +90,12 @@ readonly class MonthlyIncomeSummaryDto
             'net_total' => $convert($this->netTotalAed),
             'doctor_income_aed' => $this->doctorIncomeAed,
             'doctor_income' => $convert($this->doctorIncomeAed),
+            'nurse_commission_aed' => $this->nurseCommissionAed,
+            'nurse_commission' => $convert($this->nurseCommissionAed),
+            'opg_normal_value_aed' => $this->opgNormalValueAed,
+            'opg_normal_value' => $convert($this->opgNormalValueAed),
+            'opg_3d_value_aed' => $this->opg3dValueAed,
+            'opg_3d_value' => $convert($this->opg3dValueAed),
             'clinic_income_aed' => $this->clinicIncomeAed,
             'clinic_income' => $convert($this->clinicIncomeAed),
             'treatment_counts' => $this->treatmentCounts,

@@ -8,6 +8,7 @@ use App\Http\Requests\Nurses\ListNursesRequest;
 use App\Http\Requests\Nurses\StoreNurseRequest;
 use App\Http\Requests\Nurses\UpdateNurseRequest;
 use App\Models\Nurse;
+use App\Services\Accounting\TreatmentManagementService;
 use App\Services\Configuration\NurseManagementService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,6 +25,7 @@ class NurseAdminController extends Controller
 
     public function __construct(
         private readonly NurseManagementService $nurseManagementService,
+        private readonly TreatmentManagementService $treatmentManagementService,
     ) {}
 
     public function index(ListNursesRequest $request): View
@@ -33,6 +35,7 @@ class NurseAdminController extends Controller
         $status = $validated['status'] ?? 'all';
 
         $nurses = $this->nurseManagementService->listQuery($search, $status)
+            ->with(['nurseCommissionRates.treatment'])
             ->orderBy('name')
             ->paginate(self::PER_PAGE)
             ->withQueryString();
@@ -41,6 +44,7 @@ class NurseAdminController extends Controller
             'nurses' => $nurses,
             'search' => $search,
             'status' => $status,
+            'commissionTreatments' => $this->treatmentManagementService->listActiveRequiringNurseCommission(),
             'showConfigurationBack' => $this->showConfigurationBack($request),
         ]);
     }

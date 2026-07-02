@@ -18,6 +18,7 @@ use App\Support\ClinicCurrencySupport;
 use App\Support\DoctorLabelNormalizer;
 use App\Support\IncomeExportStandardLayout;
 use App\Support\MoneyCalculator;
+use App\Support\OpgTreatmentCodes;
 use App\Support\ReportMonthResolver;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -43,6 +44,17 @@ class DoctorsIncomeExcelExportService
     use ScopesAccountingQueries;
 
     private const TEMPLATE_PATH = 'templates/original_income_template.xlsx';
+
+    /**
+     * OPG / nurse commission columns appended after standard treatment count columns.
+     *
+     * @var array<string, string>
+     */
+    private const NURSE_COMMISSION_COLUMNS = [
+        'opg_normal_value' => 'T',
+        'opg_3d_value' => 'U',
+        'nurse_commission' => 'V',
+    ];
 
     /**
      * @param  IncomeReconciliationService  $incomeReconciliationService  Pre-export validation.
@@ -113,7 +125,7 @@ class DoctorsIncomeExcelExportService
         $clinicCurrency = ClinicCurrencySupport::baseCurrency($clinic);
 
         $workRowsQuery = $this->forCurrentClinic(DailyWorkRow::class)
-            ->with(['doctor', 'workItems.treatment', 'workItems.labJob']);
+            ->with(['doctor', 'workItems.treatment', 'workItems.labJob', 'workItems.nurseCommission']);
 
         if ($dailyReport !== null) {
             $this->assertSameClinic($dailyReport);
@@ -271,6 +283,9 @@ class DoctorsIncomeExcelExportService
         /** @var array<string, int> $treatmentTotals */
         $treatmentTotals = [];
         $labCostTotal = '0.00';
+        $opgNormalTotal = '0.00';
+        $opg3dTotal = '0.00';
+        $nurseCommissionTotal = '0.00';
 
         for ($day = 1; $day <= $daysInMonth; $day++) {
             $row = $firstDayRow + $day - 1;
@@ -307,6 +322,11 @@ class DoctorsIncomeExcelExportService
 
                     $treatmentTotals[$code] += $quantity;
                 }
+
+                $this->writeNurseCommissionColumns($sheet, $row, $dayData);
+                $opgNormalTotal = MoneyCalculator::add($opgNormalTotal, $dayData['opg_normal_value'] ?? '0.00');
+                $opg3dTotal = MoneyCalculator::add($opg3dTotal, $dayData['opg_3d_value'] ?? '0.00');
+                $nurseCommissionTotal = MoneyCalculator::add($nurseCommissionTotal, $dayData['nurse_commission'] ?? '0.00');
             }
 
             foreach ($columnTotals as $key => $value) {
@@ -329,6 +349,12 @@ class DoctorsIncomeExcelExportService
 
                 $sheet->setCellValue($treatmentColumns[$code].$totalRow, $quantity);
             }
+
+            $this->writeNurseCommissionColumns($sheet, $totalRow, [
+                'opg_normal_value' => $opgNormalTotal,
+                'opg_3d_value' => $opg3dTotal,
+                'nurse_commission' => $nurseCommissionTotal,
+            ]);
         }
 
         $summaryStart = $totalRow + 2;
@@ -460,6 +486,10 @@ class DoctorsIncomeExcelExportService
         $maxIndex = 0;
 
         foreach ($treatmentColumns as $column) {
+            $maxIndex = max($maxIndex, Coordinate::columnIndexFromString($column));
+        }
+
+        foreach (self::NURSE_COMMISSION_COLUMNS as $column) {
             $maxIndex = max($maxIndex, Coordinate::columnIndexFromString($column));
         }
 
@@ -648,6 +678,9 @@ class DoctorsIncomeExcelExportService
                     'total' => '0.00',
                     'job' => '0.00',
                     'treatments' => [],
+                    'opg_normal_value' => '0.00',
+                    'opg_3d_value' => '0.00',
+                    'nurse_commission' => '0.00',
                 ];
             }
 
@@ -713,6 +746,51 @@ class DoctorsIncomeExcelExportService
                         $daily[$dateKey]['job'],
                         $jobAmount,
                     );
+                }
+
+                if ($workItem->nurseCommission !== null) {
+                    $commission = $workItem->nurseCommission;
+                    $commissionAmount = (string) $commission->total_commission_aed;
+
+                    if (! $isLegacyAed) {
+                        $commissionAmount = ClinicCurrencySupport::fromStoredAedEquivalent(
+                            $commissionAmount,
+                            $clinicCurrency,
+                            $this->defaultUsdExchangeRate,
+                        );
+                    }
+
+                    $daily[$dateKey]['nurse_commission'] = MoneyCalculator::add(
+                        $daily[$dateKey]['nurse_commission'],
+                        $commissionAmount,
+                    );
+
+                    $lineValue = MoneyCalculator::multiply(
+                        (string) $commission->treatment_price_aed,
+                        (int) $commission->quantity,
+                    );
+
+                    if (! $isLegacyAed) {
+                        $lineValue = ClinicCurrencySupport::fromStoredAedEquivalent(
+                            $lineValue,
+                            $clinicCurrency,
+                            $this->defaultUsdExchangeRate,
+                        );
+                    }
+
+                    if (OpgTreatmentCodes::isNormal($commission->treatment_code_snapshot)) {
+                        $daily[$dateKey]['opg_normal_value'] = MoneyCalculator::add(
+                            $daily[$dateKey]['opg_normal_value'],
+                            $lineValue,
+                        );
+                    }
+
+                    if (OpgTreatmentCodes::is3d($commission->treatment_code_snapshot)) {
+                        $daily[$dateKey]['opg_3d_value'] = MoneyCalculator::add(
+                            $daily[$dateKey]['opg_3d_value'],
+                            $lineValue,
+                        );
+                    }
                 }
             }
         }
@@ -866,6 +944,7 @@ class DoctorsIncomeExcelExportService
             $sheet->setCellValue('H1', 'DAILY TOTAL');
             $sheet->setCellValue('I1', 'JOB');
             $this->writeTreatmentColumnHeaders($sheet, $profile);
+            $this->writeNurseCommissionColumnHeaders($sheet);
 
             return;
         }
@@ -877,6 +956,24 @@ class DoctorsIncomeExcelExportService
         $sheet->setCellValue('G1', 'JOB');
 
         $this->writeTreatmentColumnHeaders($sheet, $profile);
+        $this->writeNurseCommissionColumnHeaders($sheet);
+    }
+
+    private function writeNurseCommissionColumnHeaders(Worksheet $sheet): void
+    {
+        $sheet->setCellValue(self::NURSE_COMMISSION_COLUMNS['opg_normal_value'].'1', 'OPG-Normal');
+        $sheet->setCellValue(self::NURSE_COMMISSION_COLUMNS['opg_3d_value'].'1', 'OPG-3D');
+        $sheet->setCellValue(self::NURSE_COMMISSION_COLUMNS['nurse_commission'].'1', 'Nurse Comm.');
+    }
+
+    /**
+     * @param  array<string, mixed>  $dayData
+     */
+    private function writeNurseCommissionColumns(Worksheet $sheet, int $row, array $dayData): void
+    {
+        foreach (self::NURSE_COMMISSION_COLUMNS as $key => $column) {
+            $this->setNumericCell($sheet, $column.$row, $dayData[$key] ?? '0.00');
+        }
     }
 
     /**

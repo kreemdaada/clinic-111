@@ -10,6 +10,7 @@ use App\Enums\LabJobStatus;
 use App\Enums\ReportStatus;
 use App\Models\DailyReport;
 use App\Models\LabJob;
+use App\Models\NurseCommission;
 use App\Models\Payment;
 use App\Services\Accounting\Concerns\ScopesAccountingQueries;
 use App\Services\Configuration\CurrentClinicResolver;
@@ -17,6 +18,7 @@ use App\Support\Analytics\FinancialPeriod;
 use App\Support\Analytics\MonthOverMonthComparison;
 use App\Support\ClinicCurrencySupport;
 use App\Support\MoneyCalculator;
+use App\Support\OpgTreatmentCodes;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -48,8 +50,20 @@ class ClinicFinancialOverviewService
         $revenuePrevious = $this->sumRevenue($previous, $currency);
         $labCurrent = $this->sumLabCost($period, $currency);
         $labPrevious = $this->sumLabCost($previous, $currency);
-        $resultCurrent = MoneyCalculator::subtract($revenueCurrent, $labCurrent);
-        $resultPrevious = MoneyCalculator::subtract($revenuePrevious, $labPrevious);
+        $nurseCommissionCurrent = $this->sumNurseCommission($period, $currency);
+        $nurseCommissionPrevious = $this->sumNurseCommission($previous, $currency);
+        $opgNormalCurrent = $this->sumOpgTreatmentValue($period, $currency, 'OPG_NORMAL');
+        $opgNormalPrevious = $this->sumOpgTreatmentValue($previous, $currency, 'OPG_NORMAL');
+        $opg3dCurrent = $this->sumOpgTreatmentValue($period, $currency, 'OPG_3D');
+        $opg3dPrevious = $this->sumOpgTreatmentValue($previous, $currency, 'OPG_3D');
+        $resultCurrent = MoneyCalculator::subtract(
+            MoneyCalculator::subtract($revenueCurrent, $labCurrent),
+            $nurseCommissionCurrent,
+        );
+        $resultPrevious = MoneyCalculator::subtract(
+            MoneyCalculator::subtract($revenuePrevious, $labPrevious),
+            $nurseCommissionPrevious,
+        );
 
         $revenueTrend = $this->buildRevenueTrend($period, $currency);
         $topTreatments = $this->buildTopTreatments($period, $currency);
@@ -58,6 +72,7 @@ class ClinicFinancialOverviewService
 
         $hasData = bccomp($revenueCurrent, '0', 2) !== 0
             || bccomp($labCurrent, '0', 2) !== 0
+            || bccomp($nurseCommissionCurrent, '0', 2) !== 0
             || $reportMeta['count'] > 0;
 
         return new ClinicFinancialOverviewData(
@@ -65,6 +80,9 @@ class ClinicFinancialOverviewService
             currency: $currency,
             revenue: $this->kpi($revenueCurrent, $revenuePrevious),
             labCost: $this->kpi($labCurrent, $labPrevious),
+            nurseCommission: $this->kpi($nurseCommissionCurrent, $nurseCommissionPrevious),
+            opgNormalValue: $this->kpi($opgNormalCurrent, $opgNormalPrevious),
+            opg3dValue: $this->kpi($opg3dCurrent, $opg3dPrevious),
             calculatedResult: $this->kpi($resultCurrent, $resultPrevious),
             revenueTrend: $revenueTrend,
             topTreatments: $topTreatments,
@@ -99,6 +117,33 @@ class ClinicFinancialOverviewService
     {
         $totalAed = $this->labJobsInPeriodQuery($period)
             ->sum('lab_jobs.total_cost_aed');
+
+        return $this->fromStoredTotal($totalAed, $clinicCurrency);
+    }
+
+    private function sumNurseCommission(FinancialPeriod $period, string $clinicCurrency): string
+    {
+        $totalAed = $this->nurseCommissionsInPeriodQuery($period)
+            ->sum('nurse_commissions.total_commission_aed');
+
+        return $this->fromStoredTotal($totalAed, $clinicCurrency);
+    }
+
+    private function sumOpgTreatmentValue(FinancialPeriod $period, string $clinicCurrency, string $treatmentCode): string
+    {
+        $commissions = $this->nurseCommissionsInPeriodQuery($period)
+            ->get(['nurse_commissions.treatment_code_snapshot', 'nurse_commissions.treatment_price_aed', 'nurse_commissions.quantity'])
+            ->filter(fn ($commission) => OpgTreatmentCodes::matches($commission->treatment_code_snapshot, $treatmentCode));
+
+        $totalAed = '0.00';
+
+        foreach ($commissions as $commission) {
+            $lineValue = MoneyCalculator::multiply(
+                (string) $commission->treatment_price_aed,
+                (int) $commission->quantity,
+            );
+            $totalAed = MoneyCalculator::add($totalAed, $lineValue);
+        }
 
         return $this->fromStoredTotal($totalAed, $clinicCurrency);
     }
@@ -332,6 +377,20 @@ class ClinicFinancialOverviewService
                 LabJobStatus::Calculated->value,
                 LabJobStatus::Adjusted->value,
             ])
+            ->whereBetween('dwr.work_date', [
+                $period->start->toDateString(),
+                $period->end->toDateString(),
+            ]);
+    }
+
+    private function nurseCommissionsInPeriodQuery(FinancialPeriod $period)
+    {
+        return NurseCommission::query()
+            ->where('nurse_commissions.clinic_id', $this->currentClinicId())
+            ->join('work_items as wi', 'nurse_commissions.work_item_id', '=', 'wi.id')
+            ->join('daily_work_rows as dwr', 'wi.daily_work_row_id', '=', 'dwr.id')
+            ->join('daily_reports as dr', 'dwr.daily_report_id', '=', 'dr.id')
+            ->whereIn('dr.status', $this->includedReportStatuses())
             ->whereBetween('dwr.work_date', [
                 $period->start->toDateString(),
                 $period->end->toDateString(),

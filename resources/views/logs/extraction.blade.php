@@ -969,6 +969,26 @@ $rows = $importedByDoctor[$doctorCode] ?? [];
                     </div>
                     @endif
                 </div>
+                @php
+                    $nurseEntries = $nurseCommissionsByWorkRow[$row['work_row_id'] ?? 0] ?? [];
+                @endphp
+                @if ($nurseEntries !== [])
+                <div style="margin-top:0.75rem;">
+                    <div class="extraction-entry-block-title">Nurse commission</div>
+                    <div class="extraction-entry-lines">
+                        @foreach ($nurseEntries as $entry)
+                        <div class="extraction-treatment-block" style="margin-bottom:0.5rem;">
+                            <strong>{{ $entry['treatment_name'] }}</strong><br>
+                            Quantity: {{ $entry['quantity'] }}<br>
+                            Nurse: {{ $entry['nurse_name'] }}<br>
+                            Treatment price: {{ $entry['treatment_price'] }} {{ $entry['treatment_price_currency'] }}<br>
+                            Commission: {{ rtrim(rtrim($entry['commission_percentage'], '0'), '.') }} %<br>
+                            Nurse commission: {{ $entry['total_commission_aed'] }} AED
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
             </div>
             @if ($issueCount > 0)
             <div class="extraction-entry-notes">

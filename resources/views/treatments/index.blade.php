@@ -20,7 +20,7 @@
     .tx-modal-backdrop.is-open { display:flex; }
     .tx-modal {
         background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
-        width:min(520px,100%); padding:1.25rem; max-height:90vh; overflow:auto;
+        width:min(560px,100%); padding:1.25rem; max-height:90vh; overflow:auto;
     }
     .tx-modal h2 { font-size:1rem; margin:0 0 1rem; }
     .tx-modal-actions { display:flex; gap:0.5rem; justify-content:flex-end; margin-top:1rem; }
@@ -112,6 +112,7 @@
                         <button
                             type="button"
                             class="btn btn-secondary btn-sm tx-edit-btn"
+                            data-treatment-id="{{ $treatment->id }}"
                             data-code="{{ $treatment->code }}"
                             data-name="{{ e($treatment->name) }}"
                             data-description="{{ e($treatment->description ?? '') }}"
@@ -374,7 +375,7 @@ document.addEventListener('DOMContentLoaded', function () {
         syncLabCostWithNurseCommission(modal);
     }
 
-    function populateEditForm(data) {
+    function populateEditForm(data, source) {
         editForm.action = data.update_url;
         document.getElementById('tx-edit-update-url').value = data.update_url;
         document.getElementById('tx-edit-activate-url').value = data.activate_url;
@@ -415,7 +416,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.querySelectorAll('.tx-edit-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
-            populateEditForm(readEditData(btn));
+            populateEditForm(readEditData(btn), btn);
             openModal(editModal);
         });
     });

@@ -587,15 +587,16 @@ Explizite Scopes in Services machen Tenant-Filter **sichtbar und testbar**. Glob
 
 | Begriff | Bedeutung im System | Speicherort |
 |---|---|---|
-| **Patienten-Behandlungspreis** | *Nicht implementiert* — kein Katalog für Rechnungspreise an Patienten | — |
+| **Patienten-Behandlungspreis (Treatment price)** | Basis für OPG/Nurse-Provision — kein Lab-Preis, kein Revenue | `treatments.treatment_price`, `treatment_price_currency` |
 | **Tatsächlich bezahlter Betrag** | DHS/USD/VISA/Cheque/Tabby pro Zeile | `daily_work_rows.*_amount`, `payments.amount` |
 | **Zugeordneter Umsatz (Revenue)** | Summe der Zahlungen in AED-Pivot | `payments.amount_aed`, `paid_total_aed` |
 | **Labor-Einheitspreis (Lab Unit Cost)** | Kosten pro Einheit beim Labor | `lab_prices.unit_cost` |
 | **Laborkosten (JOB)** | Lab Unit Cost × Menge | `lab_jobs.total_cost_aed` |
+| **Nurse Commission** | Prozent auf Treatment price × Menge (nicht auf Payment) | `nurse_commissions` Snapshots |
 | **Doctor Commission** | Prozent auf Netto oder Festhonorar | berechnet via `MonthlyIncomeCalculationService` |
-| **Calculated Result** | Doctor Income, Clinic Income, Overview-KPIs | berechnet, nicht persistiert |
+| **Calculated Result (Overview)** | Revenue − Lab − Nurse Commission | `ClinicFinancialOverviewService` |
 
-> **Wichtig:** `lab_prices.unit_cost` ist der **Labor-Einheitspreis**, kein Patienten-Behandlungspreis. Ein zukünftiger Patienten-Behandlungspreis (z. B. für OPG-Nurse-Provision) wäre ein separates fachliches Konzept.
+> **Wichtig:** `treatments.treatment_price` ist **kein** Laborpreis und **kein** zusätzlicher Revenue-Posten. OPG-Spalten in Income/Overview/Export sind informativ. Nurse Commission wird genau einmal vom Clinic Income abgezogen.
 
 ### Währungsfelder
 

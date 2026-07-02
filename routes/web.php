@@ -15,7 +15,9 @@ use App\Http\Controllers\Web\LabPriceAdminController;
 use App\Http\Controllers\Web\LandingController;
 use App\Http\Controllers\Web\LegalPageController;
 use App\Http\Controllers\Web\LogController;
+use App\Http\Controllers\Web\MonthlyIncomeController;
 use App\Http\Controllers\Web\NurseAdminController;
+use App\Http\Controllers\Web\NurseCommissionRateAdminController;
 use App\Http\Controllers\Web\ReportLockController;
 use App\Http\Controllers\Web\TreatmentAdminController;
 use App\Http\Controllers\Web\UserAdminController;
@@ -52,6 +54,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/practice-overview', ClinicFinancialOverviewController::class)
         ->middleware('role:admin,accountant,viewer')
         ->name('clinic.financial-overview');
+
+    Route::get('/monthly-income', MonthlyIncomeController::class)
+        ->middleware('role:admin,accountant,viewer')
+        ->name('monthly-income.index');
 
     Route::get('/imports', [ImportController::class, 'index'])
         ->middleware('role:admin,accountant,viewer')
@@ -148,6 +154,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/{nurse}', [NurseAdminController::class, 'update'])->name('update');
         Route::delete('/{nurse}', [NurseAdminController::class, 'destroy'])->name('destroy');
         Route::post('/{nurse}/activate', [NurseAdminController::class, 'activate'])->name('activate');
+        Route::post('/{nurse}/commission-rates', [NurseCommissionRateAdminController::class, 'storeForNurse'])->name('commission-rates.store');
+        Route::put('/{nurse}/commission-rates/{nurseCommissionRate}', [NurseCommissionRateAdminController::class, 'updateForNurse'])->name('commission-rates.update');
+        Route::delete('/{nurse}/commission-rates/{nurseCommissionRate}', [NurseCommissionRateAdminController::class, 'destroyForNurse'])->name('commission-rates.destroy');
+        Route::post('/{nurse}/commission-rates/{nurseCommissionRate}/activate', [NurseCommissionRateAdminController::class, 'activateForNurse'])->name('commission-rates.activate');
     });
 
     Route::middleware('role:admin')->prefix('admin/users')->name('admin.users.')->group(function () {

@@ -63,6 +63,18 @@ class TreatmentManagementService
     /**
      * @return Collection<int, Treatment>
      */
+    public function listActiveRequiringNurseCommission(): Collection
+    {
+        return $this->forCurrentClinic(Treatment::class)
+            ->where('is_active', true)
+            ->where('requires_nurse_commission', true)
+            ->orderBy('code')
+            ->get(['id', 'code', 'name']);
+    }
+
+    /**
+     * @return Collection<int, Treatment>
+     */
     public function listActiveWithLabCost(): Collection
     {
         return $this->forCurrentClinic(Treatment::class)

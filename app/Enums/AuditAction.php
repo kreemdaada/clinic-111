@@ -95,6 +95,18 @@ enum AuditAction: string
     /** A nurse was reactivated. */
     case NurseActivated = 'nurse_activated';
 
+    /** A nurse commission rate row was created. */
+    case NurseCommissionRateCreated = 'nurse_commission_rate_created';
+
+    /** A nurse commission rate row was updated. */
+    case NurseCommissionRateUpdated = 'nurse_commission_rate_updated';
+
+    /** A nurse commission rate row was deactivated. */
+    case NurseCommissionRateDeactivated = 'nurse_commission_rate_deactivated';
+
+    /** A nurse commission rate row was reactivated. */
+    case NurseCommissionRateActivated = 'nurse_commission_rate_activated';
+
     /** A doctor fixed fee row was created. */
     case DoctorFixedFeeCreated = 'doctor_fixed_fee_created';
 

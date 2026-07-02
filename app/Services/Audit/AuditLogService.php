@@ -11,6 +11,7 @@ use App\Models\DoctorFixedFee;
 use App\Models\Lab;
 use App\Models\LabPrice;
 use App\Models\Nurse;
+use App\Models\NurseCommissionRate;
 use App\Models\Treatment;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -585,6 +586,59 @@ class AuditLogService
             'code' => $nurse->code,
             'name' => $nurse->name,
             'is_active' => $nurse->is_active,
+        ];
+    }
+
+    public function logNurseCommissionRateCreated(NurseCommissionRate $rate): AuditLog
+    {
+        return $this->log(
+            AuditAction::NurseCommissionRateCreated,
+            $rate,
+            null,
+            $this->nurseCommissionRateSnapshot($rate),
+        );
+    }
+
+    public function logNurseCommissionRateUpdated(NurseCommissionRate $rate, array $oldValues, array $newValues): AuditLog
+    {
+        return $this->log(
+            AuditAction::NurseCommissionRateUpdated,
+            $rate,
+            $oldValues,
+            $newValues,
+        );
+    }
+
+    public function logNurseCommissionRateDeactivated(NurseCommissionRate $rate, array $oldValues): AuditLog
+    {
+        return $this->log(
+            AuditAction::NurseCommissionRateDeactivated,
+            $rate,
+            $oldValues,
+            $this->nurseCommissionRateSnapshot($rate),
+        );
+    }
+
+    public function logNurseCommissionRateActivated(NurseCommissionRate $rate, array $oldValues): AuditLog
+    {
+        return $this->log(
+            AuditAction::NurseCommissionRateActivated,
+            $rate,
+            $oldValues,
+            $this->nurseCommissionRateSnapshot($rate),
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function nurseCommissionRateSnapshot(NurseCommissionRate $rate): array
+    {
+        return [
+            'nurse_id' => $rate->nurse_id,
+            'treatment_id' => $rate->treatment_id,
+            'commission_percentage' => (string) $rate->commission_percentage,
+            'is_active' => $rate->is_active,
         ];
     }
 
