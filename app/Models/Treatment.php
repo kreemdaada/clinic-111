@@ -15,6 +15,10 @@ class Treatment extends Model
 {
     use BelongsToClinic;
 
+    protected $attributes = [
+        'requires_nurse_commission' => false,
+    ];
+
     protected $fillable = [
         'clinic_id',
         'code',
@@ -31,6 +35,7 @@ class Treatment extends Model
     {
         return [
             'has_lab_cost' => 'boolean',
+            'requires_nurse_commission' => 'boolean',
             'is_active' => 'boolean',
         ];
     }
@@ -57,5 +62,29 @@ class Treatment extends Model
     public function doctorFixedFees(): HasMany
     {
         return $this->hasMany(DoctorFixedFee::class);
+    }
+
+    /**
+     * Patient/list prices configured for this treatment.
+     */
+    public function treatmentPrices(): HasMany
+    {
+        return $this->hasMany(TreatmentPrice::class);
+    }
+
+    /**
+     * Nurse commission rates configured for this treatment.
+     */
+    public function nurseCommissionRates(): HasMany
+    {
+        return $this->hasMany(NurseCommissionRate::class);
+    }
+
+    /**
+     * Historical nurse commission snapshots for this treatment.
+     */
+    public function nurseCommissions(): HasMany
+    {
+        return $this->hasMany(NurseCommission::class);
     }
 }
