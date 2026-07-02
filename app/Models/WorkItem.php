@@ -63,4 +63,12 @@ class WorkItem extends Model
     {
         return $this->hasOne(LabJob::class);
     }
+
+    /**
+     * Nurse commission snapshot for this work item, if any.
+     */
+    public function nurseCommission(): HasOne
+    {
+        return $this->hasOne(NurseCommission::class);
+    }
 }

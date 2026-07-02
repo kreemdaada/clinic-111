@@ -42,7 +42,7 @@ pg_dump clinic_accounting > backup.sql
 
 **Relationships:**
 
-- `hasMany` users, doctors, labs, treatments, lab_prices, doctor_fixed_fees
+- `hasMany` users, doctors, labs, treatments, lab_prices, doctor_fixed_fees, nurses, treatment_prices, nurse_commission_rates, nurse_commissions
 
 **Example data (seeded):**
 
@@ -56,7 +56,7 @@ pg_dump clinic_accounting > backup.sql
 - Never physically deleted — use `is_active = false`
 - `is_active` is not mass-assignable on the model; set via `ClinicManagementService`
 - Configuration models belong to a clinic via `clinic_id` (Milestone 07)
-- Accounting and transactional tables (`daily_reports`, `daily_work_rows`, `payments`, `work_items`, `lab_jobs`, `audit_logs`) own `clinic_id` (Milestone 10, ADR-029)
+- Accounting and transactional tables (`daily_reports`, `daily_work_rows`, `payments`, `work_items`, `lab_jobs`, `nurse_commissions`, `audit_logs`) own `clinic_id` (Milestone 10, ADR-029)
 
 **Onboarding rules (Milestone 11, ADR-030):**
 
@@ -159,6 +159,7 @@ pg_dump clinic_accounting > backup.sql
 | `name` | string | Full name |
 | `description` | text nullable | Optional admin notes |
 | `has_lab_cost` | boolean | If false, no lab_job is created |
+| `requires_nurse_commission` | boolean | Default `false`; if true, work item may receive nurse commission snapshot |
 | `is_active` | boolean | |
 | `created_at`, `updated_at` | timestamps | |
 
@@ -168,6 +169,9 @@ pg_dump clinic_accounting > backup.sql
 - `hasMany` work_items
 - `hasMany` lab_prices
 - `hasMany` doctor_fixed_fees
+- `hasMany` treatment_prices
+- `hasMany` nurse_commission_rates
+- `hasMany` nurse_commissions
 
 **Admin rules (Milestone 02):**
 
@@ -184,6 +188,121 @@ pg_dump clinic_accounting > backup.sql
 | MC | Metal Ceramic Crown | true |
 | CF | Composite Filling | false |
 | BG | Bone Graft | false |
+
+---
+
+### `nurses`
+
+**Purpose:** X-ray nurse master data for commission accounting (ADR-039). No application login in v1.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | bigint PK | |
+| `clinic_id` | FK → clinics | Required; scoped to owning clinic |
+| `code` | string | Unique per clinic |
+| `name` | string | Display name |
+| `is_active` | boolean | Default `true`; soft deactivate only |
+| `created_at`, `updated_at` | timestamps | |
+
+**Indexes:** unique `(clinic_id, code)`; index `(clinic_id, is_active)`
+
+**Relationships:**
+
+- `belongsTo` clinic
+- `hasMany` nurse_commission_rates
+- `hasMany` nurse_commissions
+
+**Business rules:**
+
+- Never physically deleted — use `is_active = false`
+- Same `code` may exist in different clinics
+
+---
+
+### `treatment_prices`
+
+**Purpose:** Patient/list price per treatment (separate from `lab_prices.unit_cost`).
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | bigint PK | |
+| `clinic_id` | FK → clinics | Required |
+| `treatment_id` | FK → treatments | Required |
+| `unit_price` | decimal(12,2) | Patient/list price |
+| `currency` | char(3) | ISO 4217; not part of active-uniqueness key |
+| `is_active` | boolean | Default `true`; soft deactivate only |
+| `created_at`, `updated_at` | timestamps | |
+
+**Indexes:** `(clinic_id, treatment_id, is_active)` — at most one active row per clinic + treatment enforced in application layer
+
+**Relationships:**
+
+- `belongsTo` clinic
+- `belongsTo` treatment
+
+---
+
+### `nurse_commission_rates`
+
+**Purpose:** Commission percentage for a nurse + treatment pair.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | bigint PK | |
+| `clinic_id` | FK → clinics | Required |
+| `nurse_id` | FK → nurses | Required |
+| `treatment_id` | FK → treatments | Required |
+| `commission_percentage` | decimal(5,2) | Validated 0.01–100.00 in management layer (future) |
+| `is_active` | boolean | Default `true`; soft deactivate only |
+| `created_at`, `updated_at` | timestamps | |
+
+**Indexes:** `(clinic_id, nurse_id, treatment_id, is_active)` — at most one active row per clinic + nurse + treatment enforced in application layer
+
+**Relationships:**
+
+- `belongsTo` clinic
+- `belongsTo` nurse
+- `belongsTo` treatment
+
+**Business rules:** mirrors `doctor_fixed_fees` lifecycle — multiple inactive rows allowed; no physical delete.
+
+---
+
+### `nurse_commissions`
+
+**Purpose:** Historical 1:1 nurse commission snapshot per work item. Source of truth for nurse commission accounting in AED.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | bigint PK | |
+| `clinic_id` | FK → clinics | Required; immutable after create (ADR-029) |
+| `work_item_id` | FK → work_items unique | 1:1 with eligible work item; cascade delete with work item |
+| `nurse_id` | FK → nurses | Required; restrict on delete (preserves history) |
+| `nurse_name_snapshot` | string | Copied at snapshot time |
+| `treatment_id` | FK → treatments | Required; restrict on delete |
+| `treatment_code_snapshot` | string | Copied at snapshot time |
+| `treatment_name_snapshot` | string | Copied at snapshot time |
+| `treatment_price_original` | decimal(12,2) | Price in original currency |
+| `treatment_price_currency` | char(3) | Original currency code |
+| `exchange_rate_to_aed` | decimal(12,4) | FX rate used at snapshot |
+| `treatment_price_aed` | decimal(12,2) | Normalized unit price in AED |
+| `commission_percentage` | decimal(5,2) | Rate at snapshot time |
+| `unit_commission_aed` | decimal(12,2) | Per-unit commission in AED |
+| `quantity` | unsigned integer | From work item |
+| `total_commission_aed` | decimal(12,2) | unit_commission_aed × quantity |
+| `created_at`, `updated_at` | timestamps | |
+
+**Relationships:**
+
+- `belongsTo` clinic
+- `belongsTo` workItem
+- `belongsTo` nurse
+- `belongsTo` treatment
+
+**Delete rules:**
+
+- Deleting an editable work item removes its snapshot (`work_item_id` cascade)
+- Hard delete of nurse or treatment blocked when snapshots reference them
 
 ---
 
@@ -389,6 +508,7 @@ pg_dump clinic_accounting > backup.sql
 - `belongsTo` dailyWorkRow
 - `belongsTo` treatment
 - `hasOne` labJob (only when treatment `has_lab_cost = true` and price resolved)
+- `hasOne` nurseCommission (only when treatment `requires_nurse_commission = true` and snapshot created)
 
 **Example data:**
 
@@ -542,8 +662,8 @@ labs ──────────────┬──────────
   │                         │                     │
   │                         │                     │
 daily_reports ── daily_work_rows ── work_items ────┘
-      │                │    │            │
-      │                │    │            └── lab_jobs ── labs
+      │                │    │            ├── lab_jobs ── labs
+      │                │    │            └── nurse_commissions ── nurses
       │                │    │
       │                │    └── payments
       │                │
@@ -552,15 +672,22 @@ daily_reports ── daily_work_rows ── work_items ────┘
       └── daily_report_import_warnings
 
 doctor_fixed_fees ── doctors + treatments
+nurses ── nurse_commission_rates ── treatments
+treatment_prices ── treatments
 ```
 
 ---
 
 ## What Changed
 
+**Updated — 2026-06-28**
+
+- Nurse commission schema (ADR-039): `nurses`, `treatment_prices`, `nurse_commission_rates`, `nurse_commissions`
+- `treatments.requires_nurse_commission` boolean (default `false`)
+
 **Updated — 2026-06-27**
 
-- `clinic_id` on accounting tables: `daily_reports`, `daily_work_rows`, `payments`, `work_items`, `lab_jobs`, `audit_logs` (Milestone 10, ADR-029)
+- `clinic_id` on accounting tables: `daily_reports`, `daily_work_rows`, `payments`, `work_items`, `lab_jobs`, `nurse_commissions`, `audit_logs` (Milestone 10, ADR-029)
 
 **Updated — 2026-06-26**
 
