@@ -72,7 +72,7 @@ class DailyReportImportService
         $resolvedReportDate = $monthAnchor->toDateString();
 
         if ($this->forCurrentClinic(DailyReport::class)
-            ->where('report_date', $resolvedReportDate)
+            ->whereDate('report_date', $resolvedReportDate)
             ->whereIn('status', [ReportStatus::Approved, ReportStatus::Locked])
             ->exists()) {
             throw new RuntimeException('An approved or locked report already exists for this month.');
