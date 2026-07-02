@@ -10,7 +10,6 @@ use App\Models\Nurse;
 use App\Models\NurseCommission;
 use App\Models\NurseCommissionRate;
 use App\Models\Treatment;
-use App\Models\TreatmentPrice;
 use App\Models\WorkItem;
 use Illuminate\Database\QueryException;
 use RuntimeException;
@@ -92,24 +91,6 @@ class NurseSchemaModelTest extends TestCase
 
         $this->assertTrue($nurse->clinic->is($clinic));
         $this->assertTrue($clinic->nurses->contains($nurse));
-    }
-
-    public function test_treatment_price_belongs_to_clinic_and_treatment(): void
-    {
-        $clinic = $this->clinic111();
-        $treatment = Treatment::query()->where('clinic_id', $clinic->id)->firstOrFail();
-
-        $price = TreatmentPrice::factory()->create([
-            'clinic_id' => $clinic->id,
-            'treatment_id' => $treatment->id,
-            'unit_price' => '250.00',
-            'currency' => 'AED',
-        ]);
-
-        $this->assertTrue($price->clinic->is($clinic));
-        $this->assertTrue($price->treatment->is($treatment));
-        $this->assertTrue($treatment->treatmentPrices->contains($price));
-        $this->assertTrue($clinic->treatmentPrices->contains($price));
     }
 
     public function test_nurse_commission_rate_belongs_to_clinic_nurse_and_treatment(): void
@@ -237,11 +218,6 @@ class NurseSchemaModelTest extends TestCase
         $nurse = Nurse::factory()->forClinic($clinic)->create();
         $treatment = Treatment::query()->where('clinic_id', $clinic->id)->firstOrFail();
 
-        $price = TreatmentPrice::factory()->create([
-            'clinic_id' => $clinic->id,
-            'treatment_id' => $treatment->id,
-        ]);
-
         $rate = NurseCommissionRate::factory()->create([
             'clinic_id' => $clinic->id,
             'nurse_id' => $nurse->id,
@@ -262,8 +238,6 @@ class NurseSchemaModelTest extends TestCase
         $commission = NurseCommission::factory()->forWorkItem($workItem, $nurse)->create();
 
         $this->assertInstanceOf(Clinic::class, $nurse->clinic);
-        $this->assertInstanceOf(Clinic::class, $price->clinic);
-        $this->assertInstanceOf(Treatment::class, $price->treatment);
         $this->assertInstanceOf(Clinic::class, $rate->clinic);
         $this->assertInstanceOf(Nurse::class, $rate->nurse);
         $this->assertInstanceOf(Treatment::class, $rate->treatment);
@@ -272,7 +246,6 @@ class NurseSchemaModelTest extends TestCase
         $this->assertInstanceOf(Treatment::class, $commission->treatment);
 
         $this->assertTrue($clinic->nurses->contains($nurse));
-        $this->assertTrue($clinic->treatmentPrices->contains($price));
         $this->assertTrue($clinic->nurseCommissionRates->contains($rate));
         $this->assertTrue($clinic->nurseCommissions->contains($commission));
         $this->assertTrue($nurse->nurseCommissions->contains($commission));
@@ -284,13 +257,6 @@ class NurseSchemaModelTest extends TestCase
         $nurse = Nurse::factory()->inactive()->create();
 
         $this->assertFalse($nurse->is_active);
-    }
-
-    public function test_treatment_price_factory_inactive_state(): void
-    {
-        $price = TreatmentPrice::factory()->inactive()->create();
-
-        $this->assertFalse($price->is_active);
     }
 
     public function test_nurse_commission_rate_factory_inactive_state(): void

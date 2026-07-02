@@ -24,6 +24,8 @@ class Treatment extends Model
         'code',
         'name',
         'description',
+        'treatment_price',
+        'treatment_price_currency',
     ];
 
     /**
@@ -36,6 +38,7 @@ class Treatment extends Model
         return [
             'has_lab_cost' => 'boolean',
             'requires_nurse_commission' => 'boolean',
+            'treatment_price' => 'decimal:2',
             'is_active' => 'boolean',
         ];
     }
@@ -62,14 +65,6 @@ class Treatment extends Model
     public function doctorFixedFees(): HasMany
     {
         return $this->hasMany(DoctorFixedFee::class);
-    }
-
-    /**
-     * Patient/list prices configured for this treatment.
-     */
-    public function treatmentPrices(): HasMany
-    {
-        return $this->hasMany(TreatmentPrice::class);
     }
 
     /**
