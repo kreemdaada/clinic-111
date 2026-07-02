@@ -38,7 +38,6 @@
 
 @section('content')
 <h1 class="page-title">Import Daily Report</h1>
-<p class="page-subtitle">Upload your daily Excel — review the extraction log, then download the Server Income file.</p>
 
 @if (session('status'))
     <div class="alert alert-success">{{ session('status') }}</div>

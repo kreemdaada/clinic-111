@@ -87,7 +87,6 @@
 
 @section('content')
 <h1 class="page-title">Laboratories</h1>
-<p class="page-subtitle">Admin — manage external labs. Delete soft-deactivates; historical reports keep their lab references.</p>
 
 @if (session('success'))
 <div class="alert alert-success">{{ session('success') }}</div>
