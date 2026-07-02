@@ -15,6 +15,7 @@ use App\Http\Controllers\Web\LabPriceAdminController;
 use App\Http\Controllers\Web\LandingController;
 use App\Http\Controllers\Web\LegalPageController;
 use App\Http\Controllers\Web\LogController;
+use App\Http\Controllers\Web\NurseAdminController;
 use App\Http\Controllers\Web\ReportLockController;
 use App\Http\Controllers\Web\TreatmentAdminController;
 use App\Http\Controllers\Web\UserAdminController;
@@ -139,6 +140,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/{treatment}', [TreatmentAdminController::class, 'update'])->name('update');
         Route::delete('/{treatment}', [TreatmentAdminController::class, 'destroy'])->name('destroy');
         Route::post('/{treatment}/activate', [TreatmentAdminController::class, 'activate'])->name('activate');
+    });
+
+    Route::middleware('role:admin')->prefix('nurses')->name('nurses.')->group(function () {
+        Route::get('/', [NurseAdminController::class, 'index'])->name('index');
+        Route::post('/', [NurseAdminController::class, 'store'])->name('store');
+        Route::put('/{nurse}', [NurseAdminController::class, 'update'])->name('update');
+        Route::delete('/{nurse}', [NurseAdminController::class, 'destroy'])->name('destroy');
+        Route::post('/{nurse}/activate', [NurseAdminController::class, 'activate'])->name('activate');
     });
 
     Route::middleware('role:admin')->prefix('admin/users')->name('admin.users.')->group(function () {

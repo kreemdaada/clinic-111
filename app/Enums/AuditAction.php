@@ -83,6 +83,18 @@ enum AuditAction: string
     /** A treatment was reactivated. */
     case TreatmentActivated = 'treatment_activated';
 
+    /** A nurse master record was created. */
+    case NurseCreated = 'nurse_created';
+
+    /** A nurse master record was updated. */
+    case NurseUpdated = 'nurse_updated';
+
+    /** A nurse was deactivated (never physically deleted). */
+    case NurseDeactivated = 'nurse_deactivated';
+
+    /** A nurse was reactivated. */
+    case NurseActivated = 'nurse_activated';
+
     /** A doctor fixed fee row was created. */
     case DoctorFixedFeeCreated = 'doctor_fixed_fee_created';
 

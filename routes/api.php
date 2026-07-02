@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\DoctorFixedFeeAdminController;
 use App\Http\Controllers\Api\LabAdminController;
 use App\Http\Controllers\Api\LabPriceAdminController;
 use App\Http\Controllers\Api\MonthlyIncomeController;
+use App\Http\Controllers\Api\NurseAdminController;
 use App\Http\Controllers\Api\ReferenceDataController;
 use App\Http\Controllers\Api\TreatmentAdminController;
 use App\Http\Controllers\Api\UserAdminController;
@@ -80,6 +81,14 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         Route::put('/{treatment}', [TreatmentAdminController::class, 'update']);
         Route::delete('/{treatment}', [TreatmentAdminController::class, 'destroy']);
         Route::post('/{treatment}/activate', [TreatmentAdminController::class, 'activate']);
+    });
+
+    Route::middleware('role:admin')->prefix('admin/nurses')->group(function () {
+        Route::get('/', [NurseAdminController::class, 'index']);
+        Route::post('/', [NurseAdminController::class, 'store']);
+        Route::put('/{nurse}', [NurseAdminController::class, 'update']);
+        Route::delete('/{nurse}', [NurseAdminController::class, 'destroy']);
+        Route::post('/{nurse}/activate', [NurseAdminController::class, 'activate']);
     });
 
     Route::middleware('role:admin')->prefix('users')->group(function () {

@@ -10,6 +10,7 @@ use App\Models\Doctor;
 use App\Models\DoctorFixedFee;
 use App\Models\Lab;
 use App\Models\LabPrice;
+use App\Models\Nurse;
 use App\Models\Treatment;
 use App\Models\User;
 use App\Services\Configuration\Concerns\ScopesConfigurationQueries;
@@ -40,6 +41,10 @@ class ConfigurationDashboardService
         AuditAction::TreatmentUpdated,
         AuditAction::TreatmentDeactivated,
         AuditAction::TreatmentActivated,
+        AuditAction::NurseCreated,
+        AuditAction::NurseUpdated,
+        AuditAction::NurseDeactivated,
+        AuditAction::NurseActivated,
         AuditAction::LabPriceCreated,
         AuditAction::LabPriceDeactivated,
         AuditAction::LabPriceActivated,
@@ -101,6 +106,13 @@ class ConfigurationDashboardService
                 quickActionLabel: 'Manage treatments',
             ),
             $this->moduleCard(
+                key: 'nurses',
+                label: 'Nurses',
+                model: Nurse::class,
+                indexRoute: 'nurses.index',
+                quickActionLabel: 'Manage nurses',
+            ),
+            $this->moduleCard(
                 key: 'lab_prices',
                 label: 'Lab prices',
                 model: LabPrice::class,
@@ -144,7 +156,7 @@ class ConfigurationDashboardService
             ->where(function ($query) use ($currentClinicId, $clinicMorph) {
                 $query->whereHasMorph(
                     'auditable',
-                    [Doctor::class, Lab::class, Treatment::class, LabPrice::class, DoctorFixedFee::class, User::class],
+                    [Doctor::class, Lab::class, Treatment::class, Nurse::class, LabPrice::class, DoctorFixedFee::class, User::class],
                     fn ($q) => $q->where('clinic_id', $currentClinicId),
                 )->orWhere(function ($q) use ($currentClinicId, $clinicMorph) {
                     $q->where('auditable_type', $clinicMorph)
@@ -299,6 +311,10 @@ class ConfigurationDashboardService
         }
 
         if ($auditable instanceof Treatment) {
+            return $auditable->code;
+        }
+
+        if ($auditable instanceof Nurse) {
             return $auditable->code;
         }
 

@@ -10,6 +10,7 @@ use App\Models\Doctor;
 use App\Models\DoctorFixedFee;
 use App\Models\Lab;
 use App\Models\LabPrice;
+use App\Models\Nurse;
 use App\Models\Treatment;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -522,6 +523,65 @@ class AuditLogService
             'name' => $lab->name,
             'code' => $lab->code,
             'is_active' => $lab->is_active,
+        ];
+    }
+
+    public function logNurseCreated(Nurse $nurse): AuditLog
+    {
+        return $this->log(
+            AuditAction::NurseCreated,
+            $nurse,
+            null,
+            $this->nurseSnapshot($nurse),
+        );
+    }
+
+    public function logNurseUpdated(Nurse $nurse, array $oldValues, array $newValues): ?AuditLog
+    {
+        if (($oldValues['is_active'] ?? true) && ! ($newValues['is_active'] ?? true)) {
+            return $this->logNurseDeactivated($nurse, $oldValues);
+        }
+
+        if (! ($oldValues['is_active'] ?? true) && ($newValues['is_active'] ?? true)) {
+            return $this->log(
+                AuditAction::NurseActivated,
+                $nurse,
+                $oldValues,
+                $newValues,
+            );
+        }
+
+        if ($oldValues === $newValues) {
+            return null;
+        }
+
+        return $this->log(
+            AuditAction::NurseUpdated,
+            $nurse,
+            $oldValues,
+            $newValues,
+        );
+    }
+
+    public function logNurseDeactivated(Nurse $nurse, array $oldValues): AuditLog
+    {
+        return $this->log(
+            AuditAction::NurseDeactivated,
+            $nurse,
+            $oldValues,
+            $this->nurseSnapshot($nurse),
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function nurseSnapshot(Nurse $nurse): array
+    {
+        return [
+            'code' => $nurse->code,
+            'name' => $nurse->name,
+            'is_active' => $nurse->is_active,
         ];
     }
 
