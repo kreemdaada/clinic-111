@@ -652,7 +652,7 @@
                                         Done
                                     </span>
                                 @else
-                                    <a href="{{ route($step['index_route']) }}" class="btn btn-primary btn-sm">Configure</a>
+                                    <a href="{{ route($step['index_route'], \App\Support\ConfigurationReturnContext::query()) }}" class="btn btn-primary btn-sm">Configure</a>
                                 @endif
                             </div>
                         </div>
@@ -679,7 +679,7 @@
                     $nextStep = collect($configurationStatus['steps'])->firstWhere('key', $configurationStatus['current_step']);
                 @endphp
                 @if ($nextStep)
-                    <a href="{{ route($nextStep['index_route']) }}" class="btn btn-primary">Continue setup</a>
+                    <a href="{{ route($nextStep['index_route'], \App\Support\ConfigurationReturnContext::query()) }}" class="btn btn-primary">Continue setup</a>
                 @endif
             @endif
         </div>
@@ -707,8 +707,8 @@
             </div>
         </div>
         <div class="cfg-card-actions">
-            <a href="{{ route($module['index_route']) }}" class="btn btn-primary btn-sm">{{ $module['quick_action_label'] }}</a>
-            <a href="{{ route($module['index_route']) }}" class="btn btn-ghost btn-sm">Open</a>
+            <a href="{{ route($module['index_route'], \App\Support\ConfigurationReturnContext::query()) }}" class="btn btn-primary btn-sm">{{ $module['quick_action_label'] }}</a>
+            <a href="{{ route($module['index_route'], \App\Support\ConfigurationReturnContext::query()) }}" class="btn btn-ghost btn-sm">Open</a>
         </div>
     </article>
     @endforeach

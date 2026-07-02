@@ -22,8 +22,6 @@ class LabPrice extends Model
         'doctor_id',
         'unit_cost',
         'currency',
-        'valid_from',
-        'valid_to',
     ];
 
     /**

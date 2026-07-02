@@ -37,8 +37,6 @@ class StoreLabPriceRequest extends FormRequest
             'doctor_id' => ['nullable', 'integer', new BelongsToCurrentClinic(Doctor::class, nullable: true)],
             'unit_cost' => ['required', 'numeric', 'min:0.01'],
             'currency' => ['required', 'string', 'size:3', new SupportedCurrency],
-            'valid_from' => ['nullable', 'date'],
-            'valid_to' => ['nullable', 'date', 'after_or_equal:valid_from'],
         ];
     }
 
@@ -57,12 +55,11 @@ class StoreLabPriceRequest extends FormRequest
                 (int) $data['lab_id'],
                 (int) $data['treatment_id'],
                 $doctorId,
-                $data['valid_from'] ?? null,
-                $data['valid_to'] ?? null,
+                strtoupper((string) $data['currency']),
             )) {
                 $validator->errors()->add(
                     'lab_id',
-                    'An active price already exists for this lab, treatment, doctor override, and validity period.',
+                    'An active price already exists for this lab, treatment, doctor override, and currency.',
                 );
             }
         });

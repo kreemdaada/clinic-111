@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Concerns\PreservesConfigurationReturn;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Users\ResetUserPasswordRequest;
 use App\Http\Requests\Users\StoreUserRequest;
@@ -10,6 +11,7 @@ use App\Models\User;
 use App\Services\Configuration\TenantResourceGuard;
 use App\Services\User\UserManagementService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 use RuntimeException;
 
@@ -18,16 +20,19 @@ use RuntimeException;
  */
 class UserAdminController extends Controller
 {
+    use PreservesConfigurationReturn;
+
     public function __construct(
         private readonly UserManagementService $userManagementService,
         private readonly TenantResourceGuard $tenantResourceGuard,
     ) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
         return view('admin.users.index', [
             'users' => $this->userManagementService->listForAdministration(),
             'roles' => ['admin', 'accountant', 'viewer'],
+            'showConfigurationBack' => $this->showConfigurationBack($request),
         ]);
     }
 
@@ -46,7 +51,7 @@ class UserAdminController extends Controller
         }
 
         return redirect()
-            ->route('admin.users.index')
+            ->route('admin.users.index', $this->mergeConfigurationReturn($request))
             ->with('success', $message);
     }
 
@@ -61,22 +66,22 @@ class UserAdminController extends Controller
         }
 
         return redirect()
-            ->route('admin.users.index')
+            ->route('admin.users.index', $this->mergeConfigurationReturn($request))
             ->with('success', "User {$account->email} updated.");
     }
 
-    public function destroy(int $managedUser): RedirectResponse
+    public function destroy(Request $request, int $managedUser): RedirectResponse
     {
         $account = $this->tenantResourceGuard->findAccessibleOrAbort(User::class, $managedUser);
 
         try {
-            $this->userManagementService->deactivate($account, request()->user());
+            $this->userManagementService->deactivate($account, $request->user());
         } catch (RuntimeException $exception) {
             return back()->withErrors(['deactivate' => $exception->getMessage()]);
         }
 
         return redirect()
-            ->route('admin.users.index')
+            ->route('admin.users.index', $this->mergeConfigurationReturn($request))
             ->with('success', "User {$account->email} deleted.");
     }
 
@@ -97,7 +102,7 @@ class UserAdminController extends Controller
         }
 
         return redirect()
-            ->route('admin.users.index')
+            ->route('admin.users.index', $this->mergeConfigurationReturn($request))
             ->with('success', $message);
     }
 }

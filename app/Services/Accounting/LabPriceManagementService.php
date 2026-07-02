@@ -85,8 +85,6 @@ class LabPriceManagementService
      *     doctor_id?: int|null,
      *     unit_cost: string|float,
      *     currency?: string,
-     *     valid_from?: string|null,
-     *     valid_to?: string|null,
      *     is_active?: bool,
      * }  $data
      */
@@ -101,8 +99,7 @@ class LabPriceManagementService
 
         return DB::transaction(function () use ($data) {
             $doctorId = $data['doctor_id'] ?? null;
-            $validFrom = $data['valid_from'] ?? null;
-            $validTo = $data['valid_to'] ?? null;
+            $currency = strtoupper($data['currency'] ?? $this->currentClinicResolver->resolve()->currency ?? 'AED');
             $isActive = (bool) ($data['is_active'] ?? true);
 
             if ($isActive) {
@@ -110,8 +107,7 @@ class LabPriceManagementService
                     (int) $data['lab_id'],
                     (int) $data['treatment_id'],
                     $doctorId,
-                    $validFrom,
-                    $validTo,
+                    $currency,
                 );
             }
 
@@ -121,9 +117,7 @@ class LabPriceManagementService
                 'treatment_id' => $data['treatment_id'],
                 'doctor_id' => $doctorId,
                 'unit_cost' => $data['unit_cost'],
-                'currency' => strtoupper($data['currency'] ?? $this->currentClinicResolver->resolve()->currency ?? 'AED'),
-                'valid_from' => $validFrom,
-                'valid_to' => $validTo,
+                'currency' => $currency,
             ]);
             $price->is_active = $isActive;
             $price->save();
@@ -141,8 +135,6 @@ class LabPriceManagementService
      *     doctor_id?: int|null,
      *     unit_cost?: string|float,
      *     currency?: string,
-     *     valid_from?: string|null,
-     *     valid_to?: string|null,
      *     is_active?: bool,
      * }  $data
      */
@@ -156,18 +148,17 @@ class LabPriceManagementService
             $labId = (int) ($data['lab_id'] ?? $labPrice->lab_id);
             $treatmentId = (int) ($data['treatment_id'] ?? $labPrice->treatment_id);
             $doctorId = array_key_exists('doctor_id', $data) ? $data['doctor_id'] : $labPrice->doctor_id;
+            $currency = isset($data['currency']) ? strtoupper($data['currency']) : $labPrice->currency;
+            $willBeActive = array_key_exists('is_active', $data) ? (bool) $data['is_active'] : $labPrice->is_active;
 
             $this->assertRelatedResourcesAccessible(
                 $labId,
                 $treatmentId,
                 $doctorId !== null ? (int) $doctorId : null,
             );
-            $validFrom = array_key_exists('valid_from', $data) ? $data['valid_from'] : $labPrice->valid_from?->toDateString();
-            $validTo = array_key_exists('valid_to', $data) ? $data['valid_to'] : $labPrice->valid_to?->toDateString();
-            $willBeActive = array_key_exists('is_active', $data) ? (bool) $data['is_active'] : $labPrice->is_active;
 
             if ($willBeActive) {
-                $this->assertNoOverlap($labId, $treatmentId, $doctorId, $validFrom, $validTo, $labPrice->id);
+                $this->assertNoOverlap($labId, $treatmentId, $doctorId, $currency, $labPrice->id);
             }
 
             $labPrice->fill([
@@ -175,9 +166,7 @@ class LabPriceManagementService
                 'treatment_id' => $treatmentId,
                 'doctor_id' => $doctorId,
                 'unit_cost' => $data['unit_cost'] ?? $labPrice->unit_cost,
-                'currency' => isset($data['currency']) ? strtoupper($data['currency']) : $labPrice->currency,
-                'valid_from' => $validFrom,
-                'valid_to' => $validTo,
+                'currency' => $currency,
             ]);
 
             if (array_key_exists('is_active', $data)) {
@@ -223,8 +212,6 @@ class LabPriceManagementService
             'doctor_id' => $labPrice->doctor_id,
             'unit_cost' => $labPrice->unit_cost,
             'currency' => $labPrice->currency,
-            'valid_from' => $labPrice->valid_from?->toDateString(),
-            'valid_to' => $labPrice->valid_to?->toDateString(),
             'is_active' => false,
         ]);
     }
@@ -233,8 +220,7 @@ class LabPriceManagementService
         int $labId,
         int $treatmentId,
         ?int $doctorId,
-        ?string $validFrom,
-        ?string $validTo,
+        string $currency,
         ?int $excludeLabPriceId = null,
     ): void {
         if ($this->overlapValidator->hasActiveOverlap(
@@ -242,12 +228,11 @@ class LabPriceManagementService
             $labId,
             $treatmentId,
             $doctorId,
-            $validFrom,
-            $validTo,
+            $currency,
             $excludeLabPriceId,
         )) {
             throw ValidationException::withMessages([
-                'lab_id' => 'An active price already exists for this lab, treatment, doctor override, and validity period.',
+                'lab_id' => 'An active price already exists for this lab, treatment, doctor override, and currency.',
             ]);
         }
     }
@@ -263,8 +248,6 @@ class LabPriceManagementService
             'doctor_id' => $labPrice->doctor_id,
             'unit_cost' => (string) $labPrice->unit_cost,
             'currency' => $labPrice->currency,
-            'valid_from' => $labPrice->valid_from?->toDateString(),
-            'valid_to' => $labPrice->valid_to?->toDateString(),
             'is_active' => $labPrice->is_active,
         ];
     }

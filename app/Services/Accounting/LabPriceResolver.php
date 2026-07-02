@@ -13,17 +13,16 @@ use Illuminate\Support\Collection;
  * Resolves lab unit prices using doctor-specific overrides with default fallback.
  *
  * Lookup order: doctor-specific price → default price (`doctor_id IS NULL`).
- * Both respect `valid_from` / `valid_to` when set.
  */
 class LabPriceResolver
 {
     /**
-     * Find the effective lab price for a doctor/treatment/lab on a given date.
+     * Find the effective lab price for a doctor/treatment/lab.
      *
      * @param  Doctor  $doctor  Row's doctor (may have override prices).
      * @param  Treatment  $treatment  Treatment with lab cost.
      * @param  Lab  $lab  Lab to price against.
-     * @param  CarbonInterface|null  $effectiveDate  Work date (defaults to now).
+     * @param  CarbonInterface|null  $effectiveDate  Ignored; kept for call-site compatibility.
      * @return LabPrice|null Matching price row or null if none configured.
      */
     public function resolve(
@@ -32,33 +31,27 @@ class LabPriceResolver
         Lab $lab,
         ?CarbonInterface $effectiveDate = null,
     ): ?LabPrice {
-        if ($effectiveDate === null) {
-            $effectiveDate = now();
-        }
-
-        $doctorSpecificPrice = $this->findPrice($doctor->id, $treatment->id, $lab->id, $effectiveDate, $doctor->clinic_id);
+        $doctorSpecificPrice = $this->findPrice($doctor->id, $treatment->id, $lab->id, $doctor->clinic_id);
 
         if ($doctorSpecificPrice !== null) {
             return $doctorSpecificPrice;
         }
 
-        return $this->findPrice(null, $treatment->id, $lab->id, $effectiveDate, $doctor->clinic_id);
+        return $this->findPrice(null, $treatment->id, $lab->id, $doctor->clinic_id);
     }
 
     /**
-     * Query one price row for optional doctor scope and date validity window.
+     * Query one active price row for optional doctor scope.
      *
      * @param  int|null  $doctorId  Doctor ID or null for default price.
      * @param  int  $treatmentId  Treatment FK.
      * @param  int  $labId  Lab FK.
-     * @param  CarbonInterface  $effectiveDate  Date price must be valid for.
      * @return LabPrice|null First matching row.
      */
     private function findPrice(
         ?int $doctorId,
         int $treatmentId,
         int $labId,
-        CarbonInterface $effectiveDate,
         int $clinicId,
     ): ?LabPrice {
         $query = LabPrice::query()
@@ -72,18 +65,6 @@ class LabPriceResolver
                 } else {
                     $builder->where('doctor_id', $doctorId);
                 }
-            })
-            ->where(function ($builder) use ($effectiveDate) {
-                $date = $effectiveDate->toDateString();
-                $builder
-                    ->whereNull('valid_from')
-                    ->orWhereDate('valid_from', '<=', $date);
-            })
-            ->where(function ($builder) use ($effectiveDate) {
-                $date = $effectiveDate->toDateString();
-                $builder
-                    ->whereNull('valid_to')
-                    ->orWhereDate('valid_to', '>=', $date);
             });
 
         return $query->first();

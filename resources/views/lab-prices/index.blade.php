@@ -30,6 +30,7 @@
 @endpush
 
 @section('content')
+@include('partials.configuration-back-link', ['showConfigurationBack' => $showConfigurationBack ?? false])
 <h1 class="page-title">Lab prices</h1>
 
 @if (session('success'))
@@ -41,6 +42,9 @@
 @endif
 
 <form method="GET" action="{{ route('lab-prices.index') }}" class="lp-toolbar card" style="padding:1rem;">
+    @if (request('from') === \App\Support\ConfigurationReturnContext::VALUE)
+    <input type="hidden" name="from" value="{{ \App\Support\ConfigurationReturnContext::VALUE }}">
+    @endif
     <div class="form-group" style="margin:0;min-width:160px;">
         <label class="form-label">Search</label>
         <input class="form-input" type="search" name="search" value="{{ $search }}" placeholder="Search by doctor name or code">
@@ -87,7 +91,7 @@
     </div>
     <div style="display:flex;gap:0.5rem;align-items:center;">
         <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
-        <a href="{{ route('lab-prices.index') }}" class="btn btn-ghost btn-sm">Reset</a>
+        <a href="{{ route('lab-prices.index', request()->only('from')) }}" class="btn btn-ghost btn-sm">Reset</a>
     </div>
 </form>
 
@@ -103,7 +107,6 @@
                 <th>Treatment</th>
                 <th>Doctor</th>
                 <th>Unit cost</th>
-                <th>Validity</th>
                 <th>Status</th>
                 <th></th>
             </tr>
@@ -115,13 +118,6 @@
                 <td>{{ $price->treatment?->code }}</td>
                 <td>{{ $price->doctor?->code ?? '—' }}</td>
                 <td>{{ $currencyFormatter->format((string) $price->unit_cost, $price->currency) }}</td>
-                <td class="lp-meta">
-                    @if ($price->valid_from || $price->valid_to)
-                        {{ $price->valid_from?->format('Y-m-d') ?? '…' }} → {{ $price->valid_to?->format('Y-m-d') ?? '…' }}
-                    @else
-                        Always
-                    @endif
-                </td>
                 <td>
                     <span class="lp-status-pill @if($price->is_active) is-active @endif">
                         {{ $price->is_active ? 'Active' : 'Inactive' }}
@@ -137,8 +133,6 @@
                             data-doctor-id="{{ $price->doctor_id ?? '' }}"
                             data-unit-cost="{{ $price->unit_cost }}"
                             data-currency="{{ $price->currency }}"
-                            data-valid-from="{{ $price->valid_from?->format('Y-m-d') }}"
-                            data-valid-to="{{ $price->valid_to?->format('Y-m-d') }}"
                             data-is-active="{{ $price->is_active ? '1' : '0' }}"
                             data-update-url="{{ route('lab-prices.update', $price) }}"
                             data-activate-url="{{ route('lab-prices.activate', $price) }}"
@@ -153,11 +147,13 @@
                             data-confirm="Soft delete lab price #{{ $price->id }}? Historical lab jobs are preserved.">
                             @csrf
                             @method('DELETE')
+                            @include('partials.configuration-return-hidden')
                             <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Delete</button>
                         </form>
                         @else
                         <form method="POST" action="{{ route('lab-prices.activate', $price) }}" class="inline-form">
                             @csrf
+                            @include('partials.configuration-return-hidden')
                             <button type="submit" class="btn btn-secondary btn-sm">Activate</button>
                         </form>
                         @endif
@@ -165,7 +161,7 @@
                 </td>
             </tr>
             @empty
-            <tr><td colspan="7" style="color:var(--text-muted);">No lab prices match your filters.</td></tr>
+            <tr><td colspan="6" style="color:var(--text-muted);">No lab prices match your filters.</td></tr>
             @endforelse
         </tbody>
     </table>
@@ -188,6 +184,7 @@
             <input type="hidden" name="return_doctor_id" value="{{ $doctorFilter }}">
             <input type="hidden" name="return_status" value="{{ $status }}">
             <input type="hidden" name="return_currency" value="{{ $currency }}">
+            @include('partials.configuration-return-hidden')
             @include('lab-prices._form-fields', ['prefix' => 'create', 'defaultCurrency' => $clinicCurrency])
             <div class="lp-modal-actions">
                 <button type="button" class="btn btn-ghost btn-sm" data-close-modal>Cancel</button>
@@ -215,6 +212,7 @@
             <input type="hidden" name="return_doctor_id" value="{{ $doctorFilter }}">
             <input type="hidden" name="return_status" value="{{ $status }}">
             <input type="hidden" name="return_currency" value="{{ $currency }}">
+            @include('partials.configuration-return-hidden')
             <input type="hidden" name="return_page" value="{{ request('page') }}">
             @include('lab-prices._form-fields', ['prefix' => 'edit', 'defaultCurrency' => $clinicCurrency])
             <div class="form-group">
@@ -237,12 +235,36 @@
                 data-confirm="Soft delete this lab price? Historical lab jobs are preserved.">
                 @csrf
                 @method('DELETE')
+                <input type="hidden" name="return_search" value="{{ $search }}">
+                <input type="hidden" name="return_lab_id" value="{{ $labId }}">
+                <input type="hidden" name="return_treatment_id" value="{{ $treatmentId }}">
+                <input type="hidden" name="return_doctor_id" value="{{ $doctorFilter }}">
+                <input type="hidden" name="return_status" value="{{ $status }}">
+                <input type="hidden" name="return_currency" value="{{ $currency }}">
+                <input type="hidden" name="return_page" value="{{ request('page') }}">
+                @include('partials.configuration-return-hidden')
             </form>
             <form method="POST" id="lp-activate-form">
                 @csrf
+                <input type="hidden" name="return_search" value="{{ $search }}">
+                <input type="hidden" name="return_lab_id" value="{{ $labId }}">
+                <input type="hidden" name="return_treatment_id" value="{{ $treatmentId }}">
+                <input type="hidden" name="return_doctor_id" value="{{ $doctorFilter }}">
+                <input type="hidden" name="return_status" value="{{ $status }}">
+                <input type="hidden" name="return_currency" value="{{ $currency }}">
+                <input type="hidden" name="return_page" value="{{ request('page') }}">
+                @include('partials.configuration-return-hidden')
             </form>
             <form method="POST" id="lp-duplicate-form">
                 @csrf
+                <input type="hidden" name="return_search" value="{{ $search }}">
+                <input type="hidden" name="return_lab_id" value="{{ $labId }}">
+                <input type="hidden" name="return_treatment_id" value="{{ $treatmentId }}">
+                <input type="hidden" name="return_doctor_id" value="{{ $doctorFilter }}">
+                <input type="hidden" name="return_status" value="{{ $status }}">
+                <input type="hidden" name="return_currency" value="{{ $currency }}">
+                <input type="hidden" name="return_page" value="{{ request('page') }}">
+                @include('partials.configuration-return-hidden')
             </form>
             <button type="submit" form="lp-deactivate-form" class="btn btn-ghost btn-sm" id="lp-deactivate-btn" style="color:var(--danger);">Delete</button>
             <button type="submit" form="lp-activate-form" class="btn btn-secondary btn-sm" id="lp-activate-btn">Activate</button>
@@ -289,8 +311,6 @@ document.addEventListener('DOMContentLoaded', function () {
             doctor_id: source.dataset.doctorId || '',
             unit_cost: source.dataset.unitCost || '',
             currency: source.dataset.currency || '',
-            valid_from: source.dataset.validFrom || '',
-            valid_to: source.dataset.validTo || '',
             is_active: source.dataset.isActive === '1',
         };
     }
@@ -309,8 +329,6 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('lp-edit-doctor-id').value = data.doctor_id;
         document.getElementById('lp-edit-unit-cost').value = data.unit_cost;
         document.getElementById('lp-edit-currency').value = data.currency;
-        document.getElementById('lp-edit-valid-from').value = data.valid_from;
-        document.getElementById('lp-edit-valid-to').value = data.valid_to;
         document.getElementById('lp-edit-is-active').value = data.is_active ? '1' : '0';
         deactivateBtn.hidden = !data.is_active;
         activateBtn.hidden = data.is_active;
@@ -353,8 +371,6 @@ document.addEventListener('DOMContentLoaded', function () {
             doctor_id: document.getElementById('lp-edit-doctor-id')?.value || '',
             unit_cost: document.getElementById('lp-edit-unit-cost')?.value || '',
             currency: document.getElementById('lp-edit-currency')?.value || '',
-            valid_from: document.getElementById('lp-edit-valid-from')?.value || '',
-            valid_to: document.getElementById('lp-edit-valid-to')?.value || '',
             is_active: document.getElementById('lp-edit-is-active')?.value === '1',
         });
         openModal(editModal);

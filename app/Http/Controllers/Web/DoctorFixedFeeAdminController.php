@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Concerns\PreservesConfigurationReturn;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DoctorFixedFees\ListDoctorFixedFeesRequest;
 use App\Http\Requests\DoctorFixedFees\StoreDoctorFixedFeeRequest;
@@ -19,6 +20,8 @@ use Illuminate\View\View;
  */
 class DoctorFixedFeeAdminController extends Controller
 {
+    use PreservesConfigurationReturn;
+
     private const PER_PAGE = 20;
 
     public function __construct(
@@ -53,6 +56,7 @@ class DoctorFixedFeeAdminController extends Controller
             'treatmentId' => $treatmentId,
             'status' => $status,
             'currency' => $currency,
+            'showConfigurationBack' => $this->showConfigurationBack($request),
         ]);
     }
 
@@ -74,32 +78,32 @@ class DoctorFixedFeeAdminController extends Controller
             ->with('success', "Fee rule #{$doctorFixedFee->id} updated.");
     }
 
-    public function destroy(DoctorFixedFee $doctorFixedFee): RedirectResponse
+    public function destroy(Request $request, DoctorFixedFee $doctorFixedFee): RedirectResponse
     {
         $id = $doctorFixedFee->id;
 
         $this->doctorFixedFeeManagementService->deactivate($doctorFixedFee);
 
         return redirect()
-            ->route('doctor-fixed-fees.index')
+            ->route('doctor-fixed-fees.index', $this->filterRedirectParams($request))
             ->with('success', "Fee rule #{$id} deleted.");
     }
 
-    public function activate(DoctorFixedFee $doctorFixedFee): RedirectResponse
+    public function activate(Request $request, DoctorFixedFee $doctorFixedFee): RedirectResponse
     {
         $this->doctorFixedFeeManagementService->activate($doctorFixedFee);
 
         return redirect()
-            ->route('doctor-fixed-fees.index')
+            ->route('doctor-fixed-fees.index', $this->filterRedirectParams($request))
             ->with('success', "Fee rule #{$doctorFixedFee->id} activated.");
     }
 
-    public function duplicate(DoctorFixedFee $doctorFixedFee): RedirectResponse
+    public function duplicate(Request $request, DoctorFixedFee $doctorFixedFee): RedirectResponse
     {
         $copy = $this->doctorFixedFeeManagementService->duplicate($doctorFixedFee);
 
         return redirect()
-            ->route('doctor-fixed-fees.index')
+            ->route('doctor-fixed-fees.index', $this->filterRedirectParams($request))
             ->with('success', "Fee rule duplicated as #{$copy->id} (inactive). Adjust dates and activate when ready.");
     }
 
@@ -108,13 +112,13 @@ class DoctorFixedFeeAdminController extends Controller
      */
     private function filterRedirectParams(Request $request): array
     {
-        return array_filter([
+        return $this->mergeConfigurationReturn($request, array_filter([
             'search' => $request->input('return_search'),
             'doctor_id' => $request->input('return_doctor_id'),
             'treatment_id' => $request->input('return_treatment_id'),
             'status' => $request->input('return_status'),
             'currency' => $request->input('return_currency'),
             'page' => $request->input('return_page'),
-        ], fn ($value) => $value !== null && $value !== '');
+        ], fn ($value) => $value !== null && $value !== ''));
     }
 }

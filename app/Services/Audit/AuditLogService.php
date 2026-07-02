@@ -214,8 +214,6 @@ class AuditLogService
             'doctor_id' => $labPrice->doctor_id,
             'unit_cost' => (string) $labPrice->unit_cost,
             'currency' => $labPrice->currency,
-            'valid_from' => $labPrice->valid_from?->toDateString(),
-            'valid_to' => $labPrice->valid_to?->toDateString(),
             'is_active' => $labPrice->is_active,
         ];
     }

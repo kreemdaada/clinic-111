@@ -42,8 +42,6 @@ class UpdateLabPriceRequest extends FormRequest
             'doctor_id' => ['nullable', 'integer', new BelongsToCurrentClinic(Doctor::class, nullable: true)],
             'unit_cost' => ['sometimes', 'required', 'numeric', 'min:0.01'],
             'currency' => ['sometimes', 'required', 'string', 'size:3', new SupportedCurrency],
-            'valid_from' => ['nullable', 'date'],
-            'valid_to' => ['nullable', 'date', 'after_or_equal:valid_from'],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }
@@ -64,8 +62,7 @@ class UpdateLabPriceRequest extends FormRequest
             $doctorId = array_key_exists('doctor_id', $data)
                 ? ($data['doctor_id'] !== null && $data['doctor_id'] !== '' ? (int) $data['doctor_id'] : null)
                 : $labPrice->doctor_id;
-            $validFrom = array_key_exists('valid_from', $data) ? $data['valid_from'] : $labPrice->valid_from?->toDateString();
-            $validTo = array_key_exists('valid_to', $data) ? $data['valid_to'] : $labPrice->valid_to?->toDateString();
+            $currency = isset($data['currency']) ? strtoupper((string) $data['currency']) : $labPrice->currency;
             $willBeActive = array_key_exists('is_active', $data) ? filter_var($data['is_active'], FILTER_VALIDATE_BOOLEAN) : $labPrice->is_active;
 
             if (! $willBeActive) {
@@ -77,13 +74,12 @@ class UpdateLabPriceRequest extends FormRequest
                 $labId,
                 $treatmentId,
                 $doctorId,
-                $validFrom,
-                $validTo,
+                $currency,
                 $labPrice->id,
             )) {
                 $validator->errors()->add(
                     'lab_id',
-                    'An active price already exists for this lab, treatment, doctor override, and validity period.',
+                    'An active price already exists for this lab, treatment, doctor override, and currency.',
                 );
             }
         });

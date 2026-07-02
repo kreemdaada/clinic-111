@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Concerns\PreservesConfigurationReturn;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LabPrices\ListLabPricesRequest;
 use App\Http\Requests\LabPrices\StoreLabPriceRequest;
@@ -21,6 +22,8 @@ use Illuminate\View\View;
  */
 class LabPriceAdminController extends Controller
 {
+    use PreservesConfigurationReturn;
+
     private const PER_PAGE = 20;
 
     public function __construct(
@@ -61,6 +64,7 @@ class LabPriceAdminController extends Controller
             'status' => $status,
             'currency' => $currency,
             'clinicCurrency' => $this->currentClinicResolver->resolve()->currency,
+            'showConfigurationBack' => $this->showConfigurationBack($request),
         ]);
     }
 
@@ -82,33 +86,33 @@ class LabPriceAdminController extends Controller
             ->with('success', "Lab price #{$labPrice->id} updated.");
     }
 
-    public function destroy(LabPrice $labPrice): RedirectResponse
+    public function destroy(Request $request, LabPrice $labPrice): RedirectResponse
     {
         $id = $labPrice->id;
 
         $this->labPriceManagementService->deactivate($labPrice);
 
         return redirect()
-            ->route('lab-prices.index')
+            ->route('lab-prices.index', $this->filterRedirectParams($request))
             ->with('success', "Lab price #{$id} deleted.");
     }
 
-    public function activate(LabPrice $labPrice): RedirectResponse
+    public function activate(Request $request, LabPrice $labPrice): RedirectResponse
     {
         $this->labPriceManagementService->activate($labPrice);
 
         return redirect()
-            ->route('lab-prices.index')
+            ->route('lab-prices.index', $this->filterRedirectParams($request))
             ->with('success', "Lab price #{$labPrice->id} activated.");
     }
 
-    public function duplicate(LabPrice $labPrice): RedirectResponse
+    public function duplicate(Request $request, LabPrice $labPrice): RedirectResponse
     {
         $copy = $this->labPriceManagementService->duplicate($labPrice);
 
         return redirect()
-            ->route('lab-prices.index')
-            ->with('success', "Lab price duplicated as #{$copy->id} (inactive). Adjust dates and activate when ready.");
+            ->route('lab-prices.index', $this->filterRedirectParams($request))
+            ->with('success', "Lab price duplicated as #{$copy->id} (inactive). Activate when ready.");
     }
 
     /**
@@ -116,7 +120,7 @@ class LabPriceAdminController extends Controller
      */
     private function filterRedirectParams(Request $request): array
     {
-        return array_filter([
+        return $this->mergeConfigurationReturn($request, array_filter([
             'search' => $request->input('return_search'),
             'lab_id' => $request->input('return_lab_id'),
             'treatment_id' => $request->input('return_treatment_id'),
@@ -124,6 +128,6 @@ class LabPriceAdminController extends Controller
             'status' => $request->input('return_status'),
             'currency' => $request->input('return_currency'),
             'page' => $request->input('return_page'),
-        ], fn ($value) => $value !== null && $value !== '');
+        ], fn ($value) => $value !== null && $value !== ''));
     }
 }

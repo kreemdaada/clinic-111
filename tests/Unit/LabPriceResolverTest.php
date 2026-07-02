@@ -187,7 +187,7 @@ class LabPriceResolverTest extends TestCase
         $this->assertSame('120.00', number_format((float) $resolved['price']->unit_cost, 2, '.', ''));
     }
 
-    public function test_resolves_price_when_valid_from_stored_with_time_on_same_day(): void
+    public function test_active_price_resolves_regardless_of_legacy_validity_columns(): void
     {
         $doctorJack = Doctor::query()->where('code', 'JACK')->firstOrFail();
         $treatment = $this->createLabCostTreatment('LP_BOUNDARY', 'Boundary LP Test');
@@ -205,15 +205,23 @@ class LabPriceResolverTest extends TestCase
         $price->is_active = true;
         $price->save();
 
-        $resolved = $this->labPriceResolver->resolve(
+        $resolvedBefore = $this->labPriceResolver->resolve(
             $doctorJack,
             $treatment,
             $mainLab,
-            Carbon::parse('2026-06-01'),
+            Carbon::parse('2026-01-01'),
+        );
+        $resolvedAfter = $this->labPriceResolver->resolve(
+            $doctorJack,
+            $treatment,
+            $mainLab,
+            Carbon::parse('2026-12-01'),
         );
 
-        $this->assertNotNull($resolved);
-        $this->assertSame('199.00', number_format((float) $resolved->unit_cost, 2, '.', ''));
+        $this->assertNotNull($resolvedBefore);
+        $this->assertNotNull($resolvedAfter);
+        $this->assertSame('199.00', number_format((float) $resolvedBefore->unit_cost, 2, '.', ''));
+        $this->assertSame($price->id, $resolvedAfter->id);
     }
 
     private function createLabCostTreatment(string $code, string $name): Treatment

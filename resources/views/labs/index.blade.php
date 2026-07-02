@@ -86,6 +86,7 @@
 @endpush
 
 @section('content')
+@include('partials.configuration-back-link', ['showConfigurationBack' => $showConfigurationBack ?? false])
 <h1 class="page-title">Laboratories</h1>
 
 @if (session('success'))
@@ -97,6 +98,9 @@
 @endif
 
 <form method="GET" action="{{ route('labs.index') }}" class="labs-toolbar card" style="padding:1rem;">
+    @if (request('from') === \App\Support\ConfigurationReturnContext::VALUE)
+    <input type="hidden" name="from" value="{{ \App\Support\ConfigurationReturnContext::VALUE }}">
+    @endif
     <div class="form-group" style="margin:0;min-width:200px;">
         <label class="form-label">Search</label>
         <input class="form-input" type="search" name="search" value="{{ $search }}" placeholder="Search by laboratory name or code">
@@ -111,7 +115,7 @@
     </div>
     <div class="lab-admin-actions">
         <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
-        <a href="{{ route('labs.index') }}" class="btn btn-ghost btn-sm">Reset</a>
+        <a href="{{ route('labs.index', request()->only('from')) }}" class="btn btn-ghost btn-sm">Reset</a>
     </div>
 </form>
 
@@ -119,6 +123,7 @@
     <h2 style="font-size:1rem;margin:0 0 1rem;">Create laboratory</h2>
     <form method="POST" action="{{ route('labs.store') }}" class="lab-admin-form">
         @csrf
+        @include('partials.configuration-return-hidden')
         <div class="form-group" style="margin:0;">
             <label class="form-label">Name</label>
             <input class="form-input" type="text" name="name" value="{{ old('name') }}" required>
@@ -152,6 +157,7 @@
 
         <form method="POST" action="{{ route('labs.update', $lab) }}" class="lab-admin-form">
             @csrf
+        @include('partials.configuration-return-hidden')
             @method('PUT')
             <input type="hidden" name="search" value="{{ $search }}">
             <input type="hidden" name="status" value="{{ $status }}">
@@ -184,12 +190,14 @@
                 data-confirm-danger="1"
                 data-confirm="Soft delete {{ $lab->code }}? The lab record is kept for historical reports.">
                 @csrf
+        @include('partials.configuration-return-hidden')
                 @method('DELETE')
                 <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Delete</button>
             </form>
             @else
             <form method="POST" action="{{ route('labs.activate', $lab) }}">
                 @csrf
+        @include('partials.configuration-return-hidden')
                 <button type="submit" class="btn btn-secondary btn-sm">Activate</button>
             </form>
             @endif
