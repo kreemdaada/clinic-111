@@ -66,6 +66,24 @@ class TreatmentManagementServiceTest extends TestCase
         $this->assertNotContains('CF', LabCostTreatmentCatalog::codes());
     }
 
+    public function test_nurse_commission_required_clears_external_lab_cost(): void
+    {
+        $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $this->actingAs($admin);
+
+        $treatment = $this->treatmentManagementService->create([
+            'code' => 'NURSE_ONLY',
+            'name' => 'Nurse Only',
+            'has_lab_cost' => true,
+            'requires_nurse_commission' => true,
+            'treatment_price' => '150.00',
+            'treatment_price_currency' => 'AED',
+        ]);
+
+        $this->assertTrue($treatment->requires_nurse_commission);
+        $this->assertFalse($treatment->has_lab_cost);
+    }
+
     public function test_changing_has_lab_cost_updates_catalog_resolution(): void
     {
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();

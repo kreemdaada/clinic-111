@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Domain\Currency\CurrencyCatalog;
 use App\Http\Controllers\Concerns\PreservesConfigurationReturn;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Treatments\ListTreatmentsRequest;
@@ -42,6 +43,7 @@ class TreatmentAdminController extends Controller
             'treatments' => $treatments,
             'search' => $search,
             'status' => $status,
+            'currencies' => CurrencyCatalog::codes(),
             'showConfigurationBack' => $this->showConfigurationBack($request),
         ]);
     }

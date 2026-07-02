@@ -3,6 +3,7 @@
 namespace App\Services\Export;
 
 use App\Enums\CommissionType;
+use App\Exceptions\IncomeExportBlockedException;
 use App\Models\Clinic;
 use App\Models\DailyReport;
 use App\Models\DailyWorkRow;
@@ -75,9 +76,7 @@ class DoctorsIncomeExcelExportService
         $reconciliationIssues = $this->incomeReconciliationService->validateReport($dailyReport);
 
         if ($this->incomeReconciliationService->hasErrors($reconciliationIssues)) {
-            throw new RuntimeException(
-                'Income export blocked: database reconciliation failed. Check import logs for details.',
-            );
+            throw new IncomeExportBlockedException($reconciliationIssues);
         }
 
         $monthStart = ReportMonthResolver::parseFromFilename($dailyReport->source_file_name)

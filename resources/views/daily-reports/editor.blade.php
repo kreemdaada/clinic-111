@@ -252,9 +252,15 @@
 <p class="dr-status-strip is-success" role="status">{{ session('success') }}</p>
 @endif
 
-@if ($errors->has('approve') || $errors->has('unlock'))
+@if ($errors->has('approve') || $errors->has('unlock') || $errors->has('income_export'))
 <div class="alert alert-error" style="margin-bottom:1rem;">
-    {{ $errors->first('approve') ?: $errors->first('unlock') }}
+    @if ($errors->has('income_export'))
+        @foreach ($errors->get('income_export') as $message)
+            <p style="margin:0 0 0.5rem;">{{ $message }}</p>
+        @endforeach
+    @else
+        {{ $errors->first('approve') ?: $errors->first('unlock') }}
+    @endif
 </div>
 @endif
 

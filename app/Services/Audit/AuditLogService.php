@@ -510,6 +510,9 @@ class AuditLogService
             'name' => $treatment->name,
             'description' => $treatment->description,
             'has_lab_cost' => $treatment->has_lab_cost,
+            'treatment_price' => $treatment->treatment_price !== null ? (string) $treatment->treatment_price : null,
+            'treatment_price_currency' => $treatment->treatment_price_currency,
+            'requires_nurse_commission' => $treatment->requires_nurse_commission,
             'is_active' => $treatment->is_active,
         ];
     }

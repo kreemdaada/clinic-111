@@ -25,6 +25,8 @@
     .tx-modal h2 { font-size:1rem; margin:0 0 1rem; }
     .tx-modal-actions { display:flex; gap:0.5rem; justify-content:flex-end; margin-top:1rem; }
     tr.is-inactive { opacity:0.72; }
+    .tx-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; }
+    @media (max-width: 520px) { .tx-grid-2 { grid-template-columns:1fr; } }
 </style>
 @endpush
 
@@ -72,6 +74,8 @@
             <tr>
                 <th>Code</th>
                 <th>Name</th>
+                <th>Treatment price</th>
+                <th>Nurse commission</th>
                 <th>Lab cost</th>
                 <th>Status</th>
                 <th>Usage</th>
@@ -88,6 +92,14 @@
                     <div class="tx-flag">{{ Str::limit($treatment->description, 80) }}</div>
                     @endif
                 </td>
+                <td>
+                    @if ($treatment->treatment_price !== null && $treatment->treatment_price_currency !== null)
+                    {{ number_format((float) $treatment->treatment_price, 2, '.', '') }} {{ $treatment->treatment_price_currency }}
+                    @else
+                    —
+                    @endif
+                </td>
+                <td><span class="tx-flag @if($treatment->requires_nurse_commission) is-on @endif">{{ $treatment->requires_nurse_commission ? 'Required' : 'Not required' }}</span></td>
                 <td><span class="tx-flag @if($treatment->has_lab_cost) is-on @endif">{{ $treatment->has_lab_cost ? 'Yes' : 'No' }}</span></td>
                 <td>
                     <span class="tx-status-pill @if($treatment->is_active) is-active @endif">
@@ -103,6 +115,9 @@
                             data-code="{{ $treatment->code }}"
                             data-name="{{ e($treatment->name) }}"
                             data-description="{{ e($treatment->description ?? '') }}"
+                            data-treatment-price="{{ $treatment->treatment_price ?? '' }}"
+                            data-treatment-price-currency="{{ $treatment->treatment_price_currency ?? '' }}"
+                            data-requires-nurse-commission="{{ $treatment->requires_nurse_commission ? '1' : '0' }}"
                             data-has-lab-cost="{{ $treatment->has_lab_cost ? '1' : '0' }}"
                             data-is-active="{{ $treatment->is_active ? '1' : '0' }}"
                             data-update-url="{{ route('treatments.update', $treatment) }}"
@@ -131,7 +146,7 @@
                 </td>
             </tr>
             @empty
-            <tr><td colspan="6" style="color:var(--text-muted);">No treatments match your filters.</td></tr>
+            <tr><td colspan="8" style="color:var(--text-muted);">No treatments match your filters.</td></tr>
             @endforelse
         </tbody>
     </table>
@@ -165,9 +180,30 @@
                 <textarea class="form-input" name="description" rows="2">{{ old('description') }}</textarea>
             </div>
             <div class="form-group">
+                <label class="form-label">Treatment price</label>
+                <p style="color:var(--text-muted);font-size:0.8125rem;margin:-0.25rem 0 0.5rem;">Price charged for this treatment.</p>
+                <div class="tx-grid-2">
+                    <input class="form-input" type="number" name="treatment_price" value="{{ old('treatment_price') }}" min="0.01" step="0.01" placeholder="0.00">
+                    <select class="form-input" name="treatment_price_currency">
+                        <option value="">Select currency</option>
+                        @foreach ($currencies as $currencyCode)
+                        <option value="{{ $currencyCode }}" @selected(old('treatment_price_currency') === $currencyCode)>{{ $currencyCode }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <input type="hidden" name="requires_nurse_commission" value="0">
                 <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.875rem;">
-                    <input type="checkbox" name="has_lab_cost" value="1" @checked(old('has_lab_cost'))>
-                    Has lab cost (creates JOB)
+                    <input type="checkbox" name="requires_nurse_commission" value="1" id="tx-create-requires-nurse-commission" @checked(old('requires_nurse_commission'))>
+                    Nurse commission required
+                </label>
+            </div>
+            <div class="form-group" data-tx-lab-cost-group>
+                <input type="hidden" name="has_lab_cost" value="0">
+                <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.875rem;">
+                    <input type="checkbox" name="has_lab_cost" value="1" id="tx-create-has-lab-cost" @checked(old('has_lab_cost'))>
+                    External lab cost
                 </label>
             </div>
             <div class="tx-modal-actions">
@@ -207,9 +243,30 @@
                 <textarea class="form-input" name="description" id="tx-edit-description" rows="2">{{ old('description') }}</textarea>
             </div>
             <div class="form-group">
+                <label class="form-label">Treatment price</label>
+                <p style="color:var(--text-muted);font-size:0.8125rem;margin:-0.25rem 0 0.5rem;">Price charged for this treatment.</p>
+                <div class="tx-grid-2">
+                    <input class="form-input" type="number" name="treatment_price" id="tx-edit-treatment-price" value="{{ old('treatment_price') }}" min="0.01" step="0.01" placeholder="0.00">
+                    <select class="form-input" name="treatment_price_currency" id="tx-edit-treatment-price-currency">
+                        <option value="">Select currency</option>
+                        @foreach ($currencies as $currencyCode)
+                        <option value="{{ $currencyCode }}" @selected(old('treatment_price_currency') === $currencyCode)>{{ $currencyCode }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <input type="hidden" name="requires_nurse_commission" value="0">
+                <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.875rem;">
+                    <input type="checkbox" name="requires_nurse_commission" value="1" id="tx-edit-requires-nurse-commission" @checked(old('requires_nurse_commission'))>
+                    Nurse commission required
+                </label>
+            </div>
+            <div class="form-group" data-tx-lab-cost-group>
+                <input type="hidden" name="has_lab_cost" value="0">
                 <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.875rem;">
                     <input type="checkbox" name="has_lab_cost" value="1" id="tx-edit-has-lab-cost" @checked(old('has_lab_cost'))>
-                    Has lab cost (creates JOB)
+                    External lab cost
                 </label>
             </div>
             <div class="form-group">
@@ -278,9 +335,43 @@ document.addEventListener('DOMContentLoaded', function () {
             code: source.dataset.code || '',
             name: source.dataset.name || '',
             description: source.dataset.description || '',
+            treatment_price: source.dataset.treatmentPrice || '',
+            treatment_price_currency: source.dataset.treatmentPriceCurrency || '',
+            requires_nurse_commission: source.dataset.requiresNurseCommission === '1',
             has_lab_cost: source.dataset.hasLabCost === '1',
             is_active: source.dataset.isActive === '1',
         };
+    }
+
+    function syncLabCostWithNurseCommission(modal) {
+        const nurseCheckbox = modal.querySelector('[name="requires_nurse_commission"][value="1"]');
+        const labCostGroup = modal.querySelector('[data-tx-lab-cost-group]');
+        const labCostCheckbox = modal.querySelector('[name="has_lab_cost"][value="1"]');
+
+        if (!nurseCheckbox || !labCostGroup || !labCostCheckbox) {
+            return;
+        }
+
+        if (nurseCheckbox.checked) {
+            labCostCheckbox.checked = false;
+            labCostGroup.hidden = true;
+        } else {
+            labCostGroup.hidden = false;
+        }
+    }
+
+    function bindNurseCommissionLabCostSync(modal) {
+        const nurseCheckbox = modal.querySelector('[name="requires_nurse_commission"][value="1"]');
+
+        if (!nurseCheckbox) {
+            return;
+        }
+
+        nurseCheckbox.addEventListener('change', function () {
+            syncLabCostWithNurseCommission(modal);
+        });
+
+        syncLabCostWithNurseCommission(modal);
     }
 
     function populateEditForm(data) {
@@ -293,10 +384,14 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('tx-edit-code').value = data.code;
         document.getElementById('tx-edit-name').value = data.name;
         document.getElementById('tx-edit-description').value = data.description;
+        document.getElementById('tx-edit-treatment-price').value = data.treatment_price;
+        document.getElementById('tx-edit-treatment-price-currency').value = data.treatment_price_currency;
+        document.getElementById('tx-edit-requires-nurse-commission').checked = data.requires_nurse_commission;
         document.getElementById('tx-edit-has-lab-cost').checked = data.has_lab_cost;
         document.getElementById('tx-edit-is-active').value = data.is_active ? '1' : '0';
         deactivateBtn.hidden = !data.is_active;
         activateBtn.hidden = data.is_active;
+        syncLabCostWithNurseCommission(editModal);
     }
 
     document.querySelector('[data-open-create]')?.addEventListener('click', function () {
@@ -333,6 +428,9 @@ document.addEventListener('DOMContentLoaded', function () {
             code: document.getElementById('tx-edit-code')?.value || '',
             name: document.getElementById('tx-edit-name')?.value || '',
             description: document.getElementById('tx-edit-description')?.value || '',
+            treatment_price: document.getElementById('tx-edit-treatment-price')?.value || '',
+            treatment_price_currency: document.getElementById('tx-edit-treatment-price-currency')?.value || '',
+            requires_nurse_commission: document.getElementById('tx-edit-requires-nurse-commission')?.checked || false,
             has_lab_cost: document.getElementById('tx-edit-has-lab-cost')?.checked || false,
             is_active: document.getElementById('tx-edit-is-active')?.value === '1',
         });
@@ -342,6 +440,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (createModal.dataset.openOnLoad === '1') {
         openModal(createModal);
     }
+
+    bindNurseCommissionLabCostSync(createModal);
+    bindNurseCommissionLabCostSync(editModal);
 
     const searchInput = document.getElementById('tx-search-input');
     if (searchInput) {
