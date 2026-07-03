@@ -29,3 +29,5 @@ Thumbs.db
 # Production operations docs — local/server only, not in public repo
 /docs/PRODUCTION_DEPLOYMENT.md
 /docs/PRODUCTION_OPERATIONS_RUNBOOK.md
+/docs/DentalFinance_Chat_Uebergabe_ohne_Secrets.md
+/docs/DentalFinance_Production_Training_Runbook.md
