@@ -13,12 +13,12 @@ use App\Models\LabJob;
 use App\Models\NurseCommission;
 use App\Models\Payment;
 use App\Services\Accounting\Concerns\ScopesAccountingQueries;
+use App\Services\Accounting\OpgTreatmentValueAggregator;
 use App\Services\Configuration\CurrentClinicResolver;
 use App\Support\Analytics\FinancialPeriod;
 use App\Support\Analytics\MonthOverMonthComparison;
 use App\Support\ClinicCurrencySupport;
 use App\Support\MoneyCalculator;
-use App\Support\OpgTreatmentCodes;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -33,6 +33,7 @@ class ClinicFinancialOverviewService
 
     public function __construct(
         private readonly CurrentClinicResolver $currentClinicResolver,
+        private readonly OpgTreatmentValueAggregator $opgTreatmentValueAggregator,
     ) {}
 
     public function build(?string $month = null): ClinicFinancialOverviewData
@@ -132,18 +133,9 @@ class ClinicFinancialOverviewService
     private function sumOpgTreatmentValue(FinancialPeriod $period, string $clinicCurrency, string $treatmentCode): string
     {
         $commissions = $this->nurseCommissionsInPeriodQuery($period)
-            ->get(['nurse_commissions.treatment_code_snapshot', 'nurse_commissions.treatment_price_aed', 'nurse_commissions.quantity'])
-            ->filter(fn ($commission) => OpgTreatmentCodes::matches($commission->treatment_code_snapshot, $treatmentCode));
+            ->get(['nurse_commissions.treatment_code_snapshot', 'nurse_commissions.treatment_price_aed', 'nurse_commissions.quantity']);
 
-        $totalAed = '0.00';
-
-        foreach ($commissions as $commission) {
-            $lineValue = MoneyCalculator::multiply(
-                (string) $commission->treatment_price_aed,
-                (int) $commission->quantity,
-            );
-            $totalAed = MoneyCalculator::add($totalAed, $lineValue);
-        }
+        $totalAed = $this->opgTreatmentValueAggregator->sumForCanonicalCode($commissions, $treatmentCode);
 
         return $this->fromStoredTotal($totalAed, $clinicCurrency);
     }
