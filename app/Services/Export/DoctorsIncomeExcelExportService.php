@@ -11,6 +11,7 @@ use App\Models\Doctor;
 use App\Services\Accounting\Concerns\ScopesAccountingQueries;
 use App\Services\Accounting\IncomeReconciliationService;
 use App\Services\Accounting\LabJobCalculationService;
+use App\Services\Accounting\OpgTreatmentValueAggregator;
 use App\Services\Accounting\PaymentCalculationService;
 use App\Services\Accounting\WaelFixedFeeCalculator;
 use App\Services\Configuration\CurrentClinicResolver;
@@ -68,6 +69,7 @@ class DoctorsIncomeExcelExportService
         private readonly CurrentClinicResolver $currentClinicResolver,
         private readonly PaymentCalculationService $paymentCalculationService,
         private readonly DoctorIncomeExportProfileProvisioner $exportProfileProvisioner,
+        private readonly OpgTreatmentValueAggregator $opgTreatmentValueAggregator,
         private readonly string $defaultUsdExchangeRate = '3.65',
     ) {}
 
@@ -765,10 +767,7 @@ class DoctorsIncomeExcelExportService
                         $commissionAmount,
                     );
 
-                    $lineValue = MoneyCalculator::multiply(
-                        (string) $commission->treatment_price_aed,
-                        (int) $commission->quantity,
-                    );
+                    $lineValue = $this->opgTreatmentValueAggregator->lineValueAed($commission);
 
                     if (! $isLegacyAed) {
                         $lineValue = ClinicCurrencySupport::fromStoredAedEquivalent(

@@ -14,7 +14,6 @@ use App\Services\Accounting\Concerns\ScopesAccountingQueries;
 use App\Services\Configuration\CurrentClinicResolver;
 use App\Support\ClinicCurrencySupport;
 use App\Support\MoneyCalculator;
-use App\Support\OpgTreatmentCodes;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -38,6 +37,7 @@ class MonthlyIncomeCalculationService
     public function __construct(
         private readonly WaelFixedFeeCalculator $waelFixedFeeCalculator,
         private readonly CurrentClinicResolver $currentClinicResolver,
+        private readonly OpgTreatmentValueAggregator $opgTreatmentValueAggregator,
         private readonly string $defaultUsdExchangeRate = '3.65',
     ) {}
 
@@ -291,17 +291,9 @@ class MonthlyIncomeCalculationService
                     ->where('doctor_id', $doctor->id)
                     ->whereBetween('work_date', [$monthStart->toDateString(), $monthEnd->toDateString()]);
             })
-            ->get()
-            ->filter(fn (NurseCommission $commission) => OpgTreatmentCodes::matches($commission->treatment_code_snapshot, $treatmentCode));
+            ->get();
 
-        $total = '0.00';
-
-        foreach ($commissions as $commission) {
-            $lineValue = MoneyCalculator::multiply((string) $commission->treatment_price_aed, (int) $commission->quantity);
-            $total = MoneyCalculator::add($total, $lineValue);
-        }
-
-        return $total;
+        return $this->opgTreatmentValueAggregator->sumForCanonicalCode($commissions, $treatmentCode);
     }
 
     /**
