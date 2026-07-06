@@ -26,11 +26,9 @@ class ExcelDailyReportParser
 
     private const SKIPPED_SHEET_NAMES = ['SCHEDULE', 'SHEET1'];
 
-    /** @var array<int, array<string, mixed>> */
-    private array $extractionEvents = [];
-
     public function __construct(
         private readonly Clinic111HeaderMapBuilder $clinic111HeaderMapBuilder,
+        private readonly ImportDiagnosticsRecorder $diagnosticsRecorder,
     ) {}
 
     /**
@@ -56,7 +54,7 @@ class ExcelDailyReportParser
      */
     public function parseWithDiagnostics(string $filePath, ?Carbon $reportMonth = null): array
     {
-        $this->extractionEvents = [];
+        $this->diagnosticsRecorder->reset();
 
         $spreadsheet = $this->loadSpreadsheet($filePath);
 
@@ -65,13 +63,13 @@ class ExcelDailyReportParser
 
             return [
                 'rows' => $rows,
-                'events' => $this->extractionEvents,
+                'events' => $this->diagnosticsRecorder->all(),
             ];
         }
 
         return [
             'rows' => $this->parseGenericSheet($spreadsheet->getActiveSheet()),
-            'events' => $this->extractionEvents,
+            'events' => $this->diagnosticsRecorder->all(),
         ];
     }
 
@@ -604,7 +602,7 @@ class ExcelDailyReportParser
         array $rowData,
         ?string $treatmentText = null,
     ): void {
-        $this->extractionEvents[] = [
+        $this->diagnosticsRecorder->record([
             'status' => $status,
             'reason' => $reason,
             'sheet_day' => $sheetDay,
@@ -617,7 +615,7 @@ class ExcelDailyReportParser
             'treatment_text' => $treatmentText ?? ($rowData['treatment_text'] ?? null),
             'g_cell' => $rowData['raw_cells']['G'] ?? null,
             'total_cost' => $this->normalizeAmountForLog($rowData['total_cost'] ?? null),
-        ];
+        ]);
     }
 
     /**
