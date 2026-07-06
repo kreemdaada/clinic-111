@@ -30,6 +30,7 @@ class ExcelDailyReportParser
         private readonly Clinic111HeaderMapBuilder $clinic111HeaderMapBuilder,
         private readonly ImportDiagnosticsRecorder $diagnosticsRecorder,
         private readonly StaleSectionPolicy $staleSectionPolicy,
+        private readonly Clinic111RowClassifier $clinic111RowClassifier,
     ) {}
 
     /**
@@ -199,7 +200,7 @@ class ExcelDailyReportParser
         for ($rowIndex = 1; $rowIndex <= $worksheet->getHighestRow(); $rowIndex++) {
             $columnGValue = $this->readCellValue($worksheet, 'G', $rowIndex);
 
-            if ($this->isSpecialSectionLabel($columnGValue)) {
+            if ($this->clinic111RowClassifier->isSpecialSectionLabel($columnGValue)) {
                 $this->logSkippedSpecialSectionRow(
                     $worksheet,
                     $rowIndex,
@@ -249,8 +250,8 @@ class ExcelDailyReportParser
                     $hybridRowData = $this->extractRow($worksheet, $rowIndex, $columnMap);
 
                     if (
-                        ! $this->hasPatientName($hybridRowData)
-                        && $this->hasPaymentValues($hybridRowData)
+                        ! $this->clinic111RowClassifier->hasPatientName($hybridRowData)
+                        && $this->clinic111RowClassifier->hasPaymentValues($hybridRowData)
                     ) {
                         $emittedRow = $this->emitSectionSubtotal(
                             $currentDoctor,
@@ -285,7 +286,7 @@ class ExcelDailyReportParser
                 continue;
             }
 
-            if ($this->isClinicHeaderRow($worksheet, $rowIndex)) {
+            if ($this->clinic111RowClassifier->isClinicHeaderRow($this->readRowValues($worksheet, $rowIndex))) {
                 if ($inOpgSection) {
                     $opgColumnMap = $this->clinic111HeaderMapBuilder->build($worksheet, $rowIndex);
                 } else {
@@ -302,7 +303,7 @@ class ExcelDailyReportParser
 
                 $rowData = $this->extractRow($worksheet, $rowIndex, $opgColumnMap);
 
-                if ($this->isOpgActivityRow($rowData)) {
+                if ($this->clinic111RowClassifier->isOpgActivityRow($rowData)) {
                     $emittedRow = $this->emitOpgActivityRow($rowData, $sheetDay, $sheetName, $opgColumnMap);
 
                     if ($emittedRow !== null) {
@@ -319,7 +320,7 @@ class ExcelDailyReportParser
 
             $rowData = $this->extractRow($worksheet, $rowIndex, $columnMap);
 
-            if ($this->hasPatientName($rowData)) {
+            if ($this->clinic111RowClassifier->hasPatientName($rowData)) {
                 if ($sectionAnchorDate === null) {
                     $sectionAnchorDate = $this->parseWorkDateValue($rowData['work_date'] ?? null);
                 }
@@ -340,7 +341,7 @@ class ExcelDailyReportParser
                 continue;
             }
 
-            if ($this->hasSectionActivityTreatment($rowData)) {
+            if ($this->clinic111RowClassifier->hasSectionActivityTreatment($rowData)) {
                 if ($sectionAnchorDate === null) {
                     $sectionAnchorDate = $this->parseWorkDateValue($rowData['work_date'] ?? null);
                 }
@@ -356,11 +357,11 @@ class ExcelDailyReportParser
                 continue;
             }
 
-            if (! $this->isSectionSubtotalRow($rowData)) {
-                if ($this->hasPaymentValues($rowData)) {
+            if (! $this->clinic111RowClassifier->isSectionSubtotalRow($rowData)) {
+                if ($this->clinic111RowClassifier->hasPaymentValues($rowData)) {
                     $this->recordExtractionEvent(
                         status: 'skipped',
-                        reason: $this->resolveSkippedPaymentReason($rowData),
+                        reason: $this->clinic111RowClassifier->resolveSkippedPaymentReason($rowData),
                         sheetDay: $sheetDay,
                         sheetName: $sheetName,
                         doctorLabel: $currentDoctor,
@@ -560,7 +561,7 @@ class ExcelDailyReportParser
 
         $rowData = $this->extractRow($worksheet, $rowIndex, $columnMap);
 
-        if (! $this->hasPaymentValues($rowData)) {
+        if (! $this->clinic111RowClassifier->hasPaymentValues($rowData)) {
             return;
         }
 
@@ -620,48 +621,6 @@ class ExcelDailyReportParser
     }
 
     /**
-     * Determine the skip-reason code for a payment row that is not a daily subtotal.
-     *
-     * @param  array<string, mixed>  $rowData  Parsed row with raw_cells and payment fields.
-     * @return string Reason code (e.g. `cash_row`, `not_a_daily_subtotal`).
-     */
-    private function resolveSkippedPaymentReason(array $rowData): string
-    {
-        $treatmentCell = strtoupper(trim((string) (($rowData['raw_cells']['G'] ?? ''))));
-
-        if ($treatmentCell === 'CASH') {
-            return 'cash_row';
-        }
-
-        if (str_starts_with($treatmentCell, 'TOTAL')) {
-            return 'grand_total_row';
-        }
-
-        if (str_contains($treatmentCell, 'TRANSFER')) {
-            return 'transfer_row';
-        }
-
-        return 'not_a_daily_subtotal';
-    }
-
-    /**
-     * Check whether a row contains any non-zero payment amount.
-     *
-     * @param  array<string, mixed>  $rowData  Parsed row with amount fields.
-     * @return bool True when DHS, USD, VISA, or RUBL has a numeric value.
-     */
-    private function hasPaymentValues(array $rowData): bool
-    {
-        foreach (['dhs_amount', 'cheque_amount', 'tabby_amount', 'usd_amount', 'visa_amount', 'rubl_amount'] as $field) {
-            if ($this->hasNumericValue($rowData[$field] ?? null)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
      * Normalize a cell value to a two-decimal string for extraction events.
      *
      * @param  mixed  $value  Raw amount from Excel.
@@ -712,65 +671,11 @@ class ExcelDailyReportParser
     {
         $doctorColumn = $this->readCellValue($worksheet, 'G', $rowIndex);
 
-        if ($this->looksLikeDoctorSectionLabel($doctorColumn)) {
+        if ($this->clinic111RowClassifier->looksLikeDoctorSectionLabel($doctorColumn)) {
             return $doctorColumn;
         }
 
         return null;
-    }
-
-    /**
-     * Check whether a cell value matches the `DR …` doctor section header pattern.
-     *
-     * @param  string|null  $value  Raw cell text.
-     * @return bool True for values like `DR Jack` or `DR. Riyadh`.
-     */
-    private function looksLikeDoctorSectionLabel(?string $value): bool
-    {
-        if ($value === null || $value === '') {
-            return false;
-        }
-
-        return (bool) preg_match('/^DR\.?\s+[A-Za-z]/i', trim($value));
-    }
-
-    /**
-     * Detect special section boundary labels that terminate a doctor block.
-     *
-     * @param  string|null  $value  Raw column-G cell text.
-     * @return bool True for CASH, CLINIC 111, or TOTAL-prefixed labels.
-     */
-    private function isSpecialSectionLabel(?string $value): bool
-    {
-        if ($value === null || $value === '') {
-            return false;
-        }
-
-        $normalized = strtoupper(trim($value));
-
-        if (in_array($normalized, ['CASH', 'CLINIC 111'], true)) {
-            return true;
-        }
-
-        return str_starts_with($normalized, 'TOTAL');
-    }
-
-    /**
-     * @param  array<string, mixed>  $rowData
-     */
-    private function isOpgActivityRow(array $rowData): bool
-    {
-        $treatmentText = trim((string) ($rowData['treatment_text'] ?? ''));
-
-        if (! OpgTreatmentLabelNormalizer::isOpgTreatmentLabel($treatmentText)) {
-            return false;
-        }
-
-        if ($this->hasPaymentValues($rowData)) {
-            return true;
-        }
-
-        return $this->hasPatientName($rowData);
     }
 
     /**
@@ -852,105 +757,6 @@ class ExcelDailyReportParser
         }
 
         return null;
-    }
-
-    /**
-     * Check whether a row is the Clinic 111 column header row (DATE + NAME).
-     *
-     * @param  Worksheet  $worksheet  Sheet being scanned.
-     * @param  int  $rowIndex  1-based Excel row index.
-     * @return bool True when the row contains DATE and NAME headers.
-     */
-    private function isClinicHeaderRow(Worksheet $worksheet, int $rowIndex): bool
-    {
-        $rowValues = $this->readRowValues($worksheet, $rowIndex);
-
-        return in_array('DATE', $rowValues, true) && in_array('NAME', $rowValues, true);
-    }
-
-    /**
-     * Check whether a parsed row represents a patient line (has a real name).
-     *
-     * @param  array<string, mixed>  $rowData  Parsed row with patient_name.
-     * @return bool True when patient_name is non-empty and not the header placeholder.
-     */
-    private function hasPatientName(array $rowData): bool
-    {
-        $name = trim((string) ($rowData['patient_name'] ?? ''));
-
-        if ($name === '' || strtoupper($name) === 'NAME') {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Nameless row with treatment text in column G — activity line, not a section subtotal.
-     *
-     * @param  array<string, mixed>  $rowData
-     */
-    private function hasSectionActivityTreatment(array $rowData): bool
-    {
-        if ($this->hasPatientName($rowData)) {
-            return false;
-        }
-
-        $treatmentText = trim((string) ($rowData['treatment_text'] ?? ''));
-
-        if ($treatmentText === '' || strtoupper($treatmentText) === 'TREATMENT') {
-            return false;
-        }
-
-        if ($this->looksLikeDoctorSectionLabel($treatmentText)) {
-            return false;
-        }
-
-        $normalized = strtoupper($treatmentText);
-
-        if (str_starts_with($normalized, 'TOTAL') || $normalized === 'CASH') {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Check whether a row is a doctor daily subtotal (payments without a patient name).
-     *
-     * Excludes CASH and TOTAL summary rows.
-     *
-     * @param  array<string, mixed>  $rowData  Parsed row with payment and name fields.
-     * @return bool True when the row has payment values and no patient name.
-     */
-    private function isSectionSubtotalRow(array $rowData): bool
-    {
-        if ($this->hasPatientName($rowData)) {
-            return false;
-        }
-
-        if ($this->hasSectionActivityTreatment($rowData)) {
-            return false;
-        }
-
-        $treatmentCell = strtoupper(trim((string) (($rowData['raw_cells']['G'] ?? ''))));
-
-        if ($treatmentCell !== '' && (
-            str_starts_with($treatmentCell, 'TOTAL')
-            || $treatmentCell === 'CASH'
-        )) {
-            return false;
-        }
-
-        $paymentFields = ['dhs_amount', 'cheque_amount', 'tabby_amount', 'usd_amount', 'visa_amount', 'rubl_amount'];
-
-        foreach ($paymentFields as $field) {
-            if ($this->hasNumericValue($rowData[$field] ?? null)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**
