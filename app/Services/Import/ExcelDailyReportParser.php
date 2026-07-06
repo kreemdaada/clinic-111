@@ -216,6 +216,41 @@ class ExcelDailyReportParser
             $doctorLabel = $this->extractDoctorLabelFromRow($worksheet, $rowIndex);
 
             if ($doctorLabel !== null) {
+                if (
+                    $currentDoctor !== null
+                    && $columnMap !== null
+                    && ! $this->doctorLabelsMatch($currentDoctor, $doctorLabel)
+                    && $this->sectionHasAccumulatedData($sectionPatientTreatments, $sectionPatientPayments)
+                ) {
+                    $hybridRowData = $this->extractRow($worksheet, $rowIndex, $columnMap);
+
+                    if (
+                        ! $this->hasPatientName($hybridRowData)
+                        && $this->hasPaymentValues($hybridRowData)
+                    ) {
+                        $emittedRow = $this->emitSectionSubtotal(
+                            $currentDoctor,
+                            $sectionPatientTreatments,
+                            $sectionPatientPayments,
+                            $sectionAnchorDate,
+                            $sectionMaxFileNumber,
+                            $reportMonth,
+                            $hybridRowData,
+                            $sheetDay,
+                            $sheetName,
+                        );
+
+                        if ($emittedRow !== null) {
+                            $parsedRows[] = $emittedRow;
+                        }
+
+                        $sectionPatientTreatments = [];
+                        $sectionPatientPayments = $this->emptySectionPaymentTotals();
+                        $sectionAnchorDate = null;
+                        $sectionMaxFileNumber = 0;
+                    }
+                }
+
                 $currentDoctor = $doctorLabel;
                 $columnMap = null;
                 $sectionPatientTreatments = [];
@@ -274,45 +309,22 @@ class ExcelDailyReportParser
                 continue;
             }
 
-            if ($this->shouldSkipStaleSection($sectionAnchorDate, $sectionMaxFileNumber, $reportMonth, $rowData)) {
-                $this->recordExtractionEvent(
-                    status: 'skipped',
-                    reason: 'stale_section',
-                    sheetDay: $sheetDay,
-                    sheetName: $sheetName,
-                    doctorLabel: $currentDoctor,
-                    rowData: $rowData,
-                    treatmentText: implode(' | ', $sectionPatientTreatments),
-                );
-
-                $sectionPatientTreatments = [];
-                $sectionPatientPayments = $this->emptySectionPaymentTotals();
-                $sectionAnchorDate = null;
-                $sectionMaxFileNumber = 0;
-
-                continue;
-            }
-
-            $rowData = $this->applySectionPaymentTotals($rowData, $sectionPatientPayments);
-
-            $rowData['doctor'] = $currentDoctor;
-            $rowData['sheet_name'] = $sheetName;
-            $rowData['sheet_day'] = $sheetDay;
-            $rowData['work_date'] = null;
-            $rowData['treatment_text'] = implode(' | ', $sectionPatientTreatments);
-            $rowData['is_daily_subtotal'] = true;
-
-            $this->recordExtractionEvent(
-                status: 'extracted',
-                reason: null,
-                sheetDay: $sheetDay,
-                sheetName: $sheetName,
-                doctorLabel: $currentDoctor,
-                rowData: $rowData,
-                treatmentText: $rowData['treatment_text'],
+            $emittedRow = $this->emitSectionSubtotal(
+                $currentDoctor,
+                $sectionPatientTreatments,
+                $sectionPatientPayments,
+                $sectionAnchorDate,
+                $sectionMaxFileNumber,
+                $reportMonth,
+                $rowData,
+                $sheetDay,
+                $sheetName,
             );
 
-            $parsedRows[] = $rowData;
+            if ($emittedRow !== null) {
+                $parsedRows[] = $emittedRow;
+            }
+
             $sectionPatientTreatments = [];
             $sectionPatientPayments = $this->emptySectionPaymentTotals();
             $sectionAnchorDate = null;
@@ -320,6 +332,82 @@ class ExcelDailyReportParser
         }
 
         return $parsedRows;
+    }
+
+    /**
+     * @param  array<int, string>  $sectionPatientTreatments
+     * @param  array<string, float>  $sectionPatientPayments
+     * @param  array<string, mixed>  $rowData
+     * @return array<string, mixed>|null Emitted subtotal row, or null when skipped.
+     */
+    private function emitSectionSubtotal(
+        string $currentDoctor,
+        array $sectionPatientTreatments,
+        array $sectionPatientPayments,
+        ?string $sectionAnchorDate,
+        int $sectionMaxFileNumber,
+        ?Carbon $reportMonth,
+        array $rowData,
+        int $sheetDay,
+        string $sheetName,
+    ): ?array {
+        if ($this->shouldSkipStaleSection($sectionAnchorDate, $sectionMaxFileNumber, $reportMonth, $rowData)) {
+            $this->recordExtractionEvent(
+                status: 'skipped',
+                reason: 'stale_section',
+                sheetDay: $sheetDay,
+                sheetName: $sheetName,
+                doctorLabel: $currentDoctor,
+                rowData: $rowData,
+                treatmentText: implode(' | ', $sectionPatientTreatments),
+            );
+
+            return null;
+        }
+
+        $rowData = $this->applySectionPaymentTotals($rowData, $sectionPatientPayments);
+        $rowData['doctor'] = $currentDoctor;
+        $rowData['sheet_name'] = $sheetName;
+        $rowData['sheet_day'] = $sheetDay;
+        $rowData['work_date'] = null;
+        $rowData['treatment_text'] = implode(' | ', $sectionPatientTreatments);
+        $rowData['is_daily_subtotal'] = true;
+
+        $this->recordExtractionEvent(
+            status: 'extracted',
+            reason: null,
+            sheetDay: $sheetDay,
+            sheetName: $sheetName,
+            doctorLabel: $currentDoctor,
+            rowData: $rowData,
+            treatmentText: $rowData['treatment_text'],
+        );
+
+        return $rowData;
+    }
+
+    /**
+     * @param  array<int, string>  $sectionPatientTreatments
+     * @param  array<string, float>  $sectionPatientPayments
+     */
+    private function sectionHasAccumulatedData(array $sectionPatientTreatments, array $sectionPatientPayments): bool
+    {
+        if ($sectionPatientTreatments !== []) {
+            return true;
+        }
+
+        foreach ($sectionPatientPayments as $amount) {
+            if ((float) $amount != 0.0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function doctorLabelsMatch(string $currentDoctor, string $nextDoctorLabel): bool
+    {
+        return strtoupper(trim($currentDoctor)) === strtoupper(trim($nextDoctorLabel));
     }
 
     /**
