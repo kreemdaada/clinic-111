@@ -58,7 +58,7 @@ class AdminHelperTextRemovalTest extends TestCase
 
         $pages = [
             ['route' => 'labs.index', 'title' => 'Laboratories', 'marker' => 'Create laboratory'],
-            ['route' => 'imports.index', 'title' => 'Import Daily Report', 'marker' => 'Import file'],
+            ['route' => 'imports.index', 'title' => 'Import Daily Report', 'marker' => 'Start import'],
         ];
 
         foreach ($pages as $page) {
@@ -75,6 +75,6 @@ class AdminHelperTextRemovalTest extends TestCase
 
         $this->actingAs($admin)
             ->get(route('imports.index'))
-            ->assertSee('Drop Excel file here', false);
+            ->assertSee('Upload file', false);
     }
 }

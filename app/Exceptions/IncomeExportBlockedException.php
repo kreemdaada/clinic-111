@@ -44,7 +44,7 @@ class IncomeExportBlockedException extends UserFacingException
         }
 
         $messages[] = 'Open the daily report, review the affected doctor and day, then save your changes. '
-            .'If an extraction log exists for this report, it lists the same issues.';
+            .'If an import log exists for this report, the View log page lists the same issues.';
 
         return $messages;
     }

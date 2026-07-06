@@ -74,8 +74,8 @@
 
         <div id="dropzone" class="dropzone">
             <div class="dropzone-icon">📊</div>
-            <div class="dropzone-title">Drop Excel file here</div>
-            <div class="dropzone-hint">or click to browse — .xlsx, .xlsm only</div>
+            <div class="dropzone-title">Upload file</div>
+            <div class="dropzone-hint">Drop here or click to browse — .xlsx, .xlsm only</div>
             <input type="file" id="file-input" name="file" accept=".xlsx,.xlsm" style="display:none;" required>
         </div>
 
@@ -84,9 +84,9 @@
         </div>
 
         <div class="import-actions" style="margin-top:1.25rem;">
-            <button type="submit" id="submit-btn" class="btn btn-primary" @if(isset($canImport) && ! $canImport) disabled @endif>Import file</button>
+            <button type="submit" id="submit-btn" class="btn btn-primary" @if(isset($canImport) && ! $canImport) disabled @endif>Start import</button>
             <div id="spinner" class="spinner">
-                <span>Importing… this may take a minute for large files.</span>
+                <span>Processing report… this may take a minute for large files.</span>
             </div>
         </div>
     </form>
@@ -119,7 +119,7 @@
                     <td>{{ $report->daily_work_rows_count }}</td>
                     <td>
                         <div class="table-actions">
-                            <a href="{{ route('logs.extraction', $report) }}" class="btn btn-secondary btn-sm">Extraction log</a>
+                            <a href="{{ route('logs.extraction', $report) }}" class="btn btn-secondary btn-sm">View log</a>
                             <a href="{{ route('daily-report.edit', $report) }}" class="btn btn-secondary btn-sm">Edit rows</a>
                             <a href="{{ route('imports.income', $report) }}" class="btn btn-secondary btn-sm">Income Excel</a>
                             <form method="POST" action="{{ route('imports.destroy', $report) }}" class="inline-form"

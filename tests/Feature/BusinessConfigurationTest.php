@@ -100,7 +100,7 @@ class BusinessConfigurationTest extends TestCase
             ->assertOk()
             ->assertSee('Configuration complete', false)
             ->assertSee('ready for import', false)
-            ->assertSee('Import report', false)
+            ->assertSee('Start import', false)
             ->assertDontSee('Business Configuration', false);
 
         $this->actingAs($owner)

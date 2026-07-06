@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Support\DoctorCodeResolver;
 use App\Support\ExtractionLogDoctorGrouper;
+use App\Support\OpgClinicDoctor;
 use PHPUnit\Framework\TestCase;
 
 class ExtractionLogDoctorGrouperTest extends TestCase
@@ -93,5 +94,81 @@ class ExtractionLogDoctorGrouperTest extends TestCase
         $errors = ExtractionLogDoctorGrouper::unknownDoctorErrors($log);
 
         $this->assertSame([], $errors);
+    }
+
+    public function test_clinic_opg_imported_rows_are_not_unknown_doctor_errors(): void
+    {
+        $log = [
+            'imported_rows' => [
+                [
+                    'doctor_code' => OpgClinicDoctor::CODE,
+                    'doctor_label' => OpgClinicDoctor::IMPORT_LABEL,
+                    'sheet_day' => 3,
+                    'excel_row' => 10,
+                    'treatment_text' => 'OPG_NORMAL x 1',
+                    'paid_total_aed' => '200.00',
+                    'lab_total_aed' => '0.00',
+                    'issues' => [],
+                ],
+                [
+                    'doctor_code' => OpgClinicDoctor::CODE,
+                    'doctor_label' => OpgClinicDoctor::IMPORT_LABEL,
+                    'sheet_day' => 19,
+                    'excel_row' => 10,
+                    'treatment_text' => 'OPG_NORMAL x 1',
+                    'paid_total_aed' => '200.00',
+                    'lab_total_aed' => '0.00',
+                    'issues' => [],
+                ],
+                [
+                    'doctor_code' => OpgClinicDoctor::CODE,
+                    'doctor_label' => OpgClinicDoctor::IMPORT_LABEL,
+                    'sheet_day' => 30,
+                    'excel_row' => 10,
+                    'treatment_text' => 'OPG_NORMAL x 1',
+                    'paid_total_aed' => '200.00',
+                    'lab_total_aed' => '0.00',
+                    'issues' => [],
+                ],
+            ],
+            'skipped_rows' => [],
+            'unresolved_rows' => [],
+        ];
+
+        $totals = ExtractionLogDoctorGrouper::knownDoctorTotals($log);
+        $errors = ExtractionLogDoctorGrouper::unknownDoctorErrors($log);
+
+        $this->assertSame([], $totals);
+        $this->assertSame([], $errors);
+    }
+
+    public function test_mixed_opg_and_unknown_doctor_reports_only_unknown_doctor(): void
+    {
+        $log = [
+            'imported_rows' => [
+                [
+                    'doctor_code' => OpgClinicDoctor::CODE,
+                    'doctor_label' => OpgClinicDoctor::IMPORT_LABEL,
+                    'sheet_day' => 3,
+                    'excel_row' => 10,
+                    'treatment_text' => 'OPG_NORMAL x 1',
+                ],
+            ],
+            'skipped_rows' => [],
+            'unresolved_rows' => [
+                [
+                    'doctor_label' => 'Dr. Anas',
+                    'sheet_day' => 5,
+                    'excel_row' => 12,
+                    'treatment_text' => 'ZIR x 2',
+                ],
+            ],
+        ];
+
+        $errors = ExtractionLogDoctorGrouper::unknownDoctorErrors($log);
+
+        $this->assertCount(1, $errors);
+        $this->assertSame('Dr. Anas', $errors[0]['label']);
+        $this->assertCount(1, $errors[0]['rows']);
     }
 }

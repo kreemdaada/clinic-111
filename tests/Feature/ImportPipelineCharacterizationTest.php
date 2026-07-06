@@ -18,6 +18,7 @@ use App\Models\WorkItem;
 use App\Services\Import\DailyReportImportService;
 use App\Services\Import\ImportExtractionLogService;
 use App\Support\AccountingScopedQuery;
+use App\Support\ExtractionLogDoctorGrouper;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -341,6 +342,7 @@ class ImportPipelineCharacterizationTest extends TestCase
         $log = $this->loadExtractionLog($report);
         $this->assertCount(1, $log['unresolved_rows']);
         $this->assertSame('unresolved_doctor', $log['unresolved_rows'][0]['status'] ?? $log['unresolved_rows'][0]['reason'] ?? null);
+        $this->assertCount(1, ExtractionLogDoctorGrouper::unknownDoctorErrors($log));
     }
 
     public function test_cash_boundary_row_is_skipped_and_not_imported(): void

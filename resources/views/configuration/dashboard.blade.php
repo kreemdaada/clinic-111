@@ -572,7 +572,7 @@
         </svg>
         <span><strong>Configuration complete</strong> · ready for import</span>
     </div>
-    <a href="{{ route('imports.index') }}" class="btn btn-primary btn-sm">Import report</a>
+    <a href="{{ route('imports.index') }}" class="btn btn-primary btn-sm">Start import</a>
 </section>
 @else
 <section class="cfg-setup">
