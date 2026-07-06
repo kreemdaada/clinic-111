@@ -234,7 +234,7 @@ class PaymentCalculationService
         }
 
         foreach ($paymentDefinitions as $definition) {
-            if (bccomp($definition['amount'], '0', 2) <= 0) {
+            if (bccomp($definition['amount'], '0', 2) === 0) {
                 continue;
             }
 
