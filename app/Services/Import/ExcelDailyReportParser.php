@@ -367,7 +367,7 @@ class ExcelDailyReportParser
         int $sheetDay,
         string $sheetName,
     ): ?array {
-        if ($this->shouldSkipStaleSection($sectionAnchorDate, $sectionMaxFileNumber, $reportMonth, $rowData)) {
+        if ($this->shouldSkipStaleSection($sectionAnchorDate, $sectionMaxFileNumber, $reportMonth, $rowData, $sheetDay)) {
             $this->recordExtractionEvent(
                 status: 'skipped',
                 reason: 'stale_section',
@@ -645,10 +645,16 @@ class ExcelDailyReportParser
      * @param  int  $sectionMaxFileNumber  Highest NF file number seen in the section.
      * @param  Carbon|null  $reportMonth  Target import month.
      * @param  array<string, mixed>  $rowData  Subtotal row with total_cost.
+     * @param  int  $sheetDay  Day-of-month from the sheet tab name.
      * @return bool True when the section should be skipped.
      */
-    private function shouldSkipStaleSection(?string $sectionAnchorDate, int $sectionMaxFileNumber, ?Carbon $reportMonth, array $rowData): bool
-    {
+    private function shouldSkipStaleSection(
+        ?string $sectionAnchorDate,
+        int $sectionMaxFileNumber,
+        ?Carbon $reportMonth,
+        array $rowData,
+        int $sheetDay,
+    ): bool {
         if ($reportMonth === null || $sectionAnchorDate === null) {
             return false;
         }
@@ -656,6 +662,10 @@ class ExcelDailyReportParser
         try {
             $anchorDate = Carbon::parse($sectionAnchorDate);
         } catch (\Throwable) {
+            return false;
+        }
+
+        if ($this->sectionAnchorMatchesSheetDay($anchorDate, $reportMonth, $sheetDay)) {
             return false;
         }
 
@@ -674,6 +684,22 @@ class ExcelDailyReportParser
         $totalCost = (float) preg_replace('/[^\d.\-]/', '', (string) ($rowData['total_cost'] ?? 0));
 
         return $totalCost >= 10000;
+    }
+
+    /**
+     * Whether the anchor cell month/day align with the canonical sheet date for this report.
+     *
+     * Copied workbook templates often keep an old year in column A while the sheet tab
+     * and report month define the intended work day.
+     */
+    private function sectionAnchorMatchesSheetDay(Carbon $anchorDate, Carbon $reportMonth, int $sheetDay): bool
+    {
+        if ($sheetDay < 1 || $sheetDay > (int) $reportMonth->daysInMonth) {
+            return false;
+        }
+
+        return (int) $anchorDate->month === (int) $reportMonth->month
+            && (int) $anchorDate->day === $sheetDay;
     }
 
     /**
