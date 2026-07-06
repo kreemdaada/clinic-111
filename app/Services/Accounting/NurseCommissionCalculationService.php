@@ -8,7 +8,9 @@ use App\Models\Nurse;
 use App\Models\NurseCommission;
 use App\Models\WorkItem;
 use App\Support\AccountingScopedQuery;
+use App\Support\Analytics\FinancialPeriod;
 use App\Support\MoneyCalculator;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
 /**
@@ -18,6 +20,7 @@ class NurseCommissionCalculationService
 {
     public function __construct(
         private readonly NurseCommissionRateResolver $nurseCommissionRateResolver,
+        private readonly WorkItemTreatmentSnapshotService $workItemTreatmentSnapshotService,
     ) {}
 
     public function calculateForReport(DailyReport $dailyReport): void
@@ -66,7 +69,12 @@ class NurseCommissionCalculationService
             return;
         }
 
-        if ($treatment->treatment_price === null || $treatment->treatment_price_currency === null) {
+        if (! $this->workItemTreatmentSnapshotService->isSnapshotComplete($workItem)) {
+            $this->workItemTreatmentSnapshotService->applySnapshotFromTreatment($workItem, $treatment);
+            $workItem->refresh();
+        }
+
+        if ($workItem->treatment_price_aed === null) {
             return;
         }
 
@@ -76,10 +84,7 @@ class NurseCommissionCalculationService
             return;
         }
 
-        $currency = strtoupper((string) $treatment->treatment_price_currency);
-        $priceOriginal = number_format((float) $treatment->treatment_price, 2, '.', '');
-        $exchangeRate = MoneyCalculator::rateToAed($currency);
-        $priceAed = MoneyCalculator::convertToAed($priceOriginal, $currency, $exchangeRate);
+        $priceAed = (string) $workItem->treatment_price_aed;
         $unitCommission = MoneyCalculator::percentage($priceAed, (string) $rate->commission_percentage);
         $totalCommission = MoneyCalculator::multiply($unitCommission, (int) $workItem->quantity);
 
@@ -89,11 +94,11 @@ class NurseCommissionCalculationService
             'nurse_id' => $nurse->id,
             'nurse_name_snapshot' => $nurse->name,
             'treatment_id' => $treatment->id,
-            'treatment_code_snapshot' => $treatment->code,
+            'treatment_code_snapshot' => (string) $workItem->treatment_code_snapshot,
             'treatment_name_snapshot' => $treatment->name,
-            'treatment_price_original' => $priceOriginal,
-            'treatment_price_currency' => $currency,
-            'exchange_rate_to_aed' => $exchangeRate,
+            'treatment_price_original' => $workItem->treatment_price_original,
+            'treatment_price_currency' => $workItem->treatment_price_currency,
+            'exchange_rate_to_aed' => $workItem->exchange_rate_to_aed,
             'treatment_price_aed' => $priceAed,
             'commission_percentage' => (string) $rate->commission_percentage,
             'unit_commission_aed' => $unitCommission,
@@ -109,10 +114,13 @@ class NurseCommissionCalculationService
     {
         return NurseCommission::query()
             ->where('clinic_id', $clinicId)
-            ->whereHas('workItem.dailyWorkRow', function ($query) use ($doctorId, $monthStart, $monthEnd) {
-                $query
-                    ->where('doctor_id', $doctorId)
-                    ->whereBetween('work_date', [$monthStart, $monthEnd]);
+            ->whereHas('workItem.dailyWorkRow', function ($query) use ($doctorId, $monthStart) {
+                $query->where('doctor_id', $doctorId);
+                FinancialPeriod::applyHalfOpenMonthConstraint(
+                    $query,
+                    'work_date',
+                    Carbon::parse($monthStart),
+                );
             })
             ->get();
     }

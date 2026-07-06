@@ -7,9 +7,9 @@ use App\DTOs\ParsedTreatmentItemDto;
 use App\DTOs\TreatmentImportResultDto;
 use App\Models\DailyWorkRow;
 use App\Models\Treatment;
-use App\Models\WorkItem;
 use App\Services\Accounting\LabBillingResolver;
 use App\Services\Accounting\TreatmentParserService;
+use App\Services\Accounting\WorkItemPersistenceService;
 use App\Services\Configuration\CurrentClinicResolver;
 use App\Support\AccountingScopedQuery;
 use Illuminate\Support\Collection;
@@ -23,6 +23,7 @@ class TreatmentImportValidationService
         private readonly TreatmentParserService $treatmentParserService,
         private readonly LabBillingResolver $labBillingResolver,
         private readonly CurrentClinicResolver $currentClinicResolver,
+        private readonly WorkItemPersistenceService $workItemPersistenceService,
     ) {}
 
     /**
@@ -98,14 +99,13 @@ class TreatmentImportValidationService
                 continue;
             }
 
-            WorkItem::query()->create([
-                'clinic_id' => $dailyWorkRow->clinic_id,
-                'daily_work_row_id' => $dailyWorkRow->id,
-                'treatment_id' => $treatment->id,
-                'quantity' => $parsedItem->quantity,
-                'confidence' => $parsedItem->confidence,
-                'warning_message' => $parsedItem->warningMessage,
-            ]);
+            $this->workItemPersistenceService->create(
+                dailyWorkRow: $dailyWorkRow,
+                treatment: $treatment,
+                quantity: $parsedItem->quantity,
+                confidence: $parsedItem->confidence,
+                warningMessage: $parsedItem->warningMessage,
+            );
 
             $persistedCount++;
         }

@@ -12,6 +12,7 @@ use App\Models\LabPrice;
 use App\Models\Treatment;
 use App\Models\User;
 use App\Models\WorkItem;
+use App\Services\Accounting\WorkItemPersistenceService;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
@@ -174,10 +175,37 @@ abstract class TestCase extends BaseTestCase
      */
     protected function createWorkItem(DailyWorkRow $dailyWorkRow, array $attributes = []): WorkItem
     {
-        return WorkItem::query()->create(array_merge([
+        $base = [
             'clinic_id' => $dailyWorkRow->clinic_id,
             'daily_work_row_id' => $dailyWorkRow->id,
-        ], $attributes));
+        ];
+
+        if (isset($attributes['treatment_id'])) {
+            $treatment = Treatment::query()->findOrFail($attributes['treatment_id']);
+            $workItem = app(WorkItemPersistenceService::class)->create(
+                dailyWorkRow: $dailyWorkRow,
+                treatment: $treatment,
+                quantity: (int) ($attributes['quantity'] ?? 1),
+                confidence: (int) ($attributes['confidence'] ?? 100),
+                warningMessage: $attributes['warning_message'] ?? null,
+            );
+
+            $extras = array_diff_key($attributes, array_flip([
+                'treatment_id',
+                'quantity',
+                'confidence',
+                'warning_message',
+            ]));
+
+            if ($extras !== []) {
+                $workItem->fill($extras);
+                $workItem->save();
+            }
+
+            return $workItem->fresh();
+        }
+
+        return WorkItem::query()->create(array_merge($base, $attributes));
     }
 
     /**

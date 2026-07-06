@@ -22,6 +22,11 @@ class WorkItem extends Model
         'clinic_id',
         'daily_work_row_id',
         'treatment_id',
+        'treatment_code_snapshot',
+        'treatment_price_original',
+        'treatment_price_currency',
+        'exchange_rate_to_aed',
+        'treatment_price_aed',
         'nurse_id',
         'quantity',
         'confidence',
@@ -38,6 +43,9 @@ class WorkItem extends Model
         return [
             'quantity' => 'integer',
             'confidence' => 'integer',
+            'treatment_price_original' => 'decimal:2',
+            'exchange_rate_to_aed' => 'decimal:4',
+            'treatment_price_aed' => 'decimal:2',
         ];
     }
 

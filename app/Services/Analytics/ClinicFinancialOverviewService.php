@@ -12,6 +12,7 @@ use App\Models\DailyReport;
 use App\Models\LabJob;
 use App\Models\NurseCommission;
 use App\Models\Payment;
+use App\Models\WorkItem;
 use App\Services\Accounting\Concerns\ScopesAccountingQueries;
 use App\Services\Accounting\OpgTreatmentValueAggregator;
 use App\Services\Configuration\CurrentClinicResolver;
@@ -132,10 +133,11 @@ class ClinicFinancialOverviewService
 
     private function sumOpgTreatmentValue(FinancialPeriod $period, string $clinicCurrency, string $treatmentCode): string
     {
-        $commissions = $this->nurseCommissionsInPeriodQuery($period)
-            ->get(['nurse_commissions.treatment_code_snapshot', 'nurse_commissions.treatment_price_aed', 'nurse_commissions.quantity']);
+        $workItems = $this->opgWorkItemsInPeriodQuery($period)
+            ->with('treatment')
+            ->get();
 
-        $totalAed = $this->opgTreatmentValueAggregator->sumForCanonicalCode($commissions, $treatmentCode);
+        $totalAed = $this->opgTreatmentValueAggregator->sumForWorkItems($workItems, $treatmentCode);
 
         return $this->fromStoredTotal($totalAed, $clinicCurrency);
     }
@@ -194,10 +196,8 @@ class ClinicFinancialOverviewService
             ->join('daily_reports as dr', 'dwr.daily_report_id', '=', 'dr.id')
             ->where('dwr.clinic_id', $this->currentClinicId())
             ->whereIn('dr.status', $this->includedReportStatuses())
-            ->whereBetween('dwr.work_date', [
-                $period->start->toDateString(),
-                $period->end->toDateString(),
-            ])
+            ->where('dwr.work_date', '>=', $period->start)
+            ->where('dwr.work_date', '<', $period->exclusiveEnd())
             ->where('dwr.paid_total_aed', '>', 0)
             ->select(['dwr.id', 'dwr.paid_total_aed'])
             ->get();
@@ -322,10 +322,7 @@ class ClinicFinancialOverviewService
         return $this->forCurrentClinic(DailyReport::class)
             ->where('status', ReportStatus::NeedsReview->value)
             ->whereHas('dailyWorkRows', function ($query) use ($period): void {
-                $query->whereBetween('work_date', [
-                    $period->start->toDateString(),
-                    $period->end->toDateString(),
-                ]);
+                $period->applyHalfOpenDateConstraint($query, 'work_date');
             })
             ->count();
     }
@@ -351,10 +348,8 @@ class ClinicFinancialOverviewService
             ->join('daily_work_rows as dwr', 'payments.daily_work_row_id', '=', 'dwr.id')
             ->join('daily_reports as dr', 'dwr.daily_report_id', '=', 'dr.id')
             ->whereIn('dr.status', $this->includedReportStatuses())
-            ->whereBetween('dwr.work_date', [
-                $period->start->toDateString(),
-                $period->end->toDateString(),
-            ]);
+            ->where('dwr.work_date', '>=', $period->start)
+            ->where('dwr.work_date', '<', $period->exclusiveEnd());
     }
 
     private function labJobsInPeriodQuery(FinancialPeriod $period)
@@ -369,10 +364,8 @@ class ClinicFinancialOverviewService
                 LabJobStatus::Calculated->value,
                 LabJobStatus::Adjusted->value,
             ])
-            ->whereBetween('dwr.work_date', [
-                $period->start->toDateString(),
-                $period->end->toDateString(),
-            ]);
+            ->where('dwr.work_date', '>=', $period->start)
+            ->where('dwr.work_date', '<', $period->exclusiveEnd());
     }
 
     private function nurseCommissionsInPeriodQuery(FinancialPeriod $period)
@@ -383,10 +376,20 @@ class ClinicFinancialOverviewService
             ->join('daily_work_rows as dwr', 'wi.daily_work_row_id', '=', 'dwr.id')
             ->join('daily_reports as dr', 'dwr.daily_report_id', '=', 'dr.id')
             ->whereIn('dr.status', $this->includedReportStatuses())
-            ->whereBetween('dwr.work_date', [
-                $period->start->toDateString(),
-                $period->end->toDateString(),
-            ]);
+            ->where('dwr.work_date', '>=', $period->start)
+            ->where('dwr.work_date', '<', $period->exclusiveEnd());
+    }
+
+    private function opgWorkItemsInPeriodQuery(FinancialPeriod $period)
+    {
+        return WorkItem::query()
+            ->where('work_items.clinic_id', $this->currentClinicId())
+            ->join('daily_work_rows as dwr', 'work_items.daily_work_row_id', '=', 'dwr.id')
+            ->join('daily_reports as dr', 'dwr.daily_report_id', '=', 'dr.id')
+            ->whereIn('dr.status', $this->includedReportStatuses())
+            ->where('dwr.work_date', '>=', $period->start)
+            ->where('dwr.work_date', '<', $period->exclusiveEnd())
+            ->select('work_items.*');
     }
 
     private function decimal(mixed $value): string
