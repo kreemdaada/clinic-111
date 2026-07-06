@@ -12,6 +12,7 @@ use App\Models\Payment;
 use App\Models\WorkItem;
 use App\Services\Accounting\Concerns\ScopesAccountingQueries;
 use App\Services\Configuration\CurrentClinicResolver;
+use App\Support\Analytics\FinancialPeriod;
 use App\Support\ClinicCurrencySupport;
 use App\Support\MoneyCalculator;
 use Carbon\Carbon;
@@ -80,7 +81,9 @@ class MonthlyIncomeCalculationService
 
         $payments = $this->forCurrentClinic(Payment::class)
             ->whereHas('dailyWorkRow', fn ($query) => $query->where('doctor_id', $doctor->id))
-            ->whereBetween('paid_at', [$monthStart->toDateString(), $monthEnd->toDateString()])
+            ->where(function ($query) use ($monthStart) {
+                FinancialPeriod::applyHalfOpenMonthConstraint($query, 'paid_at', $monthStart);
+            })
             ->get();
 
         $totalDhs = $this->sumPaymentsByMethod($payments, PaymentMethod::Dhs);
@@ -192,10 +195,9 @@ class MonthlyIncomeCalculationService
         $doctor->loadMissing('doctorFixedFees.treatment');
 
         $workItems = $this->forCurrentClinic(WorkItem::class)
-            ->whereHas('dailyWorkRow', function ($query) use ($doctor, $monthStart, $monthEnd) {
-                $query
-                    ->where('doctor_id', $doctor->id)
-                    ->whereBetween('work_date', [$monthStart->toDateString(), $monthEnd->toDateString()]);
+            ->whereHas('dailyWorkRow', function ($query) use ($doctor, $monthStart) {
+                $query->where('doctor_id', $doctor->id);
+                FinancialPeriod::applyHalfOpenMonthConstraint($query, 'work_date', $monthStart);
             })
             ->with(['treatment', 'dailyWorkRow'])
             ->get();
@@ -220,10 +222,9 @@ class MonthlyIncomeCalculationService
     private function calculateLabCostForDoctor(Doctor $doctor, Carbon $monthStart, Carbon $monthEnd): string
     {
         $labJobs = $this->forCurrentClinic(LabJob::class)
-            ->whereHas('workItem.dailyWorkRow', function ($query) use ($doctor, $monthStart, $monthEnd) {
-                $query
-                    ->where('doctor_id', $doctor->id)
-                    ->whereBetween('work_date', [$monthStart->toDateString(), $monthEnd->toDateString()]);
+            ->whereHas('workItem.dailyWorkRow', function ($query) use ($doctor, $monthStart) {
+                $query->where('doctor_id', $doctor->id);
+                FinancialPeriod::applyHalfOpenMonthConstraint($query, 'work_date', $monthStart);
             })
             ->get();
 
@@ -241,10 +242,9 @@ class MonthlyIncomeCalculationService
     private function calculateTreatmentCounts(Doctor $doctor, Carbon $monthStart, Carbon $monthEnd): array
     {
         $workItems = $this->forCurrentClinic(WorkItem::class)
-            ->whereHas('dailyWorkRow', function ($query) use ($doctor, $monthStart, $monthEnd) {
-                $query
-                    ->where('doctor_id', $doctor->id)
-                    ->whereBetween('work_date', [$monthStart->toDateString(), $monthEnd->toDateString()]);
+            ->whereHas('dailyWorkRow', function ($query) use ($doctor, $monthStart) {
+                $query->where('doctor_id', $doctor->id);
+                FinancialPeriod::applyHalfOpenMonthConstraint($query, 'work_date', $monthStart);
             })
             ->with('treatment')
             ->get();
@@ -269,10 +269,9 @@ class MonthlyIncomeCalculationService
     private function calculateNurseCommissionForDoctor(Doctor $doctor, Carbon $monthStart, Carbon $monthEnd): string
     {
         $commissions = $this->forCurrentClinic(NurseCommission::class)
-            ->whereHas('workItem.dailyWorkRow', function ($query) use ($doctor, $monthStart, $monthEnd) {
-                $query
-                    ->where('doctor_id', $doctor->id)
-                    ->whereBetween('work_date', [$monthStart->toDateString(), $monthEnd->toDateString()]);
+            ->whereHas('workItem.dailyWorkRow', function ($query) use ($doctor, $monthStart) {
+                $query->where('doctor_id', $doctor->id);
+                FinancialPeriod::applyHalfOpenMonthConstraint($query, 'work_date', $monthStart);
             })
             ->get();
 
@@ -285,15 +284,15 @@ class MonthlyIncomeCalculationService
         Carbon $monthEnd,
         string $treatmentCode,
     ): string {
-        $commissions = $this->forCurrentClinic(NurseCommission::class)
-            ->whereHas('workItem.dailyWorkRow', function ($query) use ($doctor, $monthStart, $monthEnd) {
-                $query
-                    ->where('doctor_id', $doctor->id)
-                    ->whereBetween('work_date', [$monthStart->toDateString(), $monthEnd->toDateString()]);
+        $workItems = $this->forCurrentClinic(WorkItem::class)
+            ->with('treatment')
+            ->whereHas('dailyWorkRow', function ($query) use ($doctor, $monthStart) {
+                $query->where('doctor_id', $doctor->id);
+                FinancialPeriod::applyHalfOpenMonthConstraint($query, 'work_date', $monthStart);
             })
             ->get();
 
-        return $this->opgTreatmentValueAggregator->sumForCanonicalCode($commissions, $treatmentCode);
+        return $this->opgTreatmentValueAggregator->sumForWorkItems($workItems, $treatmentCode);
     }
 
     /**

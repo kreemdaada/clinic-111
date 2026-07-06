@@ -16,10 +16,12 @@ use App\Services\Accounting\NurseCommissionCalculationService;
 use App\Services\Accounting\PaymentCalculationService;
 use App\Services\Accounting\WorkItemNurseAssignmentService;
 use App\Services\Configuration\CurrentClinicResolver;
+use App\Services\Configuration\OpgClinicDoctorProvisioner;
 use App\Support\AccountingScopedQuery;
 use App\Support\DoctorLabelNormalizer;
 use App\Support\ImportRowPrivacySanitizer;
 use App\Support\MoneyCalculator;
+use App\Support\OpgClinicDoctor;
 use App\Support\PatientReferenceHasher;
 use App\Support\ReportMonthResolver;
 use Carbon\Carbon;
@@ -60,6 +62,7 @@ class DailyReportImportService
         private readonly PatientReferenceHasher $patientReferenceHasher,
         private readonly ImportRowPrivacySanitizer $importRowPrivacySanitizer,
         private readonly CurrentClinicResolver $currentClinicResolver,
+        private readonly OpgImportRowAssembler $opgImportRowAssembler,
     ) {}
 
     /**
@@ -102,8 +105,29 @@ class DailyReportImportService
                 $this->importExtractionLogService->startReport($dailyReport, $storedAbsolutePath);
                 $this->importExtractionLogService->recordParserEvents($parseResult['events']);
 
+                $importWarnings = [];
+
                 foreach ($parsedRows as $parsedRow) {
-                    $doctor = $this->resolveDoctorFromRow($parsedRow);
+                    $doctor = null;
+                    $rowWarnings = [];
+
+                    if ((bool) ($parsedRow['is_opg_section'] ?? false)) {
+                        $doctor = $this->resolveOpgDoctor();
+                        $assembled = $this->opgImportRowAssembler->assembleFromParsedOpgRow(
+                            treatmentCode: (string) ($parsedRow['opg_treatment_code'] ?? ''),
+                            quantity: (int) ($parsedRow['opg_quantity'] ?? 1),
+                            columnNurseAlias: $parsedRow['nurse_alias'] ?? null,
+                            treatmentNurseAlias: $parsedRow['opg_treatment_nurse_alias'] ?? null,
+                            unmappedNurseCandidate: $parsedRow['unmapped_nurse_candidate'] ?? null,
+                            excelRow: (int) ($parsedRow['raw_row_number'] ?? $parsedRow['excel_row'] ?? 0),
+                            treatmentLabelForWarnings: (string) ($parsedRow['treatment_text'] ?? ''),
+                        );
+                        $parsedRow['treatment_text'] = $assembled['treatment_text'];
+                        $parsedRow['nurse_assignments'] = $assembled['nurse_assignments'];
+                        $rowWarnings = $assembled['warnings'];
+                    } else {
+                        $doctor = $this->resolveDoctorFromRow($parsedRow);
+                    }
 
                     if ($doctor === null) {
                         $this->importExtractionLogService->recordUnresolvedDoctorRow($parsedRow);
@@ -113,11 +137,12 @@ class DailyReportImportService
 
                     $workRow = $this->createWorkRowFromParsedData($dailyReport, $parsedRow, $monthAnchor, $doctor);
                     $this->importExtractionLogService->recordPersistedRow($workRow, $parsedRow);
+                    $importWarnings = array_merge($importWarnings, $rowWarnings);
                 }
 
                 $dailyReport->update(['status' => ReportStatus::Parsed]);
 
-                $this->processParsedReport($dailyReport);
+                $this->processParsedReport($dailyReport, $importWarnings);
 
                 $extractionLogPath = $this->importExtractionLogService->finalize($dailyReport);
 
@@ -156,7 +181,7 @@ class DailyReportImportService
      *
      * @throws RuntimeException When the report is already approved.
      */
-    public function processParsedReport(DailyReport $dailyReport): void
+    public function processParsedReport(DailyReport $dailyReport, array $prefetchedWarnings = []): void
     {
         $this->assertSameClinic($dailyReport);
 
@@ -169,7 +194,7 @@ class DailyReportImportService
             ->with('doctor')
             ->get();
 
-        $allWarnings = [];
+        $allWarnings = $prefetchedWarnings;
 
         foreach ($workRows as $dailyWorkRow) {
             $result = $this->treatmentImportValidationService->validateAndPersist($dailyWorkRow);
@@ -250,6 +275,12 @@ class DailyReportImportService
         $mrn = $this->sanitizeString($this->getParsedRowValue($parsedRow, 'mrn'));
         $fileNumber = $this->sanitizeString($this->getParsedRowValue($parsedRow, 'file_number'));
         $excelRowNumber = (int) ($parsedRow['raw_row_number'] ?? $parsedRow['excel_row'] ?? 0);
+        $rawData = $this->importRowPrivacySanitizer->sanitize($parsedRow);
+        $nurseAssignments = $parsedRow['nurse_assignments'] ?? [];
+
+        if (is_array($nurseAssignments) && $nurseAssignments !== []) {
+            $rawData['nurse_assignments'] = $nurseAssignments;
+        }
 
         $dailyWorkRow = DailyWorkRow::query()->create([
             'clinic_id' => $dailyReport->clinic_id,
@@ -275,7 +306,7 @@ class DailyReportImportService
             'balance_dhs' => $this->toDecimalString($this->getParsedRowValue($parsedRow, 'balance_dhs', 0)),
             'balance_usd' => $this->toDecimalString($this->getParsedRowValue($parsedRow, 'balance_usd', 0)),
             'crown_count' => (int) $this->getParsedRowValue($parsedRow, 'crown_count', 0),
-            'raw_data_json' => $this->importRowPrivacySanitizer->sanitize($parsedRow),
+            'raw_data_json' => $rawData,
         ]);
 
         $this->paymentCalculationService->createPaymentsForWorkRow($dailyWorkRow);
@@ -298,6 +329,10 @@ class DailyReportImportService
             return null;
         }
 
+        if (strtoupper(trim(OpgClinicDoctor::IMPORT_LABEL)) === $doctorValue) {
+            return $this->resolveOpgDoctor();
+        }
+
         $doctorCodeGuess = DoctorLabelNormalizer::extractCodeGuess($doctorValue);
 
         $doctor = $this->forCurrentClinic(Doctor::class)
@@ -316,6 +351,23 @@ class DailyReportImportService
             ->first();
 
         return $doctor;
+    }
+
+    private function resolveOpgDoctor(): ?Doctor
+    {
+        $doctor = $this->forCurrentClinic(Doctor::class)
+            ->where('code', OpgClinicDoctor::CODE)
+            ->where('is_active', true)
+            ->first();
+
+        if ($doctor !== null) {
+            return $doctor;
+        }
+
+        $clinic = $this->currentClinicResolver->resolve();
+
+        return app(OpgClinicDoctorProvisioner::class)
+            ->provisionForClinic($clinic);
     }
 
     /**

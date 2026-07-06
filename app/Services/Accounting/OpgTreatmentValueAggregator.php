@@ -2,46 +2,98 @@
 
 namespace App\Services\Accounting;
 
+use App\Models\Treatment;
+use App\Models\WorkItem;
 use App\Support\MoneyCalculator;
 use App\Support\OpgTreatmentCodes;
 use Illuminate\Support\Collection;
 
 /**
- * Aggregates informative OPG treatment values from nurse commission snapshots.
+ * Aggregates informative OPG treatment values from persisted work item snapshots.
  *
- * Value = persisted treatment_price_aed × quantity. Callers retain query scope,
- * status filters, and currency conversion.
+ * Value = treatment_price_aed snapshot × quantity in AED.
+ * Independent of nurse assignment and nurse commission snapshots.
  */
 final class OpgTreatmentValueAggregator
 {
+    public function __construct(
+        private readonly WorkItemTreatmentSnapshotService $workItemTreatmentSnapshotService,
+    ) {}
+
     /**
-     * Sum treatment_price_aed × quantity for commissions matching a canonical OPG code.
+     * Sum treatment price × quantity for work items matching a canonical OPG code.
      *
-     * @param  Collection<int, object{treatment_code_snapshot: string, treatment_price_aed: mixed, quantity: int}>  $commissions
+     * @param  Collection<int, WorkItem>  $workItems
      */
-    public function sumForCanonicalCode(Collection $commissions, string $canonicalTreatmentCode): string
+    public function sumForWorkItems(Collection $workItems, string $canonicalTreatmentCode): string
     {
         $total = '0.00';
 
-        foreach ($commissions as $commission) {
-            if (! OpgTreatmentCodes::matches($commission->treatment_code_snapshot, $canonicalTreatmentCode)) {
+        foreach ($workItems as $workItem) {
+            $code = $this->resolveTreatmentCode($workItem);
+
+            if ($code === null || ! OpgTreatmentCodes::matches($code, $canonicalTreatmentCode)) {
                 continue;
             }
 
-            $total = MoneyCalculator::add($total, $this->lineValueAed($commission));
+            $lineValue = $this->lineValueAedFromWorkItem($workItem);
+
+            if ($lineValue === null) {
+                continue;
+            }
+
+            $total = MoneyCalculator::add($total, $lineValue);
         }
 
         return $total;
     }
 
-    /**
-     * @param  object{treatment_price_aed: mixed, quantity: int}  $commission
-     */
-    public function lineValueAed(object $commission): string
+    public function lineValueAedFromWorkItem(WorkItem $workItem): ?string
     {
-        return MoneyCalculator::multiply(
-            (string) $commission->treatment_price_aed,
-            (int) $commission->quantity,
-        );
+        $priceAed = $workItem->treatment_price_aed;
+
+        if ($priceAed !== null) {
+            return MoneyCalculator::multiply((string) $priceAed, (int) $workItem->quantity);
+        }
+
+        $workItem->loadMissing('treatment');
+        $treatment = $workItem->treatment;
+
+        if ($treatment === null) {
+            return null;
+        }
+
+        $legacyPriceAed = $this->legacyTreatmentPriceAed($treatment);
+
+        if ($legacyPriceAed === null) {
+            return null;
+        }
+
+        return MoneyCalculator::multiply($legacyPriceAed, (int) $workItem->quantity);
+    }
+
+    /**
+     * Legacy fallback for rows without a persisted snapshot (best-effort backfill only).
+     */
+    public function legacyTreatmentPriceAed(Treatment $treatment): ?string
+    {
+        if ($treatment->treatment_price === null || $treatment->treatment_price_currency === null) {
+            return null;
+        }
+
+        $attributes = $this->workItemTreatmentSnapshotService->buildAttributesFromTreatment($treatment);
+
+        return $attributes['treatment_price_aed'];
+    }
+
+    private function resolveTreatmentCode(WorkItem $workItem): ?string
+    {
+        if ($workItem->treatment_code_snapshot !== null && $workItem->treatment_code_snapshot !== '') {
+            return $workItem->treatment_code_snapshot;
+        }
+
+        $workItem->loadMissing('treatment');
+
+        return $workItem->treatment?->code;
     }
 }

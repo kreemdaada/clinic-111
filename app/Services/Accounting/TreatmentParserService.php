@@ -5,7 +5,6 @@ namespace App\Services\Accounting;
 use App\DTOs\ParsedTreatmentItemDto;
 use App\Models\DailyWorkRow;
 use App\Models\Treatment;
-use App\Models\WorkItem;
 use App\Services\Configuration\CurrentClinicResolver;
 use App\Support\AccountingScopedQuery;
 use Illuminate\Support\Collection;
@@ -33,6 +32,7 @@ class TreatmentParserService
 
     public function __construct(
         private readonly CurrentClinicResolver $currentClinicResolver,
+        private readonly WorkItemPersistenceService $workItemPersistenceService,
     ) {}
 
     /** @var array<int, string> */
@@ -136,14 +136,13 @@ class TreatmentParserService
                 continue;
             }
 
-            WorkItem::query()->create([
-                'clinic_id' => $dailyWorkRow->clinic_id,
-                'daily_work_row_id' => $dailyWorkRow->id,
-                'treatment_id' => $treatment->id,
-                'quantity' => $parsedItem->quantity,
-                'confidence' => $parsedItem->confidence,
-                'warning_message' => $parsedItem->warningMessage,
-            ]);
+            $this->workItemPersistenceService->create(
+                dailyWorkRow: $dailyWorkRow,
+                treatment: $treatment,
+                quantity: $parsedItem->quantity,
+                confidence: $parsedItem->confidence,
+                warningMessage: $parsedItem->warningMessage,
+            );
         }
     }
 

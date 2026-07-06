@@ -15,6 +15,7 @@ use App\Services\Accounting\OpgTreatmentValueAggregator;
 use App\Services\Accounting\PaymentCalculationService;
 use App\Services\Accounting\WaelFixedFeeCalculator;
 use App\Services\Configuration\CurrentClinicResolver;
+use App\Support\Analytics\FinancialPeriod;
 use App\Support\ClinicCurrencySupport;
 use App\Support\DoctorLabelNormalizer;
 use App\Support\IncomeExportStandardLayout;
@@ -133,7 +134,7 @@ class DoctorsIncomeExcelExportService
             $this->assertSameClinic($dailyReport);
             $workRowsQuery->where('daily_report_id', $dailyReport->id);
         } else {
-            $workRowsQuery->whereBetween('work_date', [$monthStart->toDateString(), $monthEnd->toDateString()]);
+            FinancialPeriod::applyHalfOpenMonthConstraint($workRowsQuery, 'work_date', $monthStart);
         }
 
         $workRows = $workRowsQuery->get();
@@ -766,8 +767,16 @@ class DoctorsIncomeExcelExportService
                         $daily[$dateKey]['nurse_commission'],
                         $commissionAmount,
                     );
+                }
 
-                    $lineValue = $this->opgTreatmentValueAggregator->lineValueAed($commission);
+                $treatmentCode = $workItem->treatment_code_snapshot ?? $workItem->treatment->code;
+
+                if (OpgTreatmentCodes::isNormal($treatmentCode) || OpgTreatmentCodes::is3d($treatmentCode)) {
+                    $lineValue = $this->opgTreatmentValueAggregator->lineValueAedFromWorkItem($workItem);
+
+                    if ($lineValue === null) {
+                        continue;
+                    }
 
                     if (! $isLegacyAed) {
                         $lineValue = ClinicCurrencySupport::fromStoredAedEquivalent(
@@ -777,14 +786,14 @@ class DoctorsIncomeExcelExportService
                         );
                     }
 
-                    if (OpgTreatmentCodes::isNormal($commission->treatment_code_snapshot)) {
+                    if (OpgTreatmentCodes::isNormal($treatmentCode)) {
                         $daily[$dateKey]['opg_normal_value'] = MoneyCalculator::add(
                             $daily[$dateKey]['opg_normal_value'],
                             $lineValue,
                         );
                     }
 
-                    if (OpgTreatmentCodes::is3d($commission->treatment_code_snapshot)) {
+                    if (OpgTreatmentCodes::is3d($treatmentCode)) {
                         $daily[$dateKey]['opg_3d_value'] = MoneyCalculator::add(
                             $daily[$dateKey]['opg_3d_value'],
                             $lineValue,

@@ -2,6 +2,8 @@
 
 namespace App\Services\Import;
 
+use App\Support\OpgClinicDoctor;
+use App\Support\OpgTreatmentLabelNormalizer;
 use Carbon\Carbon;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -188,6 +190,8 @@ class ExcelDailyReportParser
         $sectionAnchorDate = null;
         $sectionMaxFileNumber = 0;
         $sheetDay = (int) trim($sheetName);
+        $inOpgSection = false;
+        $opgColumnMap = null;
 
         for ($rowIndex = 1; $rowIndex <= $worksheet->getHighestRow(); $rowIndex++) {
             $columnGValue = $this->readCellValue($worksheet, 'G', $rowIndex);
@@ -209,6 +213,21 @@ class ExcelDailyReportParser
                 $sectionPatientPayments = $this->emptySectionPaymentTotals();
                 $sectionAnchorDate = null;
                 $sectionMaxFileNumber = 0;
+                $inOpgSection = false;
+                $opgColumnMap = null;
+
+                continue;
+            }
+
+            if (! $inOpgSection && OpgTreatmentLabelNormalizer::isBareSectionMarker($columnGValue)) {
+                $currentDoctor = null;
+                $columnMap = null;
+                $sectionPatientTreatments = [];
+                $sectionPatientPayments = $this->emptySectionPaymentTotals();
+                $sectionAnchorDate = null;
+                $sectionMaxFileNumber = 0;
+                $inOpgSection = true;
+                $opgColumnMap = null;
 
                 continue;
             }
@@ -216,6 +235,8 @@ class ExcelDailyReportParser
             $doctorLabel = $this->extractDoctorLabelFromRow($worksheet, $rowIndex);
 
             if ($doctorLabel !== null) {
+                $inOpgSection = false;
+                $opgColumnMap = null;
                 if (
                     $currentDoctor !== null
                     && $columnMap !== null
@@ -262,7 +283,29 @@ class ExcelDailyReportParser
             }
 
             if ($this->isClinicHeaderRow($worksheet, $rowIndex)) {
-                $columnMap = $this->buildClinicColumnMap($worksheet, $rowIndex);
+                if ($inOpgSection) {
+                    $opgColumnMap = $this->buildClinicColumnMap($worksheet, $rowIndex);
+                } else {
+                    $columnMap = $this->buildClinicColumnMap($worksheet, $rowIndex);
+                }
+
+                continue;
+            }
+
+            if ($inOpgSection) {
+                if ($opgColumnMap === null) {
+                    continue;
+                }
+
+                $rowData = $this->extractRow($worksheet, $rowIndex, $opgColumnMap);
+
+                if ($this->isOpgActivityRow($rowData)) {
+                    $emittedRow = $this->emitOpgActivityRow($rowData, $sheetDay, $sheetName, $opgColumnMap);
+
+                    if ($emittedRow !== null) {
+                        $parsedRows[] = $emittedRow;
+                    }
+                }
 
                 continue;
             }
@@ -758,7 +801,7 @@ class ExcelDailyReportParser
      * Detect special section boundary labels that terminate a doctor block.
      *
      * @param  string|null  $value  Raw column-G cell text.
-     * @return bool True for OPG, CASH, CLINIC 111, or TOTAL-prefixed labels.
+     * @return bool True for CASH, CLINIC 111, or TOTAL-prefixed labels.
      */
     private function isSpecialSectionLabel(?string $value): bool
     {
@@ -768,11 +811,110 @@ class ExcelDailyReportParser
 
         $normalized = strtoupper(trim($value));
 
-        if (in_array($normalized, ['OPG', 'CASH', 'CLINIC 111'], true)) {
+        if (in_array($normalized, ['CASH', 'CLINIC 111'], true)) {
             return true;
         }
 
         return str_starts_with($normalized, 'TOTAL');
+    }
+
+    /**
+     * @param  array<string, mixed>  $rowData
+     */
+    private function isOpgActivityRow(array $rowData): bool
+    {
+        $treatmentText = trim((string) ($rowData['treatment_text'] ?? ''));
+
+        if (! OpgTreatmentLabelNormalizer::isOpgTreatmentLabel($treatmentText)) {
+            return false;
+        }
+
+        if ($this->hasPaymentValues($rowData)) {
+            return true;
+        }
+
+        return $this->hasPatientName($rowData);
+    }
+
+    /**
+     * @param  array<string, mixed>  $rowData
+     * @return array<string, mixed>|null
+     */
+    private function emitOpgActivityRow(array $rowData, int $sheetDay, string $sheetName, array $columnMap): ?array
+    {
+        $parsed = OpgTreatmentLabelNormalizer::parse((string) ($rowData['treatment_text'] ?? ''));
+
+        if ($parsed === null) {
+            return null;
+        }
+
+        $columnNurseAlias = trim((string) ($rowData['nurse_alias'] ?? ''));
+        $columnNurseAlias = $columnNurseAlias !== '' ? $columnNurseAlias : null;
+
+        $rowData['doctor'] = OpgClinicDoctor::IMPORT_LABEL;
+        $rowData['sheet_name'] = $sheetName;
+        $rowData['sheet_day'] = $sheetDay;
+        $rowData['is_opg_section'] = true;
+        $rowData['opg_treatment_code'] = $parsed['code'];
+        $rowData['opg_quantity'] = $parsed['quantity'];
+        $rowData['nurse_alias'] = $columnNurseAlias;
+        $rowData['opg_treatment_nurse_alias'] = $parsed['nurse_alias'] ?? null;
+        $rowData['unmapped_nurse_candidate'] = $columnNurseAlias === null
+            ? $this->extractNurseAliasFromUnmappedCells($rowData, $columnMap)
+            : null;
+        $rowData['treatment_text'] = OpgTreatmentLabelNormalizer::treatmentText($parsed['code'], $parsed['quantity']);
+        $rowData['is_daily_subtotal'] = false;
+
+        $this->recordExtractionEvent(
+            status: 'extracted',
+            reason: null,
+            sheetDay: $sheetDay,
+            sheetName: $sheetName,
+            doctorLabel: OpgClinicDoctor::IMPORT_LABEL,
+            rowData: $rowData,
+            treatmentText: $rowData['treatment_text'],
+        );
+
+        return $rowData;
+    }
+
+    /**
+     * @param  array<string, mixed>  $rowData
+     * @param  array<string, string>  $columnMap
+     */
+    private function extractNurseAliasFromUnmappedCells(array $rowData, array $columnMap): ?string
+    {
+        $mappedColumns = array_values($columnMap);
+        $knownValues = array_filter([
+            trim((string) ($rowData['patient_name'] ?? '')),
+            trim((string) ($rowData['treatment_text'] ?? '')),
+            trim((string) ($rowData['mrn'] ?? '')),
+            trim((string) ($rowData['file_number'] ?? '')),
+        ]);
+
+        foreach ($rowData['raw_cells'] ?? [] as $column => $value) {
+            if (in_array($column, $mappedColumns, true)) {
+                continue;
+            }
+
+            $text = trim((string) $value);
+
+            if ($text === '' || is_numeric($value)) {
+                continue;
+            }
+
+            if (in_array($text, $knownValues, true)) {
+                continue;
+            }
+
+            if (preg_match('/^[A-Za-z][A-Za-z\s.\'-]{1,30}$/u', $text) !== 1) {
+                continue;
+            }
+
+            return $text;
+        }
+
+        return null;
     }
 
     /**
@@ -973,6 +1115,10 @@ class ExcelDailyReportParser
 
                 if ($header === 'TABBY') {
                     $columnMap['tabby_amount'] = $columnLetter;
+                }
+
+                if (in_array($header, ['NURSE', 'REMARK', 'REMARKS', 'STAFF', 'TECH', 'TECHNICIAN'], true)) {
+                    $columnMap['nurse_alias'] = $columnLetter;
                 }
 
                 if ($header === 'CROWN') {

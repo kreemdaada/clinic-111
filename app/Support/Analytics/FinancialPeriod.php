@@ -4,6 +4,8 @@ namespace App\Support\Analytics;
 
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use InvalidArgumentException;
 
 /**
@@ -32,6 +34,44 @@ readonly class FinancialPeriod
     public static function currentMonth(string $timezone): self
     {
         return self::fromMonth(Carbon::now($timezone)->format('Y-m'), $timezone);
+    }
+
+    /**
+     * First instant of the month following this period (exclusive upper bound).
+     */
+    public function exclusiveEnd(): CarbonInterface
+    {
+        return $this->start->copy()->addMonth()->startOfDay();
+    }
+
+    /**
+     * Apply half-open month constraint: >= period start and < next period start.
+     *
+     * @param  EloquentBuilder<mixed>|QueryBuilder  $query
+     */
+    public function applyHalfOpenDateConstraint(EloquentBuilder|QueryBuilder $query, string $column): void
+    {
+        $query
+            ->where($column, '>=', $this->start)
+            ->where($column, '<', $this->exclusiveEnd());
+    }
+
+    /**
+     * Apply half-open month constraint from any month anchor.
+     *
+     * @param  EloquentBuilder<mixed>|QueryBuilder  $query
+     */
+    public static function applyHalfOpenMonthConstraint(
+        EloquentBuilder|QueryBuilder $query,
+        string $column,
+        CarbonInterface $monthStart,
+    ): void {
+        $start = $monthStart->copy()->startOfMonth()->startOfDay();
+        $exclusiveEnd = $start->copy()->addMonth()->startOfDay();
+
+        $query
+            ->where($column, '>=', $start)
+            ->where($column, '<', $exclusiveEnd);
     }
 
     public function previous(): self
