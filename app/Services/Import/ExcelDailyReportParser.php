@@ -29,6 +29,10 @@ class ExcelDailyReportParser
     /** @var array<int, array<string, mixed>> */
     private array $extractionEvents = [];
 
+    public function __construct(
+        private readonly Clinic111HeaderMapBuilder $clinic111HeaderMapBuilder,
+    ) {}
+
     /**
      * Parse an Excel workbook and return extracted daily subtotal rows only.
      *
@@ -284,9 +288,9 @@ class ExcelDailyReportParser
 
             if ($this->isClinicHeaderRow($worksheet, $rowIndex)) {
                 if ($inOpgSection) {
-                    $opgColumnMap = $this->buildClinicColumnMap($worksheet, $rowIndex);
+                    $opgColumnMap = $this->clinic111HeaderMapBuilder->build($worksheet, $rowIndex);
                 } else {
-                    $columnMap = $this->buildClinicColumnMap($worksheet, $rowIndex);
+                    $columnMap = $this->clinic111HeaderMapBuilder->build($worksheet, $rowIndex);
                 }
 
                 continue;
@@ -1040,110 +1044,6 @@ class ExcelDailyReportParser
         $value = trim((string) $worksheet->getCell($columnLetter.$rowIndex)->getCalculatedValue());
 
         return $value === '' ? null : $value;
-    }
-
-    /**
-     * Map Clinic 111 header labels to internal field names and column letters.
-     *
-     * Handles duplicate DHS/USD columns (first = amount, second = balance).
-     *
-     * @param  Worksheet  $worksheet  Sheet containing the header row.
-     * @param  int  $headerRowIndex  1-based row index of the header (default row 3).
-     * @return array<string, string> Field name → column letter.
-     */
-    private function buildClinicColumnMap(Worksheet $worksheet, int $headerRowIndex = self::CLINIC_HEADER_ROW): array
-    {
-        $columnMap = [];
-        $dhsColumns = [];
-        $usdColumns = [];
-
-        foreach ($worksheet->getRowIterator($headerRowIndex, $headerRowIndex) as $row) {
-            foreach ($row->getCellIterator() as $cell) {
-                $header = strtoupper(trim((string) $cell->getCalculatedValue()));
-                $columnLetter = $cell->getColumn();
-
-                if ($header === 'DATE' || $header === '+') {
-                    $columnMap['work_date'] = $columnLetter;
-                }
-
-                if ($header === 'NAME') {
-                    $columnMap['patient_name'] = $columnLetter;
-                }
-
-                if ($header === 'MRN') {
-                    $columnMap['mrn'] = $columnLetter;
-                }
-
-                if ($header === 'FILE') {
-                    $columnMap['file_number'] = $columnLetter;
-                }
-
-                if ($header === 'TOTAL COST') {
-                    $columnMap['total_cost'] = $columnLetter;
-                }
-
-                if ($header === 'DISC.' || $header === 'DISC' || $header === 'DISCOUNT') {
-                    $columnMap['discount_amount'] = $columnLetter;
-                }
-
-                if ($header === 'TREATMENT') {
-                    $columnMap['treatment_text'] = $columnLetter;
-                }
-
-                if ($header === 'DHS') {
-                    $dhsColumns[] = $columnLetter;
-                }
-
-                if (in_array($header, ['$/EURO', 'USD', '$', 'US DOLLAR'], true)) {
-                    $usdColumns[] = $columnLetter;
-                }
-
-                if (
-                    in_array($header, ['RUBL', 'RUB', 'RUBLES', 'RUBLE'], true)
-                    || str_contains($header, 'RUBL')
-                ) {
-                    $columnMap['rubl_amount'] = $columnLetter;
-                }
-
-                if ($header === 'VISA') {
-                    $columnMap['visa_amount'] = $columnLetter;
-                }
-
-                if (in_array($header, ['CHEQUE', 'CHQ', 'CHECK'], true)) {
-                    $columnMap['cheque_amount'] = $columnLetter;
-                }
-
-                if ($header === 'TABBY') {
-                    $columnMap['tabby_amount'] = $columnLetter;
-                }
-
-                if (in_array($header, ['NURSE', 'REMARK', 'REMARKS', 'STAFF', 'TECH', 'TECHNICIAN'], true)) {
-                    $columnMap['nurse_alias'] = $columnLetter;
-                }
-
-                if ($header === 'CROWN') {
-                    $columnMap['crown_count'] = $columnLetter;
-                }
-            }
-        }
-
-        if (isset($dhsColumns[0])) {
-            $columnMap['dhs_amount'] = $dhsColumns[0];
-        }
-
-        if (isset($dhsColumns[1])) {
-            $columnMap['balance_dhs'] = $dhsColumns[1];
-        }
-
-        if (isset($usdColumns[0])) {
-            $columnMap['usd_amount'] = $usdColumns[0];
-        }
-
-        if (isset($usdColumns[1])) {
-            $columnMap['balance_usd'] = $usdColumns[1];
-        }
-
-        return $columnMap;
     }
 
     /**
