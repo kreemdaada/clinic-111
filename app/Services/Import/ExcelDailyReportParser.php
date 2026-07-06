@@ -294,6 +294,22 @@ class ExcelDailyReportParser
                 continue;
             }
 
+            if ($this->hasSectionActivityTreatment($rowData)) {
+                if ($sectionAnchorDate === null) {
+                    $sectionAnchorDate = $this->parseWorkDateValue($rowData['work_date'] ?? null);
+                }
+
+                $treatmentText = trim((string) ($rowData['treatment_text'] ?? ''));
+
+                if ($treatmentText !== '') {
+                    $sectionPatientTreatments[] = $treatmentText;
+                }
+
+                $this->accumulateSectionPatientPayments($sectionPatientPayments, $rowData);
+
+                continue;
+            }
+
             if (! $this->isSectionSubtotalRow($rowData)) {
                 if ($this->hasPaymentValues($rowData)) {
                     $this->recordExtractionEvent(
@@ -765,6 +781,36 @@ class ExcelDailyReportParser
     }
 
     /**
+     * Nameless row with treatment text in column G — activity line, not a section subtotal.
+     *
+     * @param  array<string, mixed>  $rowData
+     */
+    private function hasSectionActivityTreatment(array $rowData): bool
+    {
+        if ($this->hasPatientName($rowData)) {
+            return false;
+        }
+
+        $treatmentText = trim((string) ($rowData['treatment_text'] ?? ''));
+
+        if ($treatmentText === '' || strtoupper($treatmentText) === 'TREATMENT') {
+            return false;
+        }
+
+        if ($this->looksLikeDoctorSectionLabel($treatmentText)) {
+            return false;
+        }
+
+        $normalized = strtoupper($treatmentText);
+
+        if (str_starts_with($normalized, 'TOTAL') || $normalized === 'CASH') {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
      * Check whether a row is a doctor daily subtotal (payments without a patient name).
      *
      * Excludes CASH and TOTAL summary rows.
@@ -775,6 +821,10 @@ class ExcelDailyReportParser
     private function isSectionSubtotalRow(array $rowData): bool
     {
         if ($this->hasPatientName($rowData)) {
+            return false;
+        }
+
+        if ($this->hasSectionActivityTreatment($rowData)) {
             return false;
         }
 
