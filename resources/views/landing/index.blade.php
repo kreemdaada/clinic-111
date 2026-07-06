@@ -1127,7 +1127,7 @@
                         <summary>Can I export reports?</summary>
                         <div class="lp-faq-answer">
                             Yes. After importing a daily report, you can download a Server Income Excel export with
-                            per-doctor income breakdowns. Extraction logs can also be downloaded as JSON for audit
+                            per-doctor income breakdowns. Import logs can also be downloaded as JSON for audit
                             purposes.
                         </div>
                     </details>

@@ -17,7 +17,9 @@ use App\Services\Configuration\OpgTreatmentProvisioner;
 use App\Services\Export\DoctorIncomeExportProfileProvisioner;
 use App\Services\Export\DoctorsIncomeExcelExportService;
 use App\Services\Import\DailyReportImportService;
+use App\Services\Import\ImportExtractionLogService;
 use App\Services\Import\TreatmentImportValidationService;
+use App\Support\ExtractionLogDoctorGrouper;
 use App\Support\OpgClinicDoctor;
 use App\Support\OpgTreatmentCodes;
 use Illuminate\Http\UploadedFile;
@@ -82,6 +84,34 @@ class OpgSectionImportTest extends TestCase
         $this->assertSame('200.00', (string) $row->dhs_amount);
         $this->assertSame('200.00', (string) $row->paid_total_aed);
         $this->assertCount(1, $row->payments);
+    }
+
+    public function test_opg_without_nurse_is_valid_and_not_flagged_as_unknown_doctor(): void
+    {
+        $this->seedAccountingData();
+        $this->authenticateAdmin();
+        $this->provisionOpg();
+
+        $report = $this->importFixture(OpgSectionImportFixtureBuilder::opgWithUnmappedCommentWorkbook(), 'daily report June 2026.xlsx');
+
+        $opgWorkRow = $report->dailyWorkRows()->whereHas('doctor', fn ($query) => $query->where('code', OpgClinicDoctor::CODE))->firstOrFail();
+        $this->assertSame(
+            0,
+            NurseCommission::query()
+                ->whereHas('workItem', fn ($query) => $query->where('daily_work_row_id', $opgWorkRow->id))
+                ->count(),
+        );
+
+        $log = app(ImportExtractionLogService::class)->loadForReport($report);
+        $this->assertNotNull($log);
+        $this->assertSame([], ExtractionLogDoctorGrouper::unknownDoctorErrors($log));
+
+        $response = $this->get(route('logs.extraction', $report));
+        $response->assertOk();
+        $response->assertSee('Import log', false);
+        $response->assertSee('No issues found.', false);
+        $response->assertDontSee('CLINIC OPG', false);
+        $response->assertDontSee('Unrecognized doctor sections', false);
     }
 
     public function test_imported_opg_uses_existing_nurse_commission_pipeline(): void

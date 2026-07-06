@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Extraction Log')
+@section('title', 'Import log')
 
 @push('styles')
 <style>
@@ -659,12 +659,58 @@
 @endpush
 
 @section('content')
+@php
+    use App\Enums\ReportStatus;
+
+    $reportMonthLabel = $dailyReport->report_date->format('F Y');
+    $entryCount = $dailyReport->dailyWorkRows()->count();
+    $needsReview = $dailyReport->status === ReportStatus::NeedsReview;
+    $hasRealProblems = false;
+    $problemCount = 0;
+    $hintCount = 0;
+
+    if ($log !== null) {
+        $hiddenIssueCodes = ['lab_not_persisted', 'ignored_treatment_noted'];
+
+        foreach ($log['imported_rows'] ?? [] as $importedRow) {
+            foreach ($importedRow['issues'] ?? [] as $issue) {
+                if (in_array($issue['code'] ?? '', $hiddenIssueCodes, true)) {
+                    continue;
+                }
+
+                $severity = (string) ($issue['severity'] ?? 'warning');
+
+                if ($severity === 'error') {
+                    $problemCount++;
+                } elseif ($severity === 'warning') {
+                    $hintCount++;
+                }
+            }
+        }
+
+        foreach ($unknownDoctorErrors ?? [] as $unknownDoctor) {
+            $problemCount += count($unknownDoctor['rows'] ?? []);
+        }
+
+        foreach ($log['reconciliation_issues'] ?? [] as $issue) {
+            $severity = (string) ($issue['severity'] ?? 'warning');
+
+            if ($severity === 'error') {
+                $problemCount++;
+            } elseif ($severity === 'warning') {
+                $hintCount++;
+            }
+        }
+
+        $hasRealProblems = $problemCount > 0 || $hintCount > 0;
+    }
+@endphp
+
 <div class="extraction-page-header">
     <div>
-        <h1 class="page-title">Extraction Log</h1>
+        <h1 class="page-title">{{ $showImportComplete ? 'Import complete' : 'Import log' }}</h1>
         <div class="extraction-page-meta">
-            <span>Report <strong>#{{ $dailyReport->id }}</strong></span>
-            <span>{{ $dailyReport->report_date->format('F Y') }}</span>
+            <span>{{ $reportMonthLabel }}</span>
             <span>{{ $dailyReport->source_file_name }}</span>
         </div>
     </div>
@@ -672,19 +718,13 @@
         <a href="{{ route('imports.index') }}" class="btn btn-ghost">← Back</a>
         <a href="{{ route('daily-report.edit', $dailyReport) }}" class="btn btn-secondary">Edit rows</a>
         @if ($log !== null)
-        <a href="{{ route('logs.extraction.download', $dailyReport) }}" class="btn btn-secondary">Download JSON</a>
+        <a href="{{ route('imports.income', $dailyReport) }}" class="btn btn-primary">Download Excel</a>
+        @if (auth()->user()?->isAdmin())
+        <a href="{{ route('logs.extraction.download', $dailyReport) }}" class="btn btn-ghost" style="font-size:0.8125rem;">JSON</a>
+        @endif
         @endif
     </div>
 </div>
-
-@if ($showImportComplete)
-<div class="extraction-banner">
-    <div>
-        <strong>Import complete</strong>
-        Review the extraction log below, then download the Server Income Excel when ready.
-    </div>
-</div>
-@endif
 
 @if ($errors->has('income_export'))
 <div class="alert alert-error" style="margin-bottom:1rem;">
@@ -694,140 +734,70 @@
 </div>
 @endif
 
-@if ($log !== null)
-<div class="card">
-    <div class="extraction-export-card">
-        <div>
-            <h2 class="card-title">Server Income export</h2>
-            <p class="card-description">Monthly income Excel for all doctors — generated from this import.</p>
-            <div class="extraction-export-preview" style="margin-top:0.75rem;">
-                <div class="extraction-export-filename">{{ $incomeDownloadFileName }}</div>
-                <div class="extraction-export-meta">
-                    {{ $dailyReport->dailyWorkRows()->count() }} work rows · {{ $dailyReport->status->value }}
-                </div>
-            </div>
-        </div>
-        <a href="{{ route('imports.income', $dailyReport) }}" class="btn btn-primary">Download Income Excel</a>
-    </div>
-</div>
-@endif
-
 @if ($log === null)
 <div class="card">
-    <p class="extraction-muted">No extraction log for this report. Re-import the daily report to generate one.</p>
+    <p class="extraction-muted">No import log for this report. Re-import the daily report to generate one.</p>
 </div>
 @else
-@php
-$issueSummary = ['error' => 0, 'warning' => 0, 'info' => 0];
-$hiddenIssueCodes = ['lab_not_persisted', 'ignored_treatment_noted'];
-
-foreach ($log['imported_rows'] ?? [] as $importedRow) {
-foreach ($importedRow['issues'] ?? [] as $issue) {
-if (in_array($issue['code'] ?? '', $hiddenIssueCodes, true)) {
-continue;
-}
-$severity = (string) ($issue['severity'] ?? 'warning');
-if (array_key_exists($severity, $issueSummary)) {
-$issueSummary[$severity]++;
-}
-}
-}
-
-foreach ($unknownDoctorErrors ?? [] as $unknownDoctor) {
-$issueSummary['error'] += count($unknownDoctor['rows'] ?? []);
-}
-$issueSummary['warning'] += count($log['skipped_rows'] ?? []);
-
-foreach ($log['reconciliation_issues'] ?? [] as $issue) {
-$severity = (string) ($issue['severity'] ?? 'warning');
-if (array_key_exists($severity, $issueSummary)) {
-$issueSummary[$severity]++;
-}
-}
-@endphp
-
-<div class="extraction-metrics">
-    <div class="extraction-metric extraction-metric--error">
-        <div class="extraction-metric-label">Errors</div>
-        <div class="extraction-metric-value">{{ $issueSummary['error'] ?? 0 }}</div>
+<div class="card" style="margin-bottom:1rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+        <div>
+            <h2 class="card-title" style="margin-bottom:0.35rem;">Monthly export</h2>
+            <div class="extraction-export-filename">{{ $incomeDownloadFileName }}</div>
+            <div class="extraction-export-meta" style="margin-top:0.35rem;">
+                {{ $entryCount }} {{ $entryCount === 1 ? 'entry' : 'entries' }}@if ($needsReview) · Review required @endif
+            </div>
+        </div>
     </div>
+</div>
+
+@if ($hasRealProblems)
+<div class="extraction-metrics">
+    @if ($problemCount > 0)
+    <div class="extraction-metric extraction-metric--error">
+        <div class="extraction-metric-label">Problems</div>
+        <div class="extraction-metric-value">{{ $problemCount }}</div>
+    </div>
+    @endif
+    @if ($hintCount > 0)
     <div class="extraction-metric extraction-metric--warning">
         <div class="extraction-metric-label">Warnings</div>
-        <div class="extraction-metric-value">{{ $issueSummary['warning'] ?? 0 }}</div>
+        <div class="extraction-metric-value">{{ $hintCount }}</div>
     </div>
-    <div class="extraction-metric extraction-metric--info">
-        <div class="extraction-metric-label">Info</div>
-        <div class="extraction-metric-value">{{ $issueSummary['info'] ?? 0 }}</div>
-    </div>
+    @endif
 </div>
-
-<div class="extraction-toolbar-row">
-    <span class="extraction-toolbar-hint">Select a doctor to view their rows — expand for payment and lab details.</span>
-    <span style="display:flex;gap:0.5rem;">
-        <button type="button" class="extraction-toggle-btn" id="extraction-expand-all">Expand all</button>
-        <button type="button" class="extraction-toggle-btn" id="extraction-collapse-all">Collapse all</button>
-    </span>
-</div>
+@else
+<p class="extraction-muted" style="margin-bottom:1rem;">No issues found.</p>
+@endif
 
 @if (count($unknownDoctorErrors) > 0)
 <div class="card extraction-unresolved-card">
-    <h2 class="extraction-unresolved-title">Unrecognized doctor sections</h2>
-    <p class="extraction-unresolved-note">
-        These rows could not be matched to a registered doctor (JACK, RIYAD, PURIYA, WA).
-        Fix the doctor label in Excel or add the doctor in the system. Sheet-level TOTAL rows are not listed here.
+    <h2 class="extraction-unresolved-title">Doctor not found</h2>
+    @php
+        $unknownLabels = array_values(array_filter(array_map(
+            fn (array $unknownDoctor) => trim((string) ($unknownDoctor['label'] ?? '')),
+            $unknownDoctorErrors,
+        )));
+    @endphp
+    @if (count($unknownLabels) === 1)
+    <p class="extraction-unresolved-note" style="margin-bottom:0;">
+        The name "{{ $unknownLabels[0] }}" could not be matched to a doctor.
+        Please check the name in the Excel file.
     </p>
-    @foreach ($unknownDoctorErrors as $unknownDoctor)
-    <div style="margin-bottom:1.25rem;">
-        <h3 class="extraction-unresolved-label" style="margin-bottom:0.5rem;">
-            {{ $unknownDoctor['label'] ?? 'Unknown' }}
-            <span class="extraction-muted" style="font-weight:400;">— {{ count($unknownDoctor['rows'] ?? []) }} error row(s)</span>
-        </h3>
-        <div class="extraction-scroll">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Day</th>
-                        <th>Row in file</th>
-                        <th>{{ $primaryCashLabel ?? 'Cash' }}</th>
-                        @if ($foreignCashCurrency)
-                        <th>{{ $foreignCashCurrency }}</th>
-                        @endif
-                        <th>Visa ({{ $clinicCurrency ?? 'AED' }})</th>
-                        <th>TOTAL</th>
-                        <th>Treatment</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($unknownDoctor['rows'] ?? [] as $row)
-                    @php
-                    $total = bcadd(bcadd($row['dhs_aed'] ?? '0', bcmul($row['usd'] ?? '0', '3.65', 2), 2), $row['visa_aed'] ?? '0', 2);
-                    @endphp
-                    <tr class="extraction-unresolved-row">
-                        <td><strong>{{ $row['sheet_day'] ?? '—' }}</strong></td>
-                        <td>{{ $row['excel_row'] ?? '—' }}</td>
-                        <td>{{ $row['dhs_aed'] ?? '0.00' }}</td>
-                        @if ($foreignCashCurrency)
-                        <td>{{ $row['usd'] ?? '0.00' }}</td>
-                        @endif
-                        <td>{{ $row['visa_aed'] ?? '0.00' }}</td>
-                        <td><strong>{{ $total }}</strong></td>
-                        <td class="extraction-treatment-text">{{ $row['treatment_text'] ?? '—' }}</td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
-    </div>
-    @endforeach
+    @else
+    <p class="extraction-unresolved-note" style="margin-bottom:0;">
+        These names could not be matched to a doctor: {{ implode(', ', $unknownLabels) }}.
+        Please check the names in the Excel file.
+    </p>
+    @endif
 </div>
 @endif
 
 <div class="card">
     <h2 class="extraction-section-title">Summary by doctor</h2>
-    <p class="extraction-section-note" style="margin-bottom:1rem;">Click a row or tab to filter rows by doctor.</p>
     <div class="extraction-doctor-tabs" id="extraction-doctor-tabs">
         @foreach ($doctorCodes as $code)
-        <button type="button" class="extraction-doctor-tab" data-doctor-select="{{ $code }}">{{ $code }}</button>
+        <button type="button" class="extraction-doctor-tab" data-doctor-select="{{ $code }}">{{ $doctorTotals[$code]['display_name'] ?? $code }}</button>
         @endforeach
     </div>
     <div class="extraction-scroll">
@@ -835,11 +805,11 @@ $issueSummary[$severity]++;
             <thead>
                 <tr>
                     <th>Doctor</th>
-                    <th>Imported days</th>
-                    <th>Skipped rows</th>
-                    <th>Unresolved</th>
-                    <th>Total paid ({{ $clinicCurrency ?? 'AED' }})</th>
-                    <th>Total lab cost ({{ $clinicCurrency ?? 'AED' }})</th>
+                    <th>Days</th>
+                    <th>Skipped</th>
+                    <th>Unmatched</th>
+                    <th>Paid ({{ $clinicCurrency ?? 'AED' }})</th>
+                    <th>Lab cost ({{ $clinicCurrency ?? 'AED' }})</th>
                     <th>Issues</th>
                 </tr>
             </thead>
@@ -847,8 +817,7 @@ $issueSummary[$severity]++;
                 @forelse ($doctorTotals as $code => $totals)
                 <tr class="extraction-summary-row" data-doctor-select="{{ $code }}">
                     <td>
-                        <span class="extraction-doctor-code">{{ $code }}</span><br>
-                        <span class="extraction-muted">{{ $totals['doctor_label'] ?? '' }}</span>
+                        <span class="extraction-doctor-code">{{ $totals['display_name'] ?? $code }}</span>
                     </td>
                     <td>{{ $totals['day_count'] ?? 0 }}</td>
                     <td>{{ $totals['skipped_rows_on_sheet'] ?? 0 }}</td>
@@ -867,8 +836,12 @@ $issueSummary[$severity]++;
     </div>
 </div>
 
-<div id="extraction-pick-doctor" class="card extraction-pick-doctor">
-    Select a doctor above to view their treatments.
+<div class="extraction-toolbar-row">
+    <span class="extraction-toolbar-hint" id="extraction-pick-doctor">Select a doctor</span>
+    <span style="display:flex;gap:0.5rem;">
+        <button type="button" class="extraction-toggle-btn" id="extraction-expand-all">Expand all</button>
+        <button type="button" class="extraction-toggle-btn" id="extraction-collapse-all">Collapse all</button>
+    </span>
 </div>
 
 @foreach ($doctorCodes as $doctorCode)
@@ -881,14 +854,9 @@ $rows = $importedByDoctor[$doctorCode] ?? [];
 <div class="card extraction-doctor-panel" data-doctor-panel="{{ $doctorCode }}" hidden>
     <div class="extraction-panel-header">
         <h2 class="extraction-panel-title">
-            {{ $doctorCode }}
-            @if (!empty($doctorTotals[$doctorCode]['doctor_label']))
-            <span class="extraction-doctor-subtitle">— {{ $doctorTotals[$doctorCode]['doctor_label'] }}</span>
-            @elseif (!empty($rows[0]['doctor_label']))
-            <span class="extraction-doctor-subtitle">— {{ $rows[0]['doctor_label'] }}</span>
-            @endif
+            {{ $doctorTotals[$doctorCode]['display_name'] ?? $doctorCode }}
         </h2>
-        <span class="extraction-section-note">{{ count($rows) }} {{ count($rows) === 1 ? 'row' : 'rows' }}</span>
+        <span class="extraction-section-note">{{ count($rows) }} {{ count($rows) === 1 ? 'entry' : 'entries' }}</span>
     </div>
 
     @foreach ($rows as $row)
@@ -924,10 +892,21 @@ $rows = $importedByDoctor[$doctorCode] ?? [];
             </div>
         </summary>
         <div class="extraction-detail-body">
-            <div class="extraction-treatment-block">{{ $row['treatment_text'] ?? '—' }}</div>
+            @php
+                $nurseEntries = $nurseCommissionsByWorkRow[$row['work_row_id'] ?? 0] ?? [];
+                $treatmentDisplay = $row['display_treatment_text'] ?? ($row['treatment_text'] ?? '—');
+
+                if ($nurseEntries !== []) {
+                    $treatmentDisplay = collect($nurseEntries)
+                        ->map(fn (array $entry) => trim(($entry['treatment_name'] ?? '').' × '.($entry['quantity'] ?? 1)))
+                        ->filter()
+                        ->implode(', ');
+                }
+            @endphp
+            <div class="extraction-treatment-block">{{ $treatmentDisplay }}</div>
             <div class="extraction-entry-body">
                 <div>
-                    <div class="extraction-entry-block-title">Patient payment</div>
+                    <div class="extraction-entry-block-title">Payment</div>
                     <div class="extraction-entry-lines">
                         <div>Cash ({{ $primaryCashLabel ?? $clinicCurrency ?? 'AED' }}): {{ $row['display_primary_cash'] ?? $row['dhs_aed'] ?? '0.00' }}</div>
                         @if ($foreignCashCurrency)
@@ -940,7 +919,7 @@ $rows = $importedByDoctor[$doctorCode] ?? [];
                     </div>
                     @if ($diag && ! ($diag['payments']['payment_ok'] ?? true))
                     <p class="extraction-issue-line extraction-issue-line--error" style="margin:0.5rem 0 0;">
-                        Payment total does not match cash + card amounts.
+                        Payment total does not match cash and card amounts.
                     </p>
                     @endif
                 </div>
@@ -969,9 +948,6 @@ $rows = $importedByDoctor[$doctorCode] ?? [];
                     </div>
                     @endif
                 </div>
-                @php
-                    $nurseEntries = $nurseCommissionsByWorkRow[$row['work_row_id'] ?? 0] ?? [];
-                @endphp
                 @if ($nurseEntries !== [])
                 <div style="margin-top:0.75rem;">
                     <div class="extraction-entry-block-title">Nurse commission</div>

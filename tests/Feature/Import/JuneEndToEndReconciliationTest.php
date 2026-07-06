@@ -20,8 +20,10 @@ use App\Services\Configuration\OpgTreatmentProvisioner;
 use App\Services\Export\DoctorIncomeExportProfileProvisioner;
 use App\Services\Export\DoctorsIncomeExcelExportService;
 use App\Services\Import\DailyReportImportService;
+use App\Services\Import\ImportExtractionLogService;
 use App\Services\Import\TreatmentImportValidationService;
 use App\Support\Analytics\FinancialPeriod;
+use App\Support\ExtractionLogDoctorGrouper;
 use App\Support\OpgClinicDoctor;
 use App\Support\OpgTreatmentCodes;
 use Illuminate\Http\UploadedFile;
@@ -67,6 +69,7 @@ class JuneEndToEndReconciliationTest extends TestCase
 
         $this->assertNoStaleSectionWarnings($report);
         $this->assertParserRiskDaysPersisted($report, $jack, $pouria, $riyadh, $clinicOpgDoctor);
+        $this->assertOpgExtractionLogHasNoUnknownDoctorErrors($report);
         $this->assertTransferAccounting($report, $jack, $pouria, $riyadh);
         $this->assertOpgPipeline($report, $clinicOpgDoctor, $nurse);
         $this->assertNoDuplicateEntitiesWithinReport($report);
@@ -557,6 +560,13 @@ class JuneEndToEndReconciliationTest extends TestCase
             $juneJackAfter->totalDhs,
             '2026-07-01 must not belong to June monthly income.',
         );
+    }
+
+    private function assertOpgExtractionLogHasNoUnknownDoctorErrors($report): void
+    {
+        $log = app(ImportExtractionLogService::class)->loadForReport($report);
+        $this->assertNotNull($log);
+        $this->assertSame([], ExtractionLogDoctorGrouper::unknownDoctorErrors($log));
     }
 
     private function assertIncomeExcelExport($report, Doctor $jack, Doctor $pouria, Doctor $riyadh, Doctor $clinicOpgDoctor): void

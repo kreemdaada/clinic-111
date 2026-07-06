@@ -18,10 +18,14 @@ final class ExtractionLogDoctorGrouper
         $totals = [];
 
         foreach ($log['imported_rows'] ?? [] as $row) {
-            $resolved = DoctorCodeResolver::resolve(
-                isset($row['doctor_code']) ? (string) $row['doctor_code'] : null,
-                isset($row['doctor_label']) ? (string) $row['doctor_label'] : null,
-            );
+            $doctorCode = isset($row['doctor_code']) ? (string) $row['doctor_code'] : null;
+            $doctorLabel = isset($row['doctor_label']) ? (string) $row['doctor_label'] : null;
+
+            if (OpgClinicDoctor::matches($doctorCode, $doctorLabel)) {
+                continue;
+            }
+
+            $resolved = DoctorCodeResolver::resolve($doctorCode, $doctorLabel);
 
             if (! $resolved['is_known']) {
                 continue;
@@ -45,10 +49,14 @@ final class ExtractionLogDoctorGrouper
         }
 
         foreach ($log['skipped_rows'] ?? [] as $row) {
-            $resolved = DoctorCodeResolver::resolve(
-                isset($row['doctor_code']) ? (string) $row['doctor_code'] : null,
-                isset($row['doctor_label']) ? (string) $row['doctor_label'] : null,
-            );
+            $doctorCode = isset($row['doctor_code']) ? (string) $row['doctor_code'] : null;
+            $doctorLabel = isset($row['doctor_label']) ? (string) $row['doctor_label'] : null;
+
+            if (OpgClinicDoctor::matches($doctorCode, $doctorLabel)) {
+                continue;
+            }
+
+            $resolved = DoctorCodeResolver::resolve($doctorCode, $doctorLabel);
 
             if (! $resolved['is_known']) {
                 continue;
@@ -60,10 +68,13 @@ final class ExtractionLogDoctorGrouper
         }
 
         foreach ($log['unresolved_rows'] ?? [] as $row) {
-            $resolved = DoctorCodeResolver::resolve(
-                null,
-                isset($row['doctor_label']) ? (string) $row['doctor_label'] : null,
-            );
+            $doctorLabel = isset($row['doctor_label']) ? (string) $row['doctor_label'] : null;
+
+            if (OpgClinicDoctor::matches(null, $doctorLabel)) {
+                continue;
+            }
+
+            $resolved = DoctorCodeResolver::resolve(null, $doctorLabel);
 
             if (! $resolved['is_known']) {
                 continue;
@@ -90,6 +101,10 @@ final class ExtractionLogDoctorGrouper
         $groups = [];
 
         foreach ($log['unresolved_rows'] ?? [] as $row) {
+            if (self::isOpgDoctorRow($row)) {
+                continue;
+            }
+
             self::appendUnknownRow($groups, $row, 'unresolved_doctor');
         }
 
@@ -97,6 +112,10 @@ final class ExtractionLogDoctorGrouper
             $reason = (string) ($row['reason'] ?? '');
 
             if (in_array($reason, ['grand_total_row', 'cash_row', 'special_section'], true)) {
+                continue;
+            }
+
+            if (self::isOpgDoctorRow($row)) {
                 continue;
             }
 
@@ -113,6 +132,10 @@ final class ExtractionLogDoctorGrouper
         }
 
         foreach ($log['imported_rows'] ?? [] as $row) {
+            if (self::isOpgDoctorRow($row)) {
+                continue;
+            }
+
             $resolved = DoctorCodeResolver::resolve(
                 isset($row['doctor_code']) ? (string) $row['doctor_code'] : null,
                 isset($row['doctor_label']) ? (string) $row['doctor_label'] : null,
@@ -148,6 +171,17 @@ final class ExtractionLogDoctorGrouper
                 'issue_count' => 0,
             ];
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private static function isOpgDoctorRow(array $row): bool
+    {
+        return OpgClinicDoctor::matches(
+            isset($row['doctor_code']) ? (string) $row['doctor_code'] : null,
+            (string) ($row['doctor_label'] ?? $row['doctor'] ?? ''),
+        );
     }
 
     /**

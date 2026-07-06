@@ -4,13 +4,16 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\DailyReport;
+use App\Models\Doctor;
 use App\Models\NurseCommission;
+use App\Models\Treatment;
 use App\Services\DailyReport\DailyReportQueryService;
 use App\Services\Export\DoctorsIncomeExcelExportService;
 use App\Services\Import\ExtractionLogPresentationService;
 use App\Services\Import\ImportExtractionLogService;
 use App\Support\DoctorCodeResolver;
 use App\Support\ExtractionLogDoctorGrouper;
+use App\Support\OpgClinicDoctor;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -61,10 +64,14 @@ class LogController extends Controller
 
         if ($log !== null) {
             foreach ($log['imported_rows'] ?? [] as $row) {
-                $resolved = DoctorCodeResolver::resolve(
-                    isset($row['doctor_code']) ? (string) $row['doctor_code'] : null,
-                    isset($row['doctor_label']) ? (string) $row['doctor_label'] : null,
-                );
+                $doctorCode = isset($row['doctor_code']) ? (string) $row['doctor_code'] : null;
+                $doctorLabel = isset($row['doctor_label']) ? (string) $row['doctor_label'] : null;
+
+                if (OpgClinicDoctor::matches($doctorCode, $doctorLabel)) {
+                    continue;
+                }
+
+                $resolved = DoctorCodeResolver::resolve($doctorCode, $doctorLabel);
 
                 if (! $resolved['is_known']) {
                     continue;
@@ -74,6 +81,11 @@ class LogController extends Controller
             }
 
             ksort($importedByDoctor);
+
+            $treatmentNamesByCode = Treatment::query()
+                ->where('clinic_id', $clinic->id)
+                ->pluck('name', 'code')
+                ->all();
 
             foreach ($importedByDoctor as $doctorCode => $rows) {
                 usort($rows, function (array $a, array $b): int {
@@ -86,7 +98,15 @@ class LogController extends Controller
                     return ((int) ($a['excel_row'] ?? 0)) <=> ((int) ($b['excel_row'] ?? 0));
                 });
                 $importedByDoctor[$doctorCode] = array_map(
-                    fn (array $row) => $this->extractionLogPresentationService->presentImportedRow($row, $clinic),
+                    function (array $row) use ($clinic, $treatmentNamesByCode): array {
+                        $presented = $this->extractionLogPresentationService->presentImportedRow($row, $clinic);
+                        $presented['display_treatment_text'] = $this->displayTreatmentText(
+                            (string) ($presented['treatment_text'] ?? ''),
+                            $treatmentNamesByCode,
+                        );
+
+                        return $presented;
+                    },
                     $rows,
                 );
             }
@@ -95,8 +115,19 @@ class LogController extends Controller
                 ExtractionLogDoctorGrouper::knownDoctorTotals($log),
                 $clinic,
             );
-            $unknownDoctorErrors = $log['unknown_doctor_errors']
-                ?? ExtractionLogDoctorGrouper::unknownDoctorErrors($log);
+
+            $doctorDisplayNames = Doctor::query()
+                ->where('clinic_id', $clinic->id)
+                ->whereIn('code', array_keys($doctorTotals))
+                ->pluck('name', 'code');
+
+            foreach ($doctorTotals as $code => $totals) {
+                $doctorTotals[$code]['display_name'] = $this->doctorDisplayName(
+                    (string) ($doctorDisplayNames[$code] ?? $totals['doctor_label'] ?? $code),
+                );
+            }
+
+            $unknownDoctorErrors = ExtractionLogDoctorGrouper::unknownDoctorErrors($log);
         }
 
         $unresolvedRows = [];
@@ -176,9 +207,34 @@ class LogController extends Controller
         $path = $this->importExtractionLogService->getLogPath($dailyReport);
 
         if ($path === null || ! is_file($path)) {
-            abort(404, 'Extraction log not found for this report.');
+            abort(404, 'Import log not found for this report.');
         }
 
         return response()->download($path, 'extraction-report-'.$dailyReport->id.'.json');
+    }
+
+    private function doctorDisplayName(string $name): string
+    {
+        $trimmed = trim($name);
+
+        return preg_replace('/^Dr\.?\s+/i', '', $trimmed) ?? $trimmed;
+    }
+
+    /**
+     * @param  array<string, string>  $treatmentNamesByCode
+     */
+    private function displayTreatmentText(string $text, array $treatmentNamesByCode): string
+    {
+        $displayText = trim($text);
+
+        if ($displayText === '') {
+            return '—';
+        }
+
+        foreach ($treatmentNamesByCode as $code => $name) {
+            $displayText = preg_replace('/\b'.preg_quote($code, '/').'\b/', $name, $displayText) ?? $displayText;
+        }
+
+        return $displayText;
     }
 }
