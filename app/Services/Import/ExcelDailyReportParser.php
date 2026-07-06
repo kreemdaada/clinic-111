@@ -29,6 +29,7 @@ class ExcelDailyReportParser
     public function __construct(
         private readonly Clinic111HeaderMapBuilder $clinic111HeaderMapBuilder,
         private readonly ImportDiagnosticsRecorder $diagnosticsRecorder,
+        private readonly StaleSectionPolicy $staleSectionPolicy,
     ) {}
 
     /**
@@ -412,7 +413,7 @@ class ExcelDailyReportParser
         int $sheetDay,
         string $sheetName,
     ): ?array {
-        if ($this->shouldSkipStaleSection($sectionAnchorDate, $sectionMaxFileNumber, $reportMonth, $rowData, $sheetDay)) {
+        if ($this->staleSectionPolicy->shouldSkip($sectionAnchorDate, $sectionMaxFileNumber, $reportMonth, $rowData, $sheetDay)) {
             $this->recordExtractionEvent(
                 status: 'skipped',
                 reason: 'stale_section',
@@ -679,72 +680,6 @@ class ExcelDailyReportParser
         }
 
         return number_format((float) $normalized, 2, '.', '');
-    }
-
-    /**
-     * Decide whether a doctor section should be skipped as stale carry-over data.
-     *
-     * Skips sections anchored in a prior year with low file numbers or high totals.
-     *
-     * @param  string|null  $sectionAnchorDate  First patient date in the section (Y-m-d).
-     * @param  int  $sectionMaxFileNumber  Highest NF file number seen in the section.
-     * @param  Carbon|null  $reportMonth  Target import month.
-     * @param  array<string, mixed>  $rowData  Subtotal row with total_cost.
-     * @param  int  $sheetDay  Day-of-month from the sheet tab name.
-     * @return bool True when the section should be skipped.
-     */
-    private function shouldSkipStaleSection(
-        ?string $sectionAnchorDate,
-        int $sectionMaxFileNumber,
-        ?Carbon $reportMonth,
-        array $rowData,
-        int $sheetDay,
-    ): bool {
-        if ($reportMonth === null || $sectionAnchorDate === null) {
-            return false;
-        }
-
-        try {
-            $anchorDate = Carbon::parse($sectionAnchorDate);
-        } catch (\Throwable) {
-            return false;
-        }
-
-        if ($this->sectionAnchorMatchesSheetDay($anchorDate, $reportMonth, $sheetDay)) {
-            return false;
-        }
-
-        if ($anchorDate->year >= $reportMonth->year) {
-            return false;
-        }
-
-        if ($sectionMaxFileNumber >= 6200) {
-            return false;
-        }
-
-        if ($sectionMaxFileNumber > 0) {
-            return true;
-        }
-
-        $totalCost = (float) preg_replace('/[^\d.\-]/', '', (string) ($rowData['total_cost'] ?? 0));
-
-        return $totalCost >= 10000;
-    }
-
-    /**
-     * Whether the anchor cell month/day align with the canonical sheet date for this report.
-     *
-     * Copied workbook templates often keep an old year in column A while the sheet tab
-     * and report month define the intended work day.
-     */
-    private function sectionAnchorMatchesSheetDay(Carbon $anchorDate, Carbon $reportMonth, int $sheetDay): bool
-    {
-        if ($sheetDay < 1 || $sheetDay > (int) $reportMonth->daysInMonth) {
-            return false;
-        }
-
-        return (int) $anchorDate->month === (int) $reportMonth->month
-            && (int) $anchorDate->day === $sheetDay;
     }
 
     /**
