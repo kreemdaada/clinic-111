@@ -130,7 +130,7 @@
         .topbar-user {
             color: #94a3b8;
             font-size: 0.85rem;
-            margin-right: 0.5rem;
+            margin-inline-end: 0.5rem;
         }
 
         .topbar-locale-form {
@@ -152,6 +152,18 @@
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5L10 12.5L15 7.5' stroke='%23cbd5e1' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
             background-position: right 0.45rem center;
+        }
+
+        html[dir="rtl"] .topbar-locale-select {
+            padding: 0.35rem 0.65rem 0.35rem 1.75rem;
+            background-position: left 0.45rem center;
+        }
+
+        .topbar-brand-meta {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #94a3b8;
+            margin-inline-start: 0.35rem;
         }
 
         .topbar-locale-select:hover,
@@ -371,7 +383,7 @@
         th,
         td {
             padding: 0.625rem 0.75rem;
-            text-align: left;
+            text-align: start;
             border-bottom: 1px solid var(--border);
             vertical-align: middle;
         }
@@ -470,11 +482,11 @@
         }
 
         .pg-link {
-            border-right: 1px solid var(--border);
+            border-inline-end: 1px solid var(--border);
         }
 
         .pg-link:last-child {
-            border-right: none;
+            border-inline-end: none;
         }
 
         .pg-link:hover {
@@ -486,16 +498,24 @@
             background: var(--accent-soft);
             color: var(--accent);
             font-weight: 600;
-            border-right: 1px solid var(--border);
+            border-inline-end: 1px solid var(--border);
         }
 
         .pg-ellipsis {
-            border-right: 1px solid var(--border);
+            border-inline-end: 1px solid var(--border);
             cursor: default;
         }
 
         .pg-pages > :last-child {
-            border-right: none;
+            border-inline-end: none;
+        }
+
+        .numeric,
+        .amount,
+        .money,
+        .percentage {
+            direction: ltr;
+            unicode-bidi: isolate;
         }
 
         .badge {
@@ -619,10 +639,10 @@
         <a href="{{ route('imports.index') }}" class="topbar-brand">
             Dental<span style="color:var(--primary-hover);">Finance</span>
             @isset($currentClinic)
-            <span style="font-size:0.75rem;font-weight:500;color:#94a3b8;margin-left:0.35rem;">· {{ $currentClinic->name }}</span>
+            <span class="topbar-brand-meta">· {{ $currentClinic->name }}</span>
             @endisset
             @isset($clinicCurrency)
-            <span style="font-size:0.75rem;font-weight:500;color:#94a3b8;margin-left:0.35rem;">({{ $clinicCurrency }})</span>
+            <span class="topbar-brand-meta">({{ $clinicCurrency }})</span>
             @endisset
         </a>
         <nav class="topbar-nav">
@@ -688,9 +708,12 @@
             'cancel' => __('common.confirm.cancel'),
         ];
     @endphp
+    <script type="application/json" id="app-confirm-labels">
+{!! json_encode($confirmLabels, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+    </script>
     <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const confirmLabels = @json($confirmLabels);
+        const confirmLabels = JSON.parse(document.getElementById('app-confirm-labels').textContent);
 
         const modal = document.getElementById('app-confirm-modal');
         if (!modal) {

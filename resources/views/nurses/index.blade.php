@@ -25,7 +25,7 @@
     .nurse-commission-rates { margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border); }
     .nurse-commission-rates h3 { font-size:0.875rem; margin:0 0 0.75rem; }
     .nurse-commission-rates table { width:100%; border-collapse:collapse; font-size:0.8125rem; margin-bottom:0.75rem; }
-    .nurse-commission-rates th, .nurse-commission-rates td { padding:0.4rem 0.35rem; border-bottom:1px solid var(--border); text-align:left; }
+    .nurse-commission-rates th, .nurse-commission-rates td { padding:0.4rem 0.35rem; border-bottom:1px solid var(--border); text-align:start; }
     .nurse-commission-rates th { color:var(--text-muted); font-weight:500; font-size:0.75rem; }
     .nurse-commission-rates tr:last-child td { border-bottom:none; }
     .nurse-commission-rate-actions { display:flex; gap:0.35rem; flex-wrap:wrap; }

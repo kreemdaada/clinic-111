@@ -40,13 +40,13 @@
     .mi-table td {
         padding: 0.6rem 0.5rem;
         border-bottom: 1px solid var(--border);
-        text-align: right;
+        text-align: end;
         white-space: nowrap;
     }
 
     .mi-table th:first-child,
     .mi-table td:first-child {
-        text-align: left;
+        text-align: start;
     }
 
     .mi-table th {
@@ -108,14 +108,14 @@
                 @php $row = $summary->toArray(); @endphp
                 <tr>
                     <td><strong>{{ $summary->doctorName }}</strong></td>
-                    <td>{{ $currencyFormatter->format($row['total_collected'], $summary->currency) }}</td>
-                    <td>{{ $currencyFormatter->format($row['lab_cost'], $summary->currency) }}</td>
-                    <td>{{ $currencyFormatter->format($row['net_total'], $summary->currency) }}</td>
-                    <td>{{ $currencyFormatter->format($row['doctor_income'], $summary->currency) }}</td>
-                    <td>{{ $currencyFormatter->format($row['opg_normal_value'], $summary->currency) }}</td>
-                    <td>{{ $currencyFormatter->format($row['opg_3d_value'], $summary->currency) }}</td>
-                    <td>{{ $currencyFormatter->format($row['nurse_commission'], $summary->currency) }}</td>
-                    <td>{{ $currencyFormatter->format($row['clinic_income'], $summary->currency) }}</td>
+                    <td class="amount">{{ $currencyFormatter->format($row['total_collected'], $summary->currency) }}</td>
+                    <td class="amount">{{ $currencyFormatter->format($row['lab_cost'], $summary->currency) }}</td>
+                    <td class="amount">{{ $currencyFormatter->format($row['net_total'], $summary->currency) }}</td>
+                    <td class="amount">{{ $currencyFormatter->format($row['doctor_income'], $summary->currency) }}</td>
+                    <td class="amount">{{ $currencyFormatter->format($row['opg_normal_value'], $summary->currency) }}</td>
+                    <td class="amount">{{ $currencyFormatter->format($row['opg_3d_value'], $summary->currency) }}</td>
+                    <td class="amount">{{ $currencyFormatter->format($row['nurse_commission'], $summary->currency) }}</td>
+                    <td class="amount">{{ $currencyFormatter->format($row['clinic_income'], $summary->currency) }}</td>
                 </tr>
                 @endforeach
             </tbody>

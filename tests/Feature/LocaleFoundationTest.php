@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ReportSourceType;
+use App\Enums\ReportStatus;
 use App\Models\Lab;
 use App\Models\User;
 use Carbon\Carbon;
@@ -270,5 +272,54 @@ class LocaleFoundationTest extends TestCase
             ])
             ->assertRedirect(route('doctors.index'))
             ->assertSessionHas('success', __('doctors.flash.created', ['code' => 'AR_DOC'], 'ar'));
+    }
+
+    public function test_arabic_user_pages_use_western_digits_on_representative_screens(): void
+    {
+        $this->seedAccountingData();
+        $user = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $user->update(['locale' => 'ar']);
+
+        $pages = [
+            route('imports.index'),
+            route('doctors.index'),
+            route('nurses.index'),
+            route('treatments.index'),
+            route('monthly-income.index', ['month' => '2026-06']),
+            route('clinic.financial-overview', ['month' => '2026-06']),
+            route('configuration.dashboard'),
+        ];
+
+        foreach ($pages as $url) {
+            $response = $this->actingAs($user)->get($url);
+
+            $response->assertOk();
+            $response->assertSee('dir="rtl"', false);
+            $this->assertDoesNotMatchRegularExpression(
+                '/[٠-٩۰-۹]/u',
+                (string) $response->getContent(),
+                'Arabic-Indic digits found on '.$url,
+            );
+        }
+    }
+
+    public function test_arabic_import_overview_month_label_uses_western_year_digits(): void
+    {
+        $this->seedAccountingData();
+        $user = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $user->update(['locale' => 'ar']);
+
+        $report = $this->createDailyReport([
+            'report_date' => '2026-06-01',
+            'source_type' => ReportSourceType::ManualEntry,
+            'source_file_name' => 'test-report',
+            'status' => ReportStatus::Uploaded,
+        ]);
+
+        $response = $this->actingAs($user)->get(route('logs.extraction', $report));
+
+        $response->assertOk();
+        $response->assertSee('2026', false);
+        $this->assertDoesNotMatchRegularExpression('/[٠-٩۰-۹]/u', (string) $response->getContent());
     }
 }

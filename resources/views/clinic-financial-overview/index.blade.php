@@ -171,7 +171,7 @@
     .pov-table td {
         padding: 0.55rem 0.35rem;
         border-bottom: 1px solid var(--border);
-        text-align: left;
+        text-align: start;
     }
 
     .pov-table th {
@@ -185,7 +185,7 @@
     }
 
     .pov-table td:last-child {
-        text-align: right;
+        text-align: end;
         font-weight: 600;
         white-space: nowrap;
     }
@@ -257,7 +257,7 @@
         @foreach ($kpis as $item)
             <article class="pov-kpi">
                 <div class="pov-kpi-label">{{ $item['label'] }}</div>
-                <div @class(['pov-kpi-value', 'is-positive' => $item['highlight'] ?? false])>
+                <div @class(['pov-kpi-value', 'is-positive' => $item['highlight'] ?? false, 'amount'])>
                     {{ $currencyFormatter->format($item['kpi']->amount, $overview->currency) }}
                 </div>
                 <span @class([
@@ -277,7 +277,7 @@
             <div class="pov-chart" role="img" aria-label="{{ __('reports.practice_overview.revenue_trend_chart') }}">
                 @foreach ($overview->revenueTrend as $point)
                     <div class="pov-bar-wrap">
-                        <span class="pov-bar-value">{{ $currencyFormatter->format($point->revenue, $overview->currency) }}</span>
+                        <span class="pov-bar-value amount">{{ $currencyFormatter->format($point->revenue, $overview->currency) }}</span>
                         <div class="pov-bar" style="--bar-height: {{ max(4, $point->barPercent) }}"></div>
                     </div>
                 @endforeach
@@ -308,7 +308,7 @@
                                     <strong>{{ $treatment->name }}</strong>
                                     <span style="color:var(--text-muted);font-size:0.75rem;"> · {{ $treatment->code }}</span>
                                 </td>
-                                <td>{{ $currencyFormatter->format($treatment->revenue, $overview->currency) }}</td>
+                                <td class="amount">{{ $currencyFormatter->format($treatment->revenue, $overview->currency) }}</td>
                             </tr>
                         @endforeach
                     </tbody>
