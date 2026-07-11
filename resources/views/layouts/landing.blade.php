@@ -162,6 +162,46 @@
             gap: 0.5rem;
         }
 
+        .lp-locale-form {
+            display: inline-flex;
+            align-items: center;
+            margin: 0;
+        }
+
+        .lp-locale-select {
+            appearance: none;
+            background: var(--lp-bg-subtle);
+            color: var(--lp-navy-soft);
+            border: 1px solid var(--lp-border);
+            border-radius: 8px;
+            padding: 0.45rem 1.75rem 0.45rem 0.65rem;
+            font-size: 0.8125rem;
+            line-height: 1.25;
+            cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5L10 12.5L15 7.5' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.45rem center;
+        }
+
+        html[dir="rtl"] .lp-locale-select {
+            padding: 0.45rem 0.65rem 0.45rem 1.75rem;
+            background-position: left 0.45rem center;
+        }
+
+        .lp-locale-select:hover,
+        .lp-locale-select:focus {
+            border-color: #cbd5e1;
+            outline: none;
+        }
+
+        .lp-mobile-locale {
+            margin-bottom: 0.5rem;
+        }
+
+        .lp-mobile-locale .lp-locale-select {
+            width: 100%;
+        }
+
         .lp-btn {
             display: inline-flex;
             align-items: center;

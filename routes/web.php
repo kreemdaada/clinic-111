@@ -31,6 +31,8 @@ Route::get('/datenschutz', [LegalPageController::class, 'privacy'])->name('legal
 
 Route::get('/register-clinic', [ClinicOnboardingController::class, 'create'])->name('register-clinic.create');
 
+Route::put('/locale', [UserLocaleController::class, 'update'])->name('locale.update');
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);

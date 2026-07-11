@@ -811,6 +811,22 @@
             </nav>
 
             <div class="lp-header-actions">
+                <form method="POST" action="{{ route('locale.update') }}" class="lp-locale-form">
+                    @csrf
+                    @method('PUT')
+                    <select
+                        name="locale"
+                        class="lp-locale-select"
+                        aria-label="{{ __('settings.language.label') }}"
+                        onchange="this.form.submit()"
+                    >
+                        @foreach (config('locales.supported', ['en']) as $code)
+                            <option value="{{ $code }}" @selected(app()->getLocale() === $code)>
+                                {{ __('settings.language.options.'.$code) }}
+                            </option>
+                        @endforeach
+                    </select>
+                </form>
                 <a href="{{ route('login') }}" class="lp-btn lp-btn-ghost">{{ __('landing.actions.login') }}</a>
                 <a href="{{ route('register-clinic.create') }}"
                     class="lp-btn lp-btn-primary">{{ __('landing.actions.get_started') }}</a>
@@ -826,6 +842,24 @@
         </div>
 
         <nav class="lp-mobile-nav lp-container" id="lp-mobile-nav" aria-label="{{ __('landing.nav.main_aria') }}">
+            <div class="lp-mobile-locale">
+                <form method="POST" action="{{ route('locale.update') }}" class="lp-locale-form">
+                    @csrf
+                    @method('PUT')
+                    <select
+                        name="locale"
+                        class="lp-locale-select"
+                        aria-label="{{ __('settings.language.label') }}"
+                        onchange="this.form.submit()"
+                    >
+                        @foreach (config('locales.supported', ['en']) as $code)
+                            <option value="{{ $code }}" @selected(app()->getLocale() === $code)>
+                                {{ __('settings.language.options.'.$code) }}
+                            </option>
+                        @endforeach
+                    </select>
+                </form>
+            </div>
             @foreach ($navLinks as $key => $anchor)
                 <a href="#{{ $anchor }}" class="lp-btn lp-btn-ghost">{{ __('landing.nav.' . $key) }}</a>
             @endforeach
