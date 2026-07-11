@@ -56,7 +56,7 @@ class ConfigurationBackNavigationTest extends TestCase
             $this->actingAs($admin)
                 ->get(route($routeName, ConfigurationReturnContext::query()))
                 ->assertOk()
-                ->assertSee('Back to Configuration', false)
+                ->assertSee(__('navigation.back_to_configuration'), false)
                 ->assertSee(route('configuration.dashboard'), false);
         }
     }
@@ -68,7 +68,7 @@ class ConfigurationBackNavigationTest extends TestCase
         $this->actingAs($admin)
             ->get(route('doctors.index'))
             ->assertOk()
-            ->assertDontSee('Back to Configuration', false);
+            ->assertDontSee(__('navigation.back_to_configuration'), false);
     }
 
     public function test_search_and_pagination_preserve_configuration_context(): void
@@ -81,7 +81,7 @@ class ConfigurationBackNavigationTest extends TestCase
             ])));
 
         $response->assertOk()
-            ->assertSee('Back to Configuration', false)
+            ->assertSee(__('navigation.back_to_configuration'), false)
             ->assertSee('name="from" value="configuration"', false);
     }
 
@@ -108,7 +108,7 @@ class ConfigurationBackNavigationTest extends TestCase
         $this->actingAs($admin)
             ->get(route('doctors.index', ['from' => 'https://evil.example']))
             ->assertOk()
-            ->assertDontSee('Back to Configuration', false);
+            ->assertDontSee(__('navigation.back_to_configuration'), false);
 
         $response = $this->actingAs($admin)
             ->from(route('doctors.index', ['from' => 'https://evil.example']))

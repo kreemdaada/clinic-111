@@ -626,11 +626,11 @@
             @endisset
         </a>
         <nav class="topbar-nav">
-            <a href="{{ route('clinic.financial-overview') }}" @class(['active'=> request()->routeIs('clinic.financial-overview')])>Overview</a>
-            <a href="{{ route('imports.index') }}" @class(['active'=> request()->routeIs('imports.*') || request()->routeIs('logs.*')])>Import</a>
-            <a href="{{ route('daily-report.index') }}" @class(['active'=> request()->routeIs('daily-report.*')])>Daily Report</a>
+            <a href="{{ route('clinic.financial-overview') }}" @class(['active'=> request()->routeIs('clinic.financial-overview')])>{{ __('navigation.overview') }}</a>
+            <a href="{{ route('imports.index') }}" @class(['active'=> request()->routeIs('imports.*') || request()->routeIs('logs.*')])>{{ __('navigation.imports') }}</a>
+            <a href="{{ route('daily-report.index') }}" @class(['active'=> request()->routeIs('daily-report.*')])>{{ __('navigation.daily_report') }}</a>
             @if (auth()->user()->isAdmin())
-            <a href="{{ route('configuration.dashboard') }}" @class(['active'=> request()->routeIs('configuration.*') || request()->routeIs('clinics.*') || request()->routeIs('doctors.*') || request()->routeIs('labs.*') || request()->routeIs('treatments.*') || request()->routeIs('lab-prices.*') || request()->routeIs('doctor-fixed-fees.*') || request()->routeIs('admin.users.*')])>Configuration</a>
+            <a href="{{ route('configuration.dashboard') }}" @class(['active'=> request()->routeIs('configuration.*') || request()->routeIs('clinics.*') || request()->routeIs('doctors.*') || request()->routeIs('labs.*') || request()->routeIs('treatments.*') || request()->routeIs('lab-prices.*') || request()->routeIs('doctor-fixed-fees.*') || request()->routeIs('admin.users.*')])>{{ __('navigation.configuration') }}</a>
             @endif
             <form method="POST" action="{{ route('settings.language.update') }}" class="topbar-locale-form">
                 @csrf
@@ -651,7 +651,7 @@
             <span class="topbar-user">{{ auth()->user()->email }} ({{ auth()->user()->role->value }})</span>
             <form method="POST" action="{{ route('logout') }}" style="display:inline;">
                 @csrf
-                <button type="submit" class="btn-logout">Logout</button>
+                <button type="submit" class="btn-logout">{{ __('navigation.user.logout') }}</button>
             </form>
         </nav>
     </header>
@@ -671,17 +671,27 @@
 
     <div class="confirm-modal-backdrop" id="app-confirm-modal" aria-hidden="true">
         <div class="confirm-modal" role="dialog" aria-labelledby="app-confirm-title" aria-modal="true">
-            <h2 id="app-confirm-title" class="confirm-modal-title">Confirm</h2>
+            <h2 id="app-confirm-title" class="confirm-modal-title">{{ __('common.confirm.title') }}</h2>
             <p id="app-confirm-message" class="confirm-modal-message"></p>
             <div class="confirm-modal-actions">
-                <button type="button" class="btn btn-ghost btn-sm" id="app-confirm-cancel">Cancel</button>
-                <button type="button" class="btn btn-primary btn-sm" id="app-confirm-ok">Confirm</button>
+                <button type="button" class="btn btn-ghost btn-sm" id="app-confirm-cancel">{{ __('common.confirm.cancel') }}</button>
+                <button type="button" class="btn btn-primary btn-sm" id="app-confirm-ok">{{ __('common.confirm.ok') }}</button>
             </div>
         </div>
     </div>
 
+    @php
+        $confirmLabels = [
+            'title' => __('common.confirm.title'),
+            'message' => __('common.confirm.message'),
+            'ok' => __('common.confirm.ok'),
+            'cancel' => __('common.confirm.cancel'),
+        ];
+    @endphp
     <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const confirmLabels = @json($confirmLabels);
+
         const modal = document.getElementById('app-confirm-modal');
         if (!modal) {
             return;
@@ -698,14 +708,14 @@
             modal.setAttribute('aria-hidden', 'true');
             pendingAction = null;
             okBtn.classList.remove('btn-danger');
-            okBtn.textContent = 'Confirm';
+            okBtn.textContent = confirmLabels.ok;
         }
 
         function showConfirm(options) {
             const opts = typeof options === 'string' ? { message: options } : (options || {});
-            titleEl.textContent = opts.title || 'Confirm';
-            messageEl.textContent = opts.message || 'Are you sure?';
-            okBtn.textContent = opts.okText || 'Confirm';
+            titleEl.textContent = opts.title || confirmLabels.title;
+            messageEl.textContent = opts.message || confirmLabels.message;
+            okBtn.textContent = opts.okText || confirmLabels.ok;
             if (opts.danger) {
                 okBtn.classList.add('btn-danger');
             }
@@ -741,9 +751,9 @@
             event.stopPropagation();
             pendingAction = { type: 'form', form: form };
             showConfirm({
-                title: form.getAttribute('data-confirm-title') || 'Confirm',
+                title: form.getAttribute('data-confirm-title') || confirmLabels.title,
                 message: message,
-                okText: form.getAttribute('data-confirm-ok') || 'Confirm',
+                okText: form.getAttribute('data-confirm-ok') || confirmLabels.ok,
                 danger: form.getAttribute('data-confirm-danger') === '1',
             });
         }, true);

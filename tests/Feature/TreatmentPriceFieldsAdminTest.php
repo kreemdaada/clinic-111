@@ -429,7 +429,7 @@ class TreatmentPriceFieldsAdminTest extends TestCase
                 'page' => 1,
             ]))
             ->assertOk()
-            ->assertSee('Back to Configuration', false)
+            ->assertSee(__('navigation.back_to_configuration'), false)
             ->assertSee('NAV_TX', false);
     }
 

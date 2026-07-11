@@ -36,10 +36,10 @@ class BusinessConfigurationTest extends TestCase
         $this->actingAs($owner)
             ->get(route('configuration.dashboard'))
             ->assertOk()
-            ->assertSee('Business Configuration', false)
-            ->assertSee('Ready for Import', false)
-            ->assertSee('No', false)
-            ->assertSee('Continue setup', false)
+            ->assertSee(__('dashboard.business_configuration'), false)
+            ->assertSee(__('dashboard.ready_for_import_label'), false)
+            ->assertSee(__('dashboard.no'), false)
+            ->assertSee(__('dashboard.continue_setup'), false)
             ->assertSee('Doctors', false);
     }
 
@@ -98,10 +98,10 @@ class BusinessConfigurationTest extends TestCase
         $this->actingAs($owner)
             ->get(route('configuration.dashboard'))
             ->assertOk()
-            ->assertSee('Configuration complete', false)
-            ->assertSee('ready for import', false)
-            ->assertSee('Start import', false)
-            ->assertDontSee('Business Configuration', false);
+            ->assertSee(__('dashboard.setup_complete'), false)
+            ->assertSee(__('dashboard.ready_for_import'), false)
+            ->assertSee(__('dashboard.start_import'), false)
+            ->assertDontSee(__('dashboard.business_configuration'), false);
 
         $this->actingAs($owner)
             ->get(route('imports.index'))

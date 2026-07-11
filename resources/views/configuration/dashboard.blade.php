@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Configuration')
+@section('title', __('dashboard.title'))
 
 @push('styles')
 <style>
@@ -543,11 +543,15 @@
 
 @section('content')
 <div class="cfg-intro">
-    <h1 class="page-title">Configuration</h1>
+    <h1 class="page-title">{{ __('dashboard.title') }}</h1>
     <p class="page-subtitle">
-        Central dashboard for doctors, laboratories, treatments, prices, fee rules, and users.
+        {{ __('dashboard.subtitle') }}
         @isset($currentClinic)
-        <strong>{{ $currentClinic->name }}</strong> · base currency <strong>{{ $clinicCurrencyMetadata['name'] ?? $clinicCurrency }} ({{ $clinicCurrency }})</strong>.
+        {!! __('dashboard.subtitle_clinic', [
+            'clinic' => '<strong>'.$currentClinic->name.'</strong>',
+            'currency_name' => '<strong>'.($clinicCurrencyMetadata['name'] ?? $clinicCurrency).'</strong>',
+            'currency_code' => $clinicCurrency,
+        ]) !!}
         @endisset
     </p>
 </div>
@@ -564,15 +568,15 @@
 @endphp
 
 @if ($setupComplete)
-<section class="cfg-setup-compact" aria-label="Configuration status">
+<section class="cfg-setup-compact" aria-label="{{ __('dashboard.status.label') }}">
     <div class="cfg-setup-compact-main">
         <svg class="cfg-setup-compact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
             <path d="M22 4 12 14.01l-3-3"></path>
         </svg>
-        <span><strong>Configuration complete</strong> · ready for import</span>
+        <span><strong>{{ __('dashboard.setup_complete') }}</strong> · {{ __('dashboard.ready_for_import') }}</span>
     </div>
-    <a href="{{ route('imports.index') }}" class="btn btn-primary btn-sm">Start import</a>
+    <a href="{{ route('imports.index') }}" class="btn btn-primary btn-sm">{{ __('dashboard.start_import') }}</a>
 </section>
 @else
 <section class="cfg-setup">
@@ -580,12 +584,12 @@
     <div class="cfg-setup-body">
         <div class="cfg-setup-header">
             <div>
-                <h2>Business Configuration</h2>
-                <p>Complete each step before importing your first daily report.</p>
-                <div class="cfg-setup-meta">{{ $completedSetupCount }} of {{ $totalSetupCount }} steps complete</div>
+                <h2>{{ __('dashboard.business_configuration') }}</h2>
+                <p>{{ __('dashboard.setup_intro') }}</p>
+                <div class="cfg-setup-meta">{{ __('dashboard.steps_complete', ['completed' => $completedSetupCount, 'total' => $totalSetupCount]) }}</div>
             </div>
             <div class="cfg-progress-circle" aria-hidden="true">
-                <svg viewBox="0 0 36 36" role="img" aria-label="{{ $progressPct }} percent complete">
+                <svg viewBox="0 0 36 36" role="img" aria-label="{{ __('dashboard.status.percent_complete', ['percent' => $progressPct]) }}">
                     <circle class="cfg-progress-circle-track" cx="18" cy="18" r="15.9155"></circle>
                     <circle
                         class="cfg-progress-circle-fill"
@@ -598,7 +602,7 @@
                 </svg>
                 <div class="cfg-progress-circle-label">
                     <div class="cfg-progress-value">{{ $progressPct }}%</div>
-                    <div class="cfg-progress-label">Complete</div>
+                    <div class="cfg-progress-label">{{ __('dashboard.progress_complete') }}</div>
                 </div>
             </div>
         </div>
@@ -630,17 +634,17 @@
                             <div class="cfg-setup-rail-line {{ $loop->last ? 'is-spacer' : ($step['completed'] ? 'is-done' : '') }}"></div>
                         </div>
                         <div class="cfg-setup-step-card">
-                            <div class="cfg-setup-step-num">Step {{ $stepNumber }}</div>
+                            <div class="cfg-setup-step-num">{{ __('dashboard.step', ['number' => $stepNumber]) }}</div>
                             <div class="cfg-setup-step-title">{{ $step['label'] }}</div>
                             <div class="cfg-setup-step-desc">{{ $step['description'] }}</div>
                             <div class="cfg-setup-step-tags">
                                 @if ($step['required'])
-                                    <span class="cfg-setup-tag is-required">Required</span>
+                                    <span class="cfg-setup-tag is-required">{{ __('dashboard.required') }}</span>
                                 @else
-                                    <span class="cfg-setup-tag is-optional">Optional</span>
+                                    <span class="cfg-setup-tag is-optional">{{ __('dashboard.optional') }}</span>
                                 @endif
                                 @if ($isCurrent)
-                                    <span class="cfg-setup-tag is-next">Next step</span>
+                                    <span class="cfg-setup-tag is-next">{{ __('dashboard.next_step') }}</span>
                                 @endif
                             </div>
                             <div class="cfg-setup-step-action">
@@ -649,10 +653,10 @@
                                         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                             <path d="M5 10.5 8.5 14 15 6.5"></path>
                                         </svg>
-                                        Done
+                                        {{ __('dashboard.done') }}
                                     </span>
                                 @else
-                                    <a href="{{ route($step['index_route'], \App\Support\ConfigurationReturnContext::query()) }}" class="btn btn-primary btn-sm">Configure</a>
+                                    <a href="{{ route($step['index_route'], \App\Support\ConfigurationReturnContext::query()) }}" class="btn btn-primary btn-sm">{{ __('dashboard.configure') }}</a>
                                 @endif
                             </div>
                         </div>
@@ -670,8 +674,8 @@
                     </svg>
                 </div>
                 <div>
-                    <div class="cfg-setup-ready-label">Ready for Import</div>
-                    <div class="cfg-setup-ready-value">No</div>
+                    <div class="cfg-setup-ready-label">{{ __('dashboard.ready_for_import_label') }}</div>
+                    <div class="cfg-setup-ready-value">{{ __('dashboard.no') }}</div>
                 </div>
             </div>
             @if (! empty($configurationStatus['current_step']))
@@ -679,7 +683,7 @@
                     $nextStep = collect($configurationStatus['steps'])->firstWhere('key', $configurationStatus['current_step']);
                 @endphp
                 @if ($nextStep)
-                    <a href="{{ route($nextStep['index_route'], \App\Support\ConfigurationReturnContext::query()) }}" class="btn btn-primary">Continue setup</a>
+                    <a href="{{ route($nextStep['index_route'], \App\Support\ConfigurationReturnContext::query()) }}" class="btn btn-primary">{{ __('dashboard.continue_setup') }}</a>
                 @endif
             @endif
         </div>
@@ -695,20 +699,20 @@
         <div class="cfg-stats">
             <div class="cfg-stat">
                 <div class="cfg-stat-value">{{ $module['total'] }}</div>
-                <div class="cfg-stat-label">Total</div>
+                <div class="cfg-stat-label">{{ __('dashboard.stats.total') }}</div>
             </div>
             <div class="cfg-stat">
                 <div class="cfg-stat-value">{{ $module['active'] }}</div>
-                <div class="cfg-stat-label">Active</div>
+                <div class="cfg-stat-label">{{ __('dashboard.stats.active') }}</div>
             </div>
             <div class="cfg-stat">
                 <div class="cfg-stat-value">{{ $module['inactive'] }}</div>
-                <div class="cfg-stat-label">Inactive</div>
+                <div class="cfg-stat-label">{{ __('dashboard.stats.inactive') }}</div>
             </div>
         </div>
         <div class="cfg-card-actions">
             <a href="{{ route($module['index_route'], \App\Support\ConfigurationReturnContext::query()) }}" class="btn btn-primary btn-sm">{{ $module['quick_action_label'] }}</a>
-            <a href="{{ route($module['index_route'], \App\Support\ConfigurationReturnContext::query()) }}" class="btn btn-ghost btn-sm">Open</a>
+            <a href="{{ route($module['index_route'], \App\Support\ConfigurationReturnContext::query()) }}" class="btn btn-ghost btn-sm">{{ __('dashboard.open') }}</a>
         </div>
     </article>
     @endforeach
@@ -716,17 +720,17 @@
 
 <div class="cfg-panels">
     <section class="card cfg-panel" style="padding:1.25rem;">
-        <h2>Recent activity</h2>
+        <h2>{{ __('dashboard.recent_activity') }}</h2>
         @if (count($recentActivity) === 0)
-        <p style="color:var(--text-muted);font-size:0.875rem;">No configuration changes recorded yet.</p>
+        <p style="color:var(--text-muted);font-size:0.875rem;">{{ __('dashboard.no_recent_activity') }}</p>
         @else
         <table class="cfg-activity-table">
             <thead>
                 <tr>
-                    <th>Date</th>
-                    <th>User</th>
-                    <th>Action</th>
-                    <th>Target</th>
+                    <th>{{ __('dashboard.activity.date') }}</th>
+                    <th>{{ __('dashboard.activity.user') }}</th>
+                    <th>{{ __('dashboard.activity.action') }}</th>
+                    <th>{{ __('dashboard.activity.target') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -744,9 +748,9 @@
     </section>
 
     <section class="card cfg-panel" style="padding:1.25rem;">
-        <h2>Configuration health</h2>
+        <h2>{{ __('dashboard.health') }}</h2>
         @if (count($healthWarnings) === 0)
-        <div class="cfg-ok">All configuration checks passed. No warnings.</div>
+        <div class="cfg-ok">{{ __('dashboard.health_ok') }}</div>
         @else
         <ul class="cfg-warning-list">
             @foreach ($healthWarnings as $warning)
