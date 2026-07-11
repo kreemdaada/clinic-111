@@ -85,6 +85,8 @@
             height: 56px;
             display: flex;
             align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
         }
 
         .guest-brand {
@@ -169,6 +171,32 @@
         .topbar-locale-select:hover,
         .topbar-locale-select:focus {
             border-color: #64748b;
+            outline: none;
+        }
+
+        .guest-locale-select {
+            appearance: none;
+            background: var(--bg-muted, #f1f5f9);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.35rem 1.75rem 0.35rem 0.65rem;
+            font-size: 0.8125rem;
+            line-height: 1.25;
+            cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5L10 12.5L15 7.5' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.45rem center;
+        }
+
+        html[dir="rtl"] .guest-locale-select {
+            padding: 0.35rem 0.65rem 0.35rem 1.75rem;
+            background-position: left 0.45rem center;
+        }
+
+        .guest-locale-select:hover,
+        .guest-locale-select:focus {
+            border-color: #cbd5e1;
             outline: none;
         }
 
@@ -684,7 +712,7 @@
                     onchange="this.form.submit()"
                 >
                     @foreach (config('locales.supported', ['en']) as $code)
-                        <option value="{{ $code }}" @selected((auth()->user()->locale ?? 'en') === $code)>
+                        <option value="{{ $code }}" @selected(app()->getLocale() === $code)>
                             {{ __('settings.language.options.'.$code) }}
                         </option>
                     @endforeach
@@ -700,6 +728,22 @@
     @else
     <header class="guest-header">
         <a href="{{ route('landing') }}" class="guest-brand">Dental<span>Finance</span></a>
+        <form method="POST" action="{{ route('locale.update') }}" class="topbar-locale-form">
+            @csrf
+            @method('PUT')
+            <select
+                name="locale"
+                class="guest-locale-select"
+                aria-label="{{ __('settings.language.label') }}"
+                onchange="this.form.submit()"
+            >
+                @foreach (config('locales.supported', ['en']) as $code)
+                    <option value="{{ $code }}" @selected(app()->getLocale() === $code)>
+                        {{ __('settings.language.options.'.$code) }}
+                    </option>
+                @endforeach
+            </select>
+        </form>
     </header>
     @endauth
 

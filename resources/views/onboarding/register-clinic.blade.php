@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Register Clinic')
+@section('title', __('onboarding.register.title'))
 
 @push('styles')
 <style>
@@ -37,8 +37,8 @@
 @section('content')
 <div class="onboarding-wrap">
     <div class="card onboarding-card">
-        <h1>Register Your Clinic</h1>
-        <p>Create your DentalFinance account and configure your business rules after onboarding.</p>
+        <h1>{{ __('onboarding.register.heading') }}</h1>
+        <p>{{ __('onboarding.register.lead') }}</p>
 
         @if ($errors->any())
             <div class="alert alert-error">
@@ -53,54 +53,58 @@
         <form method="POST" action="{{ route('register-clinic.store') }}">
             @csrf
 
-            <div class="section-title">Clinic Information</div>
+            <div class="section-title">{{ __('onboarding.register.sections.clinic_information') }}</div>
             <div class="form-grid">
                 <div class="form-group span-2">
-                    <label class="form-label" for="clinic_name">Clinic Name</label>
+                    <label class="form-label" for="clinic_name">{{ __('onboarding.register.labels.clinic_name') }}</label>
                     <input class="form-input" type="text" id="clinic_name" name="clinic_name" value="{{ old('clinic_name') }}" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="clinic_code">Clinic Code</label>
-                    <input class="form-input" type="text" id="clinic_code" name="clinic_code" value="{{ old('clinic_code') }}" required placeholder="MY_CLINIC">
+                    <label class="form-label" for="clinic_code">{{ __('onboarding.register.labels.clinic_code') }}</label>
+                    <input class="form-input" type="text" id="clinic_code" name="clinic_code" value="{{ old('clinic_code') }}" required placeholder="{{ __('onboarding.register.placeholders.clinic_code') }}">
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="country">Country</label>
+                    <label class="form-label" for="country">{{ __('onboarding.register.labels.country') }}</label>
                     <input class="form-input" type="text" id="country" name="country" value="{{ old('country') }}" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="currency">Currency</label>
+                    <label class="form-label" for="currency">{{ __('onboarding.register.labels.currency') }}</label>
                     <select class="form-input" id="currency" name="currency" required>
                         @foreach ($currencies as $code => $label)
-                            <option value="{{ $code }}" @selected(old('currency') === $code)>{{ $label }}</option>
+                            <option value="{{ $code }}" @selected(old('currency') === $code)>
+                                {{ $code }} — {{ __('onboarding.currencies.'.$code) }}
+                            </option>
                         @endforeach
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="timezone">Timezone</label>
+                    <label class="form-label" for="timezone">{{ __('onboarding.register.labels.timezone') }}</label>
                     <select class="form-input" id="timezone" name="timezone" required>
                         @foreach ($timezones as $identifier => $label)
-                            <option value="{{ $identifier }}" @selected(old('timezone', 'Asia/Dubai') === $identifier)>{{ $label }}</option>
+                            <option value="{{ $identifier }}" @selected(old('timezone', 'Asia/Dubai') === $identifier)>
+                                {{ __('onboarding.timezones.'.str_replace('/', '_', $identifier)) }}
+                            </option>
                         @endforeach
                     </select>
                 </div>
             </div>
 
-            <div class="section-title">Owner / Admin</div>
+            <div class="section-title">{{ __('onboarding.register.sections.owner_admin') }}</div>
             <div class="form-grid">
                 <div class="form-group span-2">
-                    <label class="form-label" for="owner_name">Your Name</label>
+                    <label class="form-label" for="owner_name">{{ __('onboarding.register.labels.owner_name') }}</label>
                     <input class="form-input" type="text" id="owner_name" name="owner_name" value="{{ old('owner_name') }}" required>
                 </div>
                 <div class="form-group span-2">
-                    <label class="form-label" for="owner_email">Email</label>
+                    <label class="form-label" for="owner_email">{{ __('onboarding.register.labels.email') }}</label>
                     <input class="form-input" type="email" id="owner_email" name="owner_email" value="{{ old('owner_email') }}" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="owner_password">Password</label>
+                    <label class="form-label" for="owner_password">{{ __('onboarding.register.labels.password') }}</label>
                     <input class="form-input" type="password" id="owner_password" name="owner_password" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="owner_password_confirmation">Confirm Password</label>
+                    <label class="form-label" for="owner_password_confirmation">{{ __('onboarding.register.labels.confirm_password') }}</label>
                     <input class="form-input" type="password" id="owner_password_confirmation" name="owner_password_confirmation" required>
                 </div>
             </div>
@@ -109,7 +113,7 @@
         </form>
 
         <p style="margin-top:1rem;font-size:0.85rem;color:#64748b;text-align:center;">
-            Already have an account? <a href="{{ route('login') }}">{{ __('auth.sign_in') }}</a>
+            {{ __('auth.already_have_account') }} <a href="{{ route('login') }}">{{ __('auth.sign_in') }}</a>
         </p>
     </div>
 </div>
