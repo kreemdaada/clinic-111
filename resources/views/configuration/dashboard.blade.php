@@ -145,7 +145,7 @@
     }
 
     .cfg-activity-table th {
-        text-align: left;
+        text-align: start;
         color: var(--text-muted);
         font-weight: 500;
         padding: 0.4rem 0.5rem 0.4rem 0;

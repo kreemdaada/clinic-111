@@ -209,7 +209,7 @@
     }
 
     .extraction-unresolved-card {
-        border-left: 3px solid var(--danger);
+        border-inline-start: 3px solid var(--danger);
     }
 
     .extraction-unresolved-title {
@@ -425,7 +425,7 @@
         font-size: 0.8125rem;
         font-weight: 500;
         color: var(--text);
-        text-align: right;
+        text-align: end;
     }
 
     .extraction-kv-row--total {
@@ -466,7 +466,7 @@
     .extraction-source-item span:last-child {
         color: var(--text);
         font-weight: 500;
-        text-align: right;
+        text-align: end;
     }
 
     .extraction-subsection-title {
@@ -570,7 +570,7 @@
         border: 1px solid var(--border);
         padding: 0.1rem 0.35rem;
         border-radius: 4px;
-        margin-right: 0.25rem;
+        margin-inline-end: 0.25rem;
         font-size: 0.6875rem;
     }
 
@@ -590,7 +590,7 @@
         display: inline-block;
         padding: 0.1rem 0.35rem;
         border-radius: 4px;
-        margin-right: 0.25rem;
+        margin-inline-end: 0.25rem;
         font-size: 0.6875rem;
         border: 1px solid var(--border);
         background: var(--surface-subtle);
@@ -621,7 +621,7 @@
     }
 
     .extraction-has-issues {
-        border-left: 3px solid var(--warning);
+        border-inline-start: 3px solid var(--warning);
     }
 
     .extraction-has-issues summary {
@@ -662,7 +662,7 @@
 @php
     use App\Enums\ReportStatus;
 
-    $reportMonthLabel = $dailyReport->report_date->locale(app()->getLocale())->translatedFormat('F Y');
+    $reportMonthLabel = $dailyReport->report_date->locale(app()->getLocale())->translatedFormat('F').' '.$dailyReport->report_date->format('Y');
     $clinicCurrencyCode = $clinicCurrency ?? 'AED';
     $entryCount = $dailyReport->dailyWorkRows()->count();
     $needsReview = $dailyReport->status === ReportStatus::NeedsReview;
