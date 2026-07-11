@@ -105,11 +105,11 @@
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-primary" style="width:100%;margin-top:1rem;">Create Clinic</button>
+            <button type="submit" class="btn btn-primary" style="width:100%;margin-top:1rem;">{{ __('auth.create_clinic') }}</button>
         </form>
 
         <p style="margin-top:1rem;font-size:0.85rem;color:#64748b;text-align:center;">
-            Already have an account? <a href="{{ route('login') }}">Sign in</a>
+            Already have an account? <a href="{{ route('login') }}">{{ __('auth.sign_in') }}</a>
         </p>
     </div>
 </div>

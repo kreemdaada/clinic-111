@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ $textDirection ?? 'ltr' }}">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'DentalFinance – Financial reporting for dental practices')</title>
-    <meta name="description" content="@yield('meta_description', 'DentalFinance helps dental practices import, analyse, and report on revenue, costs, and practice performance.')">
+    <title>@yield('title', __('landing.meta.title'))</title>
+    <meta name="description" content="@yield('meta_description', __('landing.meta.description'))">
     <link rel="canonical" href="{{ url('/') }}">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="@yield('og_title', 'DentalFinance – Financial reporting for dental practices')">
-    <meta property="og:description" content="@yield('og_description', 'DentalFinance helps dental practices import, analyse, and report on revenue, costs, and practice performance.')">
+    <meta property="og:title" content="@yield('og_title', __('landing.meta.og_title'))">
+    <meta property="og:description" content="@yield('og_description', __('landing.meta.og_description'))">
     <meta property="og:url" content="{{ url('/') }}">
     <meta property="og:locale" content="en_GB">
     <meta name="twitter:card" content="summary">
@@ -68,6 +68,10 @@
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
+        }
+
+        html[dir="rtl"] body {
+            direction: rtl;
         }
 
         a {
@@ -303,7 +307,7 @@
 </head>
 
 <body>
-    <a class="lp-skip" href="#main">Skip to content</a>
+    <a class="lp-skip" href="#main">{{ __('landing.skip_to_content') }}</a>
     @yield('content')
     <script>
         (function() {

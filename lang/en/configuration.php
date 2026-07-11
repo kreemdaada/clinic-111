@@ -5,6 +5,25 @@ return [
     'continue_configuration' => 'Continue configuration',
     'view_setup_progress' => 'View setup progress',
 
+    'actions' => [
+        'create_laboratory' => 'Create laboratory',
+        'create_price' => 'Create price',
+        'add_fee_rule' => 'Add fee rule',
+        'create_user' => 'Create user',
+        'reset_password' => 'Reset password',
+        'create_clinic' => 'Create clinic',
+    ],
+
+    'confirm' => [
+        'delete_lab' => 'Soft delete :code? The lab record is kept for historical reports.',
+        'delete_clinic' => 'Soft delete :code? The clinic record is kept for future tenant scoping.',
+        'delete_lab_price' => 'Soft delete lab price #:id? Historical lab jobs are preserved.',
+        'delete_lab_price_generic' => 'Soft delete this lab price? Historical lab jobs are preserved.',
+        'delete_fee_rule' => 'Soft delete fee rule #:id? Historical work items are preserved.',
+        'delete_fee_rule_generic' => 'Soft delete this fee rule? Historical work items are preserved.',
+        'delete_user' => 'Soft delete :email? The account is deactivated, not removed from the database.',
+    ],
+
     'flash' => [
         'lab_created' => 'Laboratory :code created.',
         'lab_updated' => 'Laboratory :code updated.',

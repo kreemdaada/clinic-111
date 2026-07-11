@@ -585,6 +585,28 @@
             font-style: italic;
         }
 
+        .page-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: flex-start;
+        }
+
+        .page-toolbar-actions {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .field-action-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
         .confirm-modal-backdrop {
             position: fixed;
             inset: 0;

@@ -5,10 +5,6 @@
 @push('styles')
 <style>
     .clinics-toolbar {
-        display: flex;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-        align-items: end;
         margin-bottom: 1.25rem;
     }
 
@@ -97,7 +93,7 @@
 <div class="alert alert-error">{{ $errors->first() }}</div>
 @endif
 
-<form method="GET" action="{{ route('clinics.index') }}" class="clinics-toolbar card" style="padding:1rem;">
+<form method="GET" action="{{ route('clinics.index') }}" class="clinics-toolbar page-toolbar card" style="padding:1rem;">
     <div class="form-group" style="margin:0;min-width:200px;">
         <label class="form-label">Search</label>
         <input class="form-input" type="search" name="search" value="{{ $search }}" placeholder="Name, code, or country">
@@ -110,9 +106,9 @@
             <option value="inactive" @selected($status === 'inactive')>Inactive</option>
         </select>
     </div>
-    <div class="clinic-admin-actions">
-        <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
-        <a href="{{ route('clinics.index') }}" class="btn btn-ghost btn-sm">Reset</a>
+    <div class="page-toolbar-actions">
+        <button type="submit" class="btn btn-secondary btn-sm">{{ __('common.filter.filter') }}</button>
+        <a href="{{ route('clinics.index') }}" class="btn btn-ghost btn-sm">{{ __('common.filter.reset') }}</a>
     </div>
 </form>
 
@@ -146,7 +142,7 @@
             <input class="form-input" type="text" name="country" value="{{ old('country') }}" required>
         </div>
         <div class="clinic-admin-actions">
-            <button type="submit" class="btn btn-primary btn-sm">Create</button>
+            <button type="submit" class="btn btn-primary btn-sm">{{ __('common.actions.create') }}</button>
         </div>
     </form>
 </article>
@@ -209,25 +205,25 @@
                 </select>
             </div>
             <div class="clinic-admin-actions">
-                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                <button type="submit" class="btn btn-primary btn-sm">{{ __('common.actions.save') }}</button>
             </div>
         </form>
 
         <div class="clinic-admin-actions" style="margin-top:0.75rem;">
             @if ($clinic->is_active)
             <form method="POST" action="{{ route('clinics.destroy', $clinic) }}"
-                data-confirm-title="Delete"
-                data-confirm-ok="Delete"
+                data-confirm-title="{{ __('common.confirm.delete') }}"
+                data-confirm-ok="{{ __('common.actions.delete') }}"
                 data-confirm-danger="1"
-                data-confirm="Soft delete {{ $clinic->code }}? The clinic record is kept for future tenant scoping.">
+                data-confirm="{{ __('configuration.confirm.delete_clinic', ['code' => $clinic->code]) }}">
                 @csrf
                 @method('DELETE')
-                <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Delete</button>
+                <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">{{ __('common.actions.delete') }}</button>
             </form>
             @else
             <form method="POST" action="{{ route('clinics.activate', $clinic) }}">
                 @csrf
-                <button type="submit" class="btn btn-secondary btn-sm">Activate</button>
+                <button type="submit" class="btn btn-secondary btn-sm">{{ __('common.actions.activate') }}</button>
             </form>
             @endif
         </div>

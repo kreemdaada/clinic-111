@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Sign in')
+@section('title', __('auth.sign_in'))
 
 @push('styles')
 <style>
@@ -45,7 +45,7 @@
 @section('content')
 <div class="login-wrap">
     <div class="card login-card">
-        <h1>Sign in to DentalFinance</h1>
+        <h1>{{ __('auth.sign_in_title') }}</h1>
         <p class="login-lead">Manage daily reports, imports, and clinic configuration.</p>
 
         @if ($errors->any())
@@ -68,13 +68,13 @@
                 <label class="form-label" for="password">Password</label>
                 <input class="form-input" type="password" id="password" name="password" required>
             </div>
-            <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+            <button type="submit" class="btn btn-primary btn-block">{{ __('auth.sign_in') }}</button>
         </form>
 
         <p class="login-footer">
-            <a href="{{ route('register-clinic.create') }}">Register a new clinic</a>
+            <a href="{{ route('register-clinic.create') }}">{{ __('auth.register_clinic') }}</a>
             ·
-            <a href="{{ route('landing') }}">Back to homepage</a>
+            <a href="{{ route('landing') }}">{{ __('auth.back_to_homepage') }}</a>
         </p>
     </div>
 </div>
