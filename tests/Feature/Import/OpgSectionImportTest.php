@@ -8,6 +8,7 @@ use App\Models\Nurse;
 use App\Models\NurseCommission;
 use App\Models\NurseCommissionRate;
 use App\Models\Treatment;
+use App\Models\User;
 use App\Models\WorkItem;
 use App\Services\Accounting\MonthlyIncomeCalculationService;
 use App\Services\Accounting\OpgTreatmentValueAggregator;
@@ -108,10 +109,47 @@ class OpgSectionImportTest extends TestCase
 
         $response = $this->get(route('logs.extraction', $report));
         $response->assertOk();
-        $response->assertSee('Import log', false);
-        $response->assertSee('No issues found.', false);
+        $response->assertSee(__('import.overview.title'), false);
+        $response->assertSee(__('import.overview.no_problems'), false);
         $response->assertDontSee('CLINIC OPG', false);
         $response->assertDontSee('Unrecognized doctor sections', false);
+        $response->assertDontSee('Extraction Log', false);
+    }
+
+    public function test_import_overview_uses_german_translations(): void
+    {
+        $this->seedAccountingData();
+        $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $admin->update(['locale' => 'de']);
+        $this->actingAs($admin);
+        $this->provisionOpg();
+
+        $report = $this->importFixture(OpgSectionImportFixtureBuilder::tag3OpgDhsWorkbook(), 'daily report June 2026.xlsx');
+
+        $this->get(route('logs.extraction', $report))
+            ->assertOk()
+            ->assertSee('Importübersicht', false)
+            ->assertSee('Keine Probleme gefunden.', false)
+            ->assertSee('Übersicht nach Arzt', false)
+            ->assertSee('Excel herunterladen', false);
+    }
+
+    public function test_import_overview_uses_arabic_translations_with_rtl(): void
+    {
+        $this->seedAccountingData();
+        $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $admin->update(['locale' => 'ar']);
+        $this->actingAs($admin);
+        $this->provisionOpg();
+
+        $report = $this->importFixture(OpgSectionImportFixtureBuilder::tag3OpgDhsWorkbook(), 'daily report June 2026.xlsx');
+
+        $this->get(route('logs.extraction', $report))
+            ->assertOk()
+            ->assertSee('dir="rtl"', false)
+            ->assertSee('نظرة عامة على الاستيراد', false)
+            ->assertSee('لم يتم العثور على مشاكل.', false)
+            ->assertSee('تحميل Excel', false);
     }
 
     public function test_imported_opg_uses_existing_nurse_commission_pipeline(): void

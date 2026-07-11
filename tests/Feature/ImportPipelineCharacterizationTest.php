@@ -343,6 +343,12 @@ class ImportPipelineCharacterizationTest extends TestCase
         $this->assertCount(1, $log['unresolved_rows']);
         $this->assertSame('unresolved_doctor', $log['unresolved_rows'][0]['status'] ?? $log['unresolved_rows'][0]['reason'] ?? null);
         $this->assertCount(1, ExtractionLogDoctorGrouper::unknownDoctorErrors($log));
+
+        $this->get(route('logs.extraction', $report))
+            ->assertOk()
+            ->assertSee(__('import.overview.doctor_not_found'), false)
+            ->assertSee('DR Unknown Person', false)
+            ->assertDontSee('Unrecognized doctor sections', false);
     }
 
     public function test_cash_boundary_row_is_skipped_and_not_imported(): void

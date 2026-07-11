@@ -133,6 +133,33 @@
             margin-right: 0.5rem;
         }
 
+        .topbar-locale-form {
+            display: inline-flex;
+            align-items: center;
+            margin: 0;
+        }
+
+        .topbar-locale-select {
+            appearance: none;
+            background: #334155;
+            color: #e2e8f0;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            padding: 0.35rem 1.75rem 0.35rem 0.65rem;
+            font-size: 0.8125rem;
+            line-height: 1.25;
+            cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 7.5L10 12.5L15 7.5' stroke='%23cbd5e1' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.45rem center;
+        }
+
+        .topbar-locale-select:hover,
+        .topbar-locale-select:focus {
+            border-color: #64748b;
+            outline: none;
+        }
+
         .btn-logout {
             background: transparent;
             border: 1px solid #475569;
@@ -605,7 +632,22 @@
             @if (auth()->user()->isAdmin())
             <a href="{{ route('configuration.dashboard') }}" @class(['active'=> request()->routeIs('configuration.*') || request()->routeIs('clinics.*') || request()->routeIs('doctors.*') || request()->routeIs('labs.*') || request()->routeIs('treatments.*') || request()->routeIs('lab-prices.*') || request()->routeIs('doctor-fixed-fees.*') || request()->routeIs('admin.users.*')])>Configuration</a>
             @endif
-            <a href="{{ route('settings.language.edit') }}" @class(['active'=> request()->routeIs('settings.*')])>{{ __('settings.language.title') }}</a>
+            <form method="POST" action="{{ route('settings.language.update') }}" class="topbar-locale-form">
+                @csrf
+                @method('PUT')
+                <select
+                    name="locale"
+                    class="topbar-locale-select"
+                    aria-label="{{ __('settings.language.label') }}"
+                    onchange="this.form.submit()"
+                >
+                    @foreach (config('locales.supported', ['en']) as $code)
+                        <option value="{{ $code }}" @selected((auth()->user()->locale ?? 'en') === $code)>
+                            {{ __('settings.language.options.'.$code) }}
+                        </option>
+                    @endforeach
+                </select>
+            </form>
             <span class="topbar-user">{{ auth()->user()->email }} ({{ auth()->user()->role->value }})</span>
             <form method="POST" action="{{ route('logout') }}" style="display:inline;">
                 @csrf
