@@ -74,7 +74,7 @@ class LabPriceAdminController extends Controller
 
         return redirect()
             ->route('lab-prices.index', $this->filterRedirectParams($request))
-            ->with('success', "Lab price #{$price->id} created.");
+            ->with('success', __('configuration.flash.lab_price_created', ['id' => $price->id]));
     }
 
     public function update(UpdateLabPriceRequest $request, LabPrice $labPrice): RedirectResponse
@@ -83,7 +83,7 @@ class LabPriceAdminController extends Controller
 
         return redirect()
             ->route('lab-prices.index', $this->filterRedirectParams($request))
-            ->with('success', "Lab price #{$labPrice->id} updated.");
+            ->with('success', __('configuration.flash.lab_price_updated', ['id' => $labPrice->id]));
     }
 
     public function destroy(Request $request, LabPrice $labPrice): RedirectResponse
@@ -94,7 +94,7 @@ class LabPriceAdminController extends Controller
 
         return redirect()
             ->route('lab-prices.index', $this->filterRedirectParams($request))
-            ->with('success', "Lab price #{$id} deleted.");
+            ->with('success', __('configuration.flash.lab_price_deleted', ['id' => $id]));
     }
 
     public function activate(Request $request, LabPrice $labPrice): RedirectResponse
@@ -103,7 +103,7 @@ class LabPriceAdminController extends Controller
 
         return redirect()
             ->route('lab-prices.index', $this->filterRedirectParams($request))
-            ->with('success', "Lab price #{$labPrice->id} activated.");
+            ->with('success', __('configuration.flash.lab_price_activated', ['id' => $labPrice->id]));
     }
 
     public function duplicate(Request $request, LabPrice $labPrice): RedirectResponse
@@ -112,7 +112,7 @@ class LabPriceAdminController extends Controller
 
         return redirect()
             ->route('lab-prices.index', $this->filterRedirectParams($request))
-            ->with('success', "Lab price duplicated as #{$copy->id} (inactive). Activate when ready.");
+            ->with('success', __('configuration.flash.lab_price_duplicated', ['id' => $copy->id]));
     }
 
     /**

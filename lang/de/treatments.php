@@ -21,6 +21,12 @@ return [
     'delete_confirm_title' => 'Löschen',
     'delete_confirm' => ':code soft löschen? Historische Arbeitsposten bleiben erhalten.',
     'delete_confirm_generic' => 'Diese Behandlung soft löschen? Historische Arbeitsposten bleiben erhalten.',
+    'flash' => [
+        'created' => 'Behandlung :code erstellt.',
+        'updated' => 'Behandlung :code aktualisiert.',
+        'deleted' => 'Behandlung :code gelöscht.',
+        'activated' => 'Behandlung :code aktiviert.',
+    ],
     'table' => [
         'treatment_price' => 'Behandlungspreis',
         'nurse_commission' => 'Assistenten-Provision',

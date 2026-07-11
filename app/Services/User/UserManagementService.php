@@ -91,11 +91,11 @@ class UserManagementService
 
             if ($actingUser !== null && $actingUser->id === $user->id) {
                 if (array_key_exists('is_active', $data) && ! (bool) $data['is_active']) {
-                    throw new RuntimeException('You cannot deactivate your own account.');
+                    throw new RuntimeException(__('messages.users.cannot_deactivate_self'));
                 }
 
                 if (($data['role'] ?? $user->role->value) !== $user->role->value) {
-                    throw new RuntimeException('You cannot change your own role.');
+                    throw new RuntimeException(__('messages.users.cannot_change_own_role'));
                 }
             }
 
@@ -124,7 +124,7 @@ class UserManagementService
         $this->assertSameClinic($user);
 
         if ($actingUser !== null && $actingUser->id === $user->id) {
-            throw new RuntimeException('You cannot deactivate your own account.');
+            throw new RuntimeException(__('messages.users.cannot_deactivate_self'));
         }
 
         return DB::transaction(function () use ($user) {
@@ -181,7 +181,7 @@ class UserManagementService
         $password = $data['password'] ?? null;
 
         if ($password === null || trim($password) === '') {
-            throw new RuntimeException('Password is required unless generating a temporary password.');
+            throw new RuntimeException(__('messages.users.password_required'));
         }
 
         return [$password, null];

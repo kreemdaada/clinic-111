@@ -67,7 +67,7 @@ class DailyReportEditorController extends Controller
         if ($dateFrom->format('Y-m') !== $dateTo->format('Y-m')) {
             return back()
                 ->withInput()
-                ->withErrors(['date_to' => 'Date range must be within the same calendar month.']);
+                ->withErrors(['date_to' => __('messages.reports.date_range_same_month')]);
         }
 
         $monthStart = $dateFrom->copy()->startOfMonth();
@@ -105,7 +105,7 @@ class DailyReportEditorController extends Controller
 
         if ($dailyReport->isLocked()) {
             return back()->withErrors([
-                'delete' => 'Approved or locked reports cannot be deleted.',
+                'delete' => __('messages.reports.locked_cannot_delete'),
             ]);
         }
 
@@ -119,7 +119,7 @@ class DailyReportEditorController extends Controller
 
         return redirect()
             ->route('daily-report.index')
-            ->with('status', 'Report deleted.');
+            ->with('status', __('messages.reports.deleted'));
     }
 
     public function edit(Request $request, DailyReport $dailyReport): View
@@ -260,7 +260,7 @@ class DailyReportEditorController extends Controller
         }
 
         return response()->json([
-            'message' => 'Row saved.',
+            'message' => __('messages.reports.row_saved'),
             'data' => $this->serializeRow($workRow),
             'day_counts' => $this->editorService->dayCountsForDoctor(
                 $dailyReport->fresh(),
@@ -282,7 +282,7 @@ class DailyReportEditorController extends Controller
         }
 
         return response()->json([
-            'message' => 'Row deleted.',
+            'message' => __('messages.reports.row_deleted'),
             'day_counts' => $this->editorService->dayCountsForDoctor($dailyReport->fresh(), (int) $doctorId),
             'report_status' => $dailyReport->fresh()->status->value,
         ]);
@@ -293,7 +293,7 @@ class DailyReportEditorController extends Controller
         $doctor = $this->doctorManagementService->create($request->validated());
 
         return response()->json([
-            'message' => 'Doctor added.',
+            'message' => __('messages.reports.doctor_added'),
             'data' => [
                 'id' => $doctor->id,
                 'name' => $doctor->name,

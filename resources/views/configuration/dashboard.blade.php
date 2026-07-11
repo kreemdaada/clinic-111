@@ -683,7 +683,7 @@
                     $nextStep = collect($configurationStatus['steps'])->firstWhere('key', $configurationStatus['current_step']);
                 @endphp
                 @if ($nextStep)
-                    <a href="{{ route($nextStep['index_route'], \App\Support\ConfigurationReturnContext::query()) }}" class="btn btn-primary">{{ __('dashboard.continue_setup') }}</a>
+                    <a href="{{ route($nextStep['index_route'], \App\Support\ConfigurationReturnContext::query()) }}" class="btn btn-primary">{{ __('configuration.continue_configuration') }}</a>
                 @endif
             @endif
         </div>

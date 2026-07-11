@@ -39,8 +39,8 @@ class BusinessConfigurationTest extends TestCase
             ->assertSee(__('dashboard.business_configuration'), false)
             ->assertSee(__('dashboard.ready_for_import_label'), false)
             ->assertSee(__('dashboard.no'), false)
-            ->assertSee(__('dashboard.continue_setup'), false)
-            ->assertSee('Doctors', false);
+            ->assertSee(__('configuration.continue_configuration'), false)
+            ->assertSee(__('dashboard.steps.doctors.label'), false);
     }
 
     public function test_empty_clinic_cannot_import_from_web_ui(): void
@@ -50,8 +50,8 @@ class BusinessConfigurationTest extends TestCase
         $this->actingAs($owner)
             ->get(route('imports.index'))
             ->assertOk()
-            ->assertSee(BusinessConfigurationService::INCOMPLETE_MESSAGE, false)
-            ->assertSee('Continue configuration', false);
+            ->assertSee(BusinessConfigurationService::incompleteMessage(), false)
+            ->assertSee(__('configuration.continue_configuration'), false);
 
         $file = UploadedFile::fake()->create('daily-report.xlsx', 128, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
@@ -60,7 +60,7 @@ class BusinessConfigurationTest extends TestCase
             ->assertSessionHasErrors('file');
 
         $errors = session('errors')->get('file');
-        $this->assertContains(BusinessConfigurationService::INCOMPLETE_MESSAGE, $errors);
+        $this->assertContains(BusinessConfigurationService::incompleteMessage(), $errors);
     }
 
     public function test_dashboard_shows_correct_progress_after_partial_setup(): void
@@ -106,7 +106,7 @@ class BusinessConfigurationTest extends TestCase
         $this->actingAs($owner)
             ->get(route('imports.index'))
             ->assertOk()
-            ->assertDontSee(BusinessConfigurationService::INCOMPLETE_MESSAGE, false);
+            ->assertDontSee(BusinessConfigurationService::incompleteMessage(), false);
     }
 
     public function test_percentage_only_clinic_completes_without_fixed_fees(): void
@@ -137,7 +137,7 @@ class BusinessConfigurationTest extends TestCase
 
         $this->actingAs($owner)
             ->get(route('imports.index'))
-            ->assertSee(BusinessConfigurationService::INCOMPLETE_MESSAGE, false);
+            ->assertSee(BusinessConfigurationService::incompleteMessage(), false);
 
         $doctor = Doctor::query()->where('clinic_id', $clinic->id)->firstOrFail();
         $treatment = Treatment::query()->where('clinic_id', $clinic->id)->firstOrFail();
@@ -154,7 +154,7 @@ class BusinessConfigurationTest extends TestCase
         $this->actingAs($owner)
             ->get(route('imports.index'))
             ->assertOk()
-            ->assertDontSee(BusinessConfigurationService::INCOMPLETE_MESSAGE, false);
+            ->assertDontSee(BusinessConfigurationService::incompleteMessage(), false);
     }
 
     public function test_api_configuration_status_endpoint_returns_progress(): void
@@ -202,7 +202,7 @@ class BusinessConfigurationTest extends TestCase
         $this->actingAs($admin)
             ->get(route('imports.index'))
             ->assertOk()
-            ->assertDontSee(BusinessConfigurationService::INCOMPLETE_MESSAGE, false);
+            ->assertDontSee(BusinessConfigurationService::incompleteMessage(), false);
     }
 
     private function registerClinicOwner(string $code, string $email): User

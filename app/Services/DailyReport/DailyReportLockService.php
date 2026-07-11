@@ -29,11 +29,11 @@ class DailyReportLockService
         $this->assertSameClinic($dailyReport);
 
         if ($dailyReport->isLocked()) {
-            throw new RuntimeException('Report is already approved or locked.');
+            throw new RuntimeException(__('messages.reports.already_locked'));
         }
 
         if (! in_array($dailyReport->status, [ReportStatus::Calculated, ReportStatus::NeedsReview], true)) {
-            throw new RuntimeException('Only calculated reports can be approved.');
+            throw new RuntimeException(__('messages.reports.only_calculated_can_approve'));
         }
 
         $this->nurseCommissionApprovalGuard->assertCanApprove($dailyReport);
@@ -63,13 +63,13 @@ class DailyReportLockService
         $this->assertSameClinic($dailyReport);
 
         if (! $dailyReport->isLocked()) {
-            throw new RuntimeException('Report is not locked.');
+            throw new RuntimeException(__('messages.reports.not_locked'));
         }
 
         $reason = trim($reason);
 
         if ($reason === '') {
-            throw new RuntimeException('Unlock reason is required.');
+            throw new RuntimeException(__('messages.reports.unlock_reason_required'));
         }
 
         return DB::transaction(function () use ($dailyReport, $user, $reason) {

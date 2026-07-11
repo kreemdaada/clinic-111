@@ -9,7 +9,10 @@ use App\Exceptions\BusinessConfigurationIncompleteException;
  */
 class BusinessConfigurationService
 {
-    public const INCOMPLETE_MESSAGE = 'Your clinic configuration is incomplete. Complete the missing configuration before importing reports.';
+    public static function incompleteMessage(): string
+    {
+        return __('configuration.incomplete');
+    }
 
     public function __construct(
         private readonly ConfigurationProgressService $configurationProgressService,
@@ -43,6 +46,6 @@ class BusinessConfigurationService
             return;
         }
 
-        throw new BusinessConfigurationIncompleteException(self::INCOMPLETE_MESSAGE);
+        throw new BusinessConfigurationIncompleteException(self::incompleteMessage());
     }
 }

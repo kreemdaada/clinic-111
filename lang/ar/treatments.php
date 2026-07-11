@@ -21,6 +21,12 @@ return [
     'delete_confirm_title' => 'حذف',
     'delete_confirm' => 'حذف ناعم لـ :code؟ تبقى عناصر العمل السابقة محفوظة.',
     'delete_confirm_generic' => 'حذف ناعم لهذا العلاج؟ تبقى عناصر العمل السابقة محفوظة.',
+    'flash' => [
+        'created' => 'تم إنشاء العلاج :code.',
+        'updated' => 'تم تحديث العلاج :code.',
+        'deleted' => 'تم حذف العلاج :code.',
+        'activated' => 'تم تفعيل العلاج :code.',
+    ],
     'table' => [
         'treatment_price' => 'سعر العلاج',
         'nurse_commission' => 'عمولة الممرض',

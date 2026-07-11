@@ -37,5 +37,14 @@ return [
         'ok' => 'Bestätigen',
         'cancel' => 'Abbrechen',
         'delete' => 'Löschen',
+        'are_you_sure' => 'Sind Sie sicher?',
+    ],
+    'flash' => [
+        'saved' => 'Gespeichert.',
+        'created' => 'Erstellt.',
+        'updated' => 'Aktualisiert.',
+        'deleted' => 'Gelöscht.',
+        'failed' => 'Etwas ist schiefgelaufen.',
+        'check_form' => 'Bitte prüfen Sie das Formular.',
     ],
 ];

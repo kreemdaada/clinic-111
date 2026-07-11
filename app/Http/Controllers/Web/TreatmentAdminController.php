@@ -54,7 +54,7 @@ class TreatmentAdminController extends Controller
 
         return redirect()
             ->route('treatments.index', $this->filterRedirectParams($request))
-            ->with('success', "Treatment {$treatment->code} created.");
+            ->with('success', __('treatments.flash.created', ['code' => $treatment->code]));
     }
 
     public function update(UpdateTreatmentRequest $request, Treatment $treatment): RedirectResponse
@@ -63,7 +63,7 @@ class TreatmentAdminController extends Controller
 
         return redirect()
             ->route('treatments.index', $this->filterRedirectParams($request))
-            ->with('success', "Treatment {$treatment->code} updated.");
+            ->with('success', __('treatments.flash.updated', ['code' => $treatment->code]));
     }
 
     public function destroy(Request $request, Treatment $treatment): RedirectResponse
@@ -74,7 +74,7 @@ class TreatmentAdminController extends Controller
 
         return redirect()
             ->route('treatments.index', $this->mergeConfigurationReturn($request))
-            ->with('success', "Treatment {$code} deleted.");
+            ->with('success', __('treatments.flash.deleted', ['code' => $code]));
     }
 
     public function activate(Request $request, Treatment $treatment): RedirectResponse
@@ -83,7 +83,7 @@ class TreatmentAdminController extends Controller
 
         return redirect()
             ->route('treatments.index', $this->mergeConfigurationReturn($request))
-            ->with('success', "Treatment {$treatment->code} activated.");
+            ->with('success', __('treatments.flash.activated', ['code' => $treatment->code]));
     }
 
     /**

@@ -48,8 +48,13 @@ class ImportDailyReportRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'file.uploaded' => 'Upload failed before PHP received the file. Stop any running server and restart with: ./bin/serve (not php artisan serve). Current PHP limit: upload_max_filesize='.ini_get('upload_max_filesize').', post_max_size='.ini_get('post_max_size').'.',
-            'file.max' => 'The file is too large. Maximum allowed size is '.((int) config('accounting.upload.max_kilobytes') / 1024).' MB.',
+            'file.uploaded' => __('validation.custom.file.uploaded', [
+                'upload' => ini_get('upload_max_filesize'),
+                'post' => ini_get('post_max_size'),
+            ]),
+            'file.max' => __('validation.custom.file.max', [
+                'max' => (int) config('accounting.upload.max_kilobytes') / 1024,
+            ]),
         ];
     }
 
@@ -61,7 +66,7 @@ class ImportDailyReportRequest extends FormRequest
             }
 
             if (! app(BusinessConfigurationService::class)->canImport()) {
-                $validator->errors()->add('file', BusinessConfigurationService::INCOMPLETE_MESSAGE);
+                $validator->errors()->add('file', BusinessConfigurationService::incompleteMessage());
             }
         });
     }

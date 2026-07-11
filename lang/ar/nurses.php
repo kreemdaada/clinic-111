@@ -12,6 +12,12 @@ return [
     'deactivate_confirm_title' => 'إلغاء تفعيل الممرض',
     'deactivate_confirm' => 'إلغاء تفعيل :name؟ لن يكون متاحاً لإدخالات الأشعة الجديدة.',
     'deactivate_confirm_generic' => 'إلغاء تفعيل هذا الممرض؟ لن يكون متاحاً لإدخالات الأشعة الجديدة.',
+    'flash' => [
+        'created' => 'تم إنشاء الممرضة :code.',
+        'updated' => 'تم تحديث الممرضة :code.',
+        'deactivated' => 'تم إلغاء تفعيل الممرضة :code.',
+        'activated' => 'تم تفعيل الممرضة :code.',
+    ],
     'commission_rates' => [
         'heading' => 'عمولات الممرض',
         'description' => 'حدد نسبة عمولة لكل علاج أشعة. يظهر الممرض في محرر التقرير اليومي فقط بعد إضافة سعر هنا.',

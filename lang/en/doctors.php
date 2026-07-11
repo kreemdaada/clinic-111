@@ -13,6 +13,11 @@ return [
     'commission_percent' => 'Commission %',
     'default_lab' => 'Default lab',
     'delete_confirm' => 'Soft delete :code? The doctor record is kept for historical reports.',
+    'flash' => [
+        'created' => 'Doctor :code created.',
+        'updated' => 'Doctor :code updated.',
+        'deleted' => 'Doctor :code deleted.',
+    ],
     'fields' => [
         'code' => 'Code',
         'name' => 'Name',

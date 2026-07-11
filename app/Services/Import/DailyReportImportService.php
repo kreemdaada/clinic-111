@@ -82,7 +82,7 @@ class DailyReportImportService
             ->whereDate('report_date', $resolvedReportDate)
             ->whereIn('status', [ReportStatus::Approved, ReportStatus::Locked])
             ->exists()) {
-            throw new RuntimeException('An approved or locked report already exists for this month.');
+            throw new RuntimeException(__('messages.reports.month_report_exists'));
         }
 
         $storedPath = $this->storeUploadedFile($uploadedFile);
@@ -186,7 +186,7 @@ class DailyReportImportService
         $this->assertSameClinic($dailyReport);
 
         if ($dailyReport->isLocked()) {
-            throw new RuntimeException('Approved or locked reports are read-only.');
+            throw new RuntimeException(__('messages.reports.read_only'));
         }
 
         $clinicId = (int) $dailyReport->clinic_id;

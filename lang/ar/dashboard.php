@@ -20,7 +20,6 @@ return [
     'ready_for_import_label' => 'جاهز للاستيراد',
     'yes' => 'نعم',
     'no' => 'لا',
-    'continue_setup' => 'متابعة الإعداد',
     'stats' => [
         'total' => 'الإجمالي',
         'active' => 'نشط',
@@ -40,5 +39,47 @@ return [
     'status' => [
         'label' => 'حالة الإعدادات',
         'percent_complete' => ':percent بالمئة مكتمل',
+    ],
+    'modules' => [
+        'manage_doctors' => 'إدارة الأطباء',
+        'manage_treatments' => 'إدارة العلاجات',
+        'manage_nurses' => 'إدارة الممرضات',
+    ],
+    'steps' => [
+        'doctors' => [
+            'label' => 'الأطباء',
+            'description' => 'أضف طبيبًا نشطًا واحدًا على الأقل.',
+        ],
+        'labs' => [
+            'label' => 'المختبرات',
+            'description' => 'احتفظ بمختبر نشط واحد على الأقل.',
+        ],
+        'treatments' => [
+            'label' => 'العلاجات',
+            'description' => 'أضف رمز علاج نشط واحدًا على الأقل.',
+        ],
+        'lab_prices' => [
+            'label' => 'أسعار المختبر',
+            'description' => 'أضف سعر مختبر نشط واحدًا على الأقل.',
+        ],
+        'doctor_fixed_fees' => [
+            'label' => 'رسوم الأطباء الثابتة',
+            'description_required' => 'اضبط قواعد الرسوم للأطباء بدون عمولة.',
+            'description_optional' => 'اختياري ما لم تستخدم أطباء بدون عمولة.',
+        ],
+        'import' => [
+            'label' => 'استيراد التقرير',
+            'description' => 'استورد أول تقرير Excel يومي.',
+        ],
+    ],
+    'warnings' => [
+        'no_active_labs' => 'لا توجد مختبرات نشطة.',
+        'no_active_treatments' => 'لا توجد علاجات نشطة.',
+        'no_active_lab_prices' => 'لا توجد أسعار مختبر نشطة.',
+        'no_active_fixed_fees' => 'لا توجد قواعد رسوم بدون عمولة نشطة.',
+        'inactive_doctors' => ':count طبيب/أطباء غير نشطين.',
+        'fixed_doctors_without_fees' => 'أطباء نشطون بدون عمولة بدون قواعد رسوم: :codes.',
+        'lab_cost_treatments_without_prices' => 'علاجات بتكلفة مختبر بدون أسعار نشطة: :codes.',
+        'percentage_doctors_missing_rate' => 'أطباء بنسبة مئوية بدون معدل عمولة صالح: :codes.',
     ],
 ];

@@ -86,52 +86,52 @@ class ConfigurationDashboardService
         return [
             $this->moduleCard(
                 key: 'doctors',
-                label: 'Doctors',
+                label: __('doctors.title'),
                 model: Doctor::class,
                 indexRoute: 'doctors.index',
-                quickActionLabel: 'Manage doctors',
+                quickActionLabel: __('dashboard.modules.manage_doctors'),
             ),
             $this->moduleCard(
                 key: 'labs',
-                label: 'Laboratories',
+                label: __('configuration.modules.labs'),
                 model: Lab::class,
                 indexRoute: 'labs.index',
-                quickActionLabel: 'Manage laboratories',
+                quickActionLabel: __('configuration.modules.manage_labs'),
             ),
             $this->moduleCard(
                 key: 'treatments',
-                label: 'Treatments',
+                label: __('treatments.title'),
                 model: Treatment::class,
                 indexRoute: 'treatments.index',
-                quickActionLabel: 'Manage treatments',
+                quickActionLabel: __('dashboard.modules.manage_treatments'),
             ),
             $this->moduleCard(
                 key: 'nurses',
-                label: 'Nurses',
+                label: __('nurses.title'),
                 model: Nurse::class,
                 indexRoute: 'nurses.index',
-                quickActionLabel: 'Manage nurses',
+                quickActionLabel: __('dashboard.modules.manage_nurses'),
             ),
             $this->moduleCard(
                 key: 'lab_prices',
-                label: 'Lab prices',
+                label: __('configuration.modules.lab_prices'),
                 model: LabPrice::class,
                 indexRoute: 'lab-prices.index',
-                quickActionLabel: 'Manage lab prices',
+                quickActionLabel: __('configuration.modules.manage_lab_prices'),
             ),
             $this->moduleCard(
                 key: 'doctor_fixed_fees',
-                label: 'No-commission fees',
+                label: __('configuration.modules.doctor_fixed_fees'),
                 model: DoctorFixedFee::class,
                 indexRoute: 'doctor-fixed-fees.index',
-                quickActionLabel: 'Manage fee rules',
+                quickActionLabel: __('configuration.modules.manage_fee_rules'),
             ),
             $this->moduleCard(
                 key: 'users',
-                label: 'Users',
+                label: __('configuration.modules.users'),
                 model: User::class,
                 indexRoute: 'admin.users.index',
-                quickActionLabel: 'Manage users',
+                quickActionLabel: __('configuration.modules.manage_users'),
             ),
         ];
     }
@@ -183,15 +183,15 @@ class ConfigurationDashboardService
         $warnings = [];
 
         if ($this->forCurrentClinic(Lab::class)->where('is_active', true)->count() === 0) {
-            $warnings[] = $this->warning('no_active_labs', 'No active laboratories are configured.');
+            $warnings[] = $this->warning('no_active_labs', __('dashboard.warnings.no_active_labs'));
         }
 
         if ($this->forCurrentClinic(Treatment::class)->where('is_active', true)->count() === 0) {
-            $warnings[] = $this->warning('no_active_treatments', 'No active treatments are configured.');
+            $warnings[] = $this->warning('no_active_treatments', __('dashboard.warnings.no_active_treatments'));
         }
 
         if ($this->forCurrentClinic(LabPrice::class)->where('is_active', true)->count() === 0) {
-            $warnings[] = $this->warning('no_active_lab_prices', 'No active lab prices are configured.');
+            $warnings[] = $this->warning('no_active_lab_prices', __('dashboard.warnings.no_active_lab_prices'));
         }
 
         $activeFixedDoctors = $this->forCurrentClinic(Doctor::class)
@@ -200,14 +200,14 @@ class ConfigurationDashboardService
             ->count();
 
         if ($activeFixedDoctors > 0 && $this->forCurrentClinic(DoctorFixedFee::class)->where('is_active', true)->count() === 0) {
-            $warnings[] = $this->warning('no_active_fixed_fees', 'No active no-commission fee rules are configured.');
+            $warnings[] = $this->warning('no_active_fixed_fees', __('dashboard.warnings.no_active_fixed_fees'));
         }
 
         $inactiveDoctors = $this->forCurrentClinic(Doctor::class)->where('is_active', false)->count();
         if ($inactiveDoctors > 0) {
             $warnings[] = $this->warning(
                 'inactive_doctors',
-                "{$inactiveDoctors} doctor(s) are inactive.",
+                __('dashboard.warnings.inactive_doctors', ['count' => $inactiveDoctors]),
             );
         }
 
@@ -220,7 +220,7 @@ class ConfigurationDashboardService
         if ($fixedDoctorsMissingFees->isNotEmpty()) {
             $warnings[] = $this->warning(
                 'fixed_doctors_without_fees',
-                'Active no-commission doctor(s) without fee rules: '.$fixedDoctorsMissingFees->join(', ').'.',
+                __('dashboard.warnings.fixed_doctors_without_fees', ['codes' => $fixedDoctorsMissingFees->join(', ')]),
             );
         }
 
@@ -233,7 +233,7 @@ class ConfigurationDashboardService
         if ($labCostTreatmentsWithoutPrice->isNotEmpty()) {
             $warnings[] = $this->warning(
                 'lab_cost_treatments_without_prices',
-                'Lab-cost treatment(s) without active prices: '.$labCostTreatmentsWithoutPrice->join(', ').'.',
+                __('dashboard.warnings.lab_cost_treatments_without_prices', ['codes' => $labCostTreatmentsWithoutPrice->join(', ')]),
             );
         }
 
@@ -250,7 +250,7 @@ class ConfigurationDashboardService
         if ($percentageDoctorsMissingRate->isNotEmpty()) {
             $warnings[] = $this->warning(
                 'percentage_doctors_missing_rate',
-                'Percentage doctor(s) without a valid commission rate: '.$percentageDoctorsMissingRate->join(', ').'.',
+                __('dashboard.warnings.percentage_doctors_missing_rate', ['codes' => $percentageDoctorsMissingRate->join(', ')]),
             );
         }
 

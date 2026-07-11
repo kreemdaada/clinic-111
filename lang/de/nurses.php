@@ -12,6 +12,12 @@ return [
     'deactivate_confirm_title' => 'Assistent deaktivieren',
     'deactivate_confirm' => ':name deaktivieren? Er/Sie steht für neue Röntgeneinträge nicht mehr zur Verfügung.',
     'deactivate_confirm_generic' => 'Diesen Assistenten deaktivieren? Er/Sie steht für neue Röntgeneinträge nicht mehr zur Verfügung.',
+    'flash' => [
+        'created' => 'Nurse :code erstellt.',
+        'updated' => 'Nurse :code aktualisiert.',
+        'deactivated' => 'Nurse :code deaktiviert.',
+        'activated' => 'Nurse :code aktiviert.',
+    ],
     'commission_rates' => [
         'heading' => 'Assistenten-Provisionen',
         'description' => 'Weisen Sie pro Röntgenbehandlung einen Provisionsprozentsatz zu. Der Assistent erscheint erst im Tagesbericht-Editor, nachdem hier ein Satz hinzugefügt wurde.',

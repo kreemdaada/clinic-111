@@ -13,7 +13,7 @@ class NurseCommissionApprovalBlockedException extends UserFacingException
     public function __construct(
         private readonly array $messages,
     ) {
-        parent::__construct($messages[0] ?? 'This report cannot be approved until all nurse commission entries are complete.');
+        parent::__construct($messages[0] ?? __('messages.reports.nurse_commission_incomplete'));
     }
 
     /**

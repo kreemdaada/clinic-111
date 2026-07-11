@@ -326,7 +326,7 @@ class NurseAdminTest extends TestCase
             ->get(route('configuration.dashboard'))
             ->assertOk()
             ->assertSee(route('nurses.index', ConfigurationReturnContext::query()), false)
-            ->assertSee('Manage nurses');
+            ->assertSee(__('dashboard.modules.manage_nurses'));
     }
 
     public function test_nurse_page_shows_back_to_configuration_with_valid_context(): void
