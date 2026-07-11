@@ -26,9 +26,9 @@ class ConfigurationDashboardTest extends TestCase
         $this->actingAs($admin)
             ->get(route('configuration.dashboard'))
             ->assertOk()
-            ->assertSee('Configuration')
-            ->assertSee('Recent activity')
-            ->assertSee('Configuration health')
+            ->assertSee(__('dashboard.title'))
+            ->assertSee(__('dashboard.recent_activity'))
+            ->assertSee(__('dashboard.health'))
             ->assertSee('Doctors', false)
             ->assertSee('Manage doctors', false)
             ->assertSee(route('labs.index'), false);
@@ -84,6 +84,6 @@ class ConfigurationDashboardTest extends TestCase
             ->get(route('imports.index'))
             ->assertOk()
             ->assertSee(route('configuration.dashboard'), false)
-            ->assertSee('Configuration', false);
+            ->assertSee(__('navigation.configuration'), false);
     }
 }

@@ -314,7 +314,7 @@ class NurseAdminTest extends TestCase
             ])));
 
         $response->assertOk()
-            ->assertSee('Back to Configuration', false)
+            ->assertSee(__('navigation.back_to_configuration'), false)
             ->assertSee('from=configuration', false);
     }
 
@@ -336,7 +336,7 @@ class NurseAdminTest extends TestCase
         $this->actingAs($admin)
             ->get(route('nurses.index', ConfigurationReturnContext::query()))
             ->assertOk()
-            ->assertSee('Back to Configuration', false)
+            ->assertSee(__('navigation.back_to_configuration'), false)
             ->assertSee(route('configuration.dashboard'), false);
     }
 
@@ -347,7 +347,7 @@ class NurseAdminTest extends TestCase
         $this->actingAs($admin)
             ->get(route('nurses.index', ['from' => 'https://evil.example']))
             ->assertOk()
-            ->assertDontSee('Back to Configuration', false);
+            ->assertDontSee(__('navigation.back_to_configuration'), false);
 
         $response = $this->actingAs($admin)
             ->from(route('nurses.index', ['from' => 'https://evil.example']))

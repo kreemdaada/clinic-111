@@ -143,4 +143,43 @@ class LocaleFoundationTest extends TestCase
 
         $this->assertSame('en', $user->fresh()->locale);
     }
+
+    public function test_german_user_sees_translated_navigation_and_dashboard(): void
+    {
+        $this->seedAccountingData();
+        $user = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $user->update(['locale' => 'de']);
+
+        $this->actingAs($user)
+            ->get(route('imports.index'))
+            ->assertOk()
+            ->assertSee('Importe', false)
+            ->assertSee('Abmelden', false)
+            ->assertDontSee('>Logout<', false);
+
+        $this->actingAs($user)
+            ->get(route('configuration.dashboard'))
+            ->assertOk()
+            ->assertSee('Konfiguration', false)
+            ->assertSee('Letzte Aktivität', false);
+    }
+
+    public function test_arabic_user_sees_translated_navigation_with_rtl(): void
+    {
+        $this->seedAccountingData();
+        $user = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $user->update(['locale' => 'ar']);
+
+        $this->actingAs($user)
+            ->get(route('imports.index'))
+            ->assertOk()
+            ->assertSee('dir="rtl"', false)
+            ->assertSee('الاستيراد', false)
+            ->assertSee('تسجيل الخروج', false);
+
+        $this->actingAs($user)
+            ->get(route('configuration.dashboard'))
+            ->assertOk()
+            ->assertSee('النشاط الأخير', false);
+    }
 }
