@@ -18,6 +18,6 @@ class UserLocaleController extends Controller
         $request->user()?->update(['locale' => $locale]);
         $request->session()->put('locale', $locale);
 
-        return back(fallback: route('imports.index'));
+        return back(fallback: route('landing'));
     }
 }
