@@ -4,7 +4,7 @@
 
 @push('styles')
 <style>
-    .lp-toolbar { display:flex; gap:0.75rem; flex-wrap:wrap; align-items:end; margin-bottom:1rem; }
+    .lp-toolbar { margin-bottom:1rem; }
     .lp-table-wrap { overflow-x:auto; }
     .lp-status-pill {
         font-size:0.6875rem; text-transform:uppercase; letter-spacing:0.04em;
@@ -41,7 +41,7 @@
 <div class="alert alert-error">{{ $errors->first() }}</div>
 @endif
 
-<form method="GET" action="{{ route('lab-prices.index') }}" class="lp-toolbar card" style="padding:1rem;">
+<form method="GET" action="{{ route('lab-prices.index') }}" class="lp-toolbar page-toolbar card" style="padding:1rem;">
     @if (request('from') === \App\Support\ConfigurationReturnContext::VALUE)
     <input type="hidden" name="from" value="{{ \App\Support\ConfigurationReturnContext::VALUE }}">
     @endif
@@ -89,14 +89,14 @@
         <label class="form-label">Currency</label>
         <input class="form-input" type="text" name="currency" value="{{ $currency }}" maxlength="3" placeholder="{{ $clinicCurrency ?? 'AED' }}">
     </div>
-    <div style="display:flex;gap:0.5rem;align-items:center;">
-        <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
-        <a href="{{ route('lab-prices.index', request()->only('from')) }}" class="btn btn-ghost btn-sm">Reset</a>
+    <div class="page-toolbar-actions">
+        <button type="submit" class="btn btn-secondary btn-sm">{{ __('common.filter.filter') }}</button>
+        <a href="{{ route('lab-prices.index', request()->only('from')) }}" class="btn btn-ghost btn-sm">{{ __('common.filter.reset') }}</a>
     </div>
 </form>
 
 <div style="margin-bottom:1rem;">
-    <button type="button" class="btn btn-primary btn-sm" data-open-create>Create price</button>
+    <button type="button" class="btn btn-primary btn-sm" data-open-create>{{ __('configuration.actions.create_price') }}</button>
 </div>
 
 <div class="card lp-table-wrap">
@@ -138,23 +138,23 @@
                             data-activate-url="{{ route('lab-prices.activate', $price) }}"
                             data-destroy-url="{{ route('lab-prices.destroy', $price) }}"
                             data-duplicate-url="{{ route('lab-prices.duplicate', $price) }}"
-                        >Edit</button>
+                        >{{ __('common.actions.edit') }}</button>
                         @if ($price->is_active)
                         <form method="POST" action="{{ route('lab-prices.destroy', $price) }}" class="inline-form"
-                            data-confirm-title="Delete"
-                            data-confirm-ok="Delete"
+                            data-confirm-title="{{ __('common.confirm.delete') }}"
+                            data-confirm-ok="{{ __('common.actions.delete') }}"
                             data-confirm-danger="1"
-                            data-confirm="Soft delete lab price #{{ $price->id }}? Historical lab jobs are preserved.">
+                            data-confirm="{{ __('configuration.confirm.delete_lab_price', ['id' => $price->id]) }}">
                             @csrf
                             @method('DELETE')
                             @include('partials.configuration-return-hidden')
-                            <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Delete</button>
+                            <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">{{ __('common.actions.delete') }}</button>
                         </form>
                         @else
                         <form method="POST" action="{{ route('lab-prices.activate', $price) }}" class="inline-form">
                             @csrf
                             @include('partials.configuration-return-hidden')
-                            <button type="submit" class="btn btn-secondary btn-sm">Activate</button>
+                            <button type="submit" class="btn btn-secondary btn-sm">{{ __('common.actions.activate') }}</button>
                         </form>
                         @endif
                     </div>
@@ -187,8 +187,8 @@
             @include('partials.configuration-return-hidden')
             @include('lab-prices._form-fields', ['prefix' => 'create', 'defaultCurrency' => $clinicCurrency])
             <div class="lp-modal-actions">
-                <button type="button" class="btn btn-ghost btn-sm" data-close-modal>Cancel</button>
-                <button type="submit" class="btn btn-primary btn-sm">Create</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-close-modal>{{ __('common.actions.cancel') }}</button>
+                <button type="submit" class="btn btn-primary btn-sm">{{ __('common.actions.create') }}</button>
             </div>
         </form>
     </div>
@@ -223,16 +223,16 @@
                 </select>
             </div>
             <div class="lp-modal-actions">
-                <button type="button" class="btn btn-ghost btn-sm" data-close-modal>Cancel</button>
-                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-close-modal>{{ __('common.actions.cancel') }}</button>
+                <button type="submit" class="btn btn-primary btn-sm">{{ __('common.actions.save') }}</button>
             </div>
         </form>
         <div style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
             <form method="POST" id="lp-deactivate-form"
-                data-confirm-title="Delete"
-                data-confirm-ok="Delete"
+                data-confirm-title="{{ __('common.confirm.delete') }}"
+                data-confirm-ok="{{ __('common.actions.delete') }}"
                 data-confirm-danger="1"
-                data-confirm="Soft delete this lab price? Historical lab jobs are preserved.">
+                data-confirm="{{ __('configuration.confirm.delete_lab_price_generic') }}">
                 @csrf
                 @method('DELETE')
                 <input type="hidden" name="return_search" value="{{ $search }}">
@@ -266,9 +266,9 @@
                 <input type="hidden" name="return_page" value="{{ request('page') }}">
                 @include('partials.configuration-return-hidden')
             </form>
-            <button type="submit" form="lp-deactivate-form" class="btn btn-ghost btn-sm" id="lp-deactivate-btn" style="color:var(--danger);">Delete</button>
-            <button type="submit" form="lp-activate-form" class="btn btn-secondary btn-sm" id="lp-activate-btn">Activate</button>
-            <button type="submit" form="lp-duplicate-form" class="btn btn-ghost btn-sm" id="lp-duplicate-btn">Duplicate</button>
+            <button type="submit" form="lp-deactivate-form" class="btn btn-ghost btn-sm" id="lp-deactivate-btn" style="color:var(--danger);">{{ __('common.actions.delete') }}</button>
+            <button type="submit" form="lp-activate-form" class="btn btn-secondary btn-sm" id="lp-activate-btn">{{ __('common.actions.activate') }}</button>
+            <button type="submit" form="lp-duplicate-form" class="btn btn-ghost btn-sm" id="lp-duplicate-btn">{{ __('common.actions.duplicate') }}</button>
         </div>
     </div>
 </div>

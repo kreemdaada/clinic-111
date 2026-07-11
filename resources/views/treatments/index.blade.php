@@ -4,7 +4,7 @@
 
 @push('styles')
 <style>
-    .tx-toolbar { display:flex; gap:0.75rem; flex-wrap:wrap; align-items:end; margin-bottom:1rem; }
+    .tx-toolbar { margin-bottom:1rem; }
     .tx-table-wrap { overflow-x:auto; }
     .tx-status-pill {
         font-size:0.6875rem; text-transform:uppercase; letter-spacing:0.04em;
@@ -42,7 +42,7 @@
 <div class="alert alert-error">{{ $errors->first() }}</div>
 @endif
 
-<form method="GET" action="{{ route('treatments.index') }}" class="tx-toolbar card" style="padding:1rem;">
+<form method="GET" action="{{ route('treatments.index') }}" class="tx-toolbar page-toolbar card" style="padding:1rem;">
     @if (request('from') === \App\Support\ConfigurationReturnContext::VALUE)
     <input type="hidden" name="from" value="{{ \App\Support\ConfigurationReturnContext::VALUE }}">
     @endif
@@ -58,7 +58,7 @@
             <option value="inactive" @selected($status === 'inactive')>{{ __('common.status.inactive') }}</option>
         </select>
     </div>
-    <div style="display:flex;gap:0.5rem;align-items:center;">
+    <div class="page-toolbar-actions">
         <button type="submit" class="btn btn-secondary btn-sm">{{ __('common.filter.filter') }}</button>
         <a href="{{ route('treatments.index', request()->only('from')) }}" class="btn btn-ghost btn-sm">{{ __('common.filter.reset') }}</a>
     </div>

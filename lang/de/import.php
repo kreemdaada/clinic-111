@@ -1,6 +1,15 @@
 <?php
 
 return [
+    'index' => [
+        'upload_file' => 'Datei hochladen',
+        'start_import' => 'Import starten',
+        'view_log' => 'Protokoll anzeigen',
+        'edit_rows' => 'Zeilen bearbeiten',
+        'income_excel' => 'Einnahmen-Excel',
+        'delete_title' => 'Import löschen',
+        'delete_message' => 'Diesen Import und alle zugehörigen Daten löschen? Dies kann nicht rückgängig gemacht werden.',
+    ],
     'overview' => [
         'title' => 'Importübersicht',
         'completed' => 'Import abgeschlossen',

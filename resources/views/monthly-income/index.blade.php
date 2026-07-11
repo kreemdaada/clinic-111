@@ -14,10 +14,7 @@
     }
 
     .mi-filter {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        flex-wrap: wrap;
+        width: 100%;
     }
 
     .mi-filter label {
@@ -76,7 +73,7 @@
         <h1 class="page-title">{{ __('reports.monthly_income.title') }}</h1>
         <p class="page-subtitle">{{ __('reports.monthly_income.subtitle') }}</p>
     </div>
-    <form method="GET" action="{{ route('monthly-income.index') }}" class="mi-filter">
+    <form method="GET" action="{{ route('monthly-income.index') }}" class="mi-filter field-action-stack">
         <label for="month">{{ __('common.filter.period') }}</label>
         <input class="form-input" type="month" id="month" name="month" value="{{ $selectedMonth }}" style="width:auto;">
         <button type="submit" class="btn btn-secondary btn-sm">{{ __('common.filter.apply') }}</button>

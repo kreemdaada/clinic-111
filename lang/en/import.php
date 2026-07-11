@@ -1,6 +1,15 @@
 <?php
 
 return [
+    'index' => [
+        'upload_file' => 'Upload file',
+        'start_import' => 'Start import',
+        'view_log' => 'View log',
+        'edit_rows' => 'Edit rows',
+        'income_excel' => 'Income Excel',
+        'delete_title' => 'Delete import',
+        'delete_message' => 'Delete this import and all its data? This cannot be undone.',
+    ],
     'overview' => [
         'title' => 'Import overview',
         'completed' => 'Import completed',

@@ -57,8 +57,8 @@ class AdminHelperTextRemovalTest extends TestCase
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
 
         $pages = [
-            ['route' => 'labs.index', 'title' => 'Laboratories', 'marker' => 'Create laboratory'],
-            ['route' => 'imports.index', 'title' => 'Import Daily Report', 'marker' => 'Start import'],
+            ['route' => 'labs.index', 'title' => 'Laboratories', 'marker' => __('configuration.actions.create_laboratory')],
+            ['route' => 'imports.index', 'title' => 'Import Daily Report', 'marker' => __('import.index.start_import')],
         ];
 
         foreach ($pages as $page) {
@@ -75,6 +75,6 @@ class AdminHelperTextRemovalTest extends TestCase
 
         $this->actingAs($admin)
             ->get(route('imports.index'))
-            ->assertSee('Upload file', false);
+            ->assertSee(__('import.index.upload_file'), false);
     }
 }
