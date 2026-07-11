@@ -50,7 +50,6 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-    Route::get('/settings/language', [UserLocaleController::class, 'edit'])->name('settings.language.edit');
     Route::put('/settings/language', [UserLocaleController::class, 'update'])->name('settings.language.update');
 });
 

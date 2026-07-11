@@ -3,12 +3,28 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class LocaleFoundationTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_authenticated_user_sees_language_dropdown_in_layout(): void
+    {
+        $this->seedAccountingData();
+        $user = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+
+        $this->actingAs($user)
+            ->get(route('imports.index'))
+            ->assertOk()
+            ->assertSee('name="locale"', false)
+            ->assertSee(__('settings.language.options.en'), false)
+            ->assertSee(__('settings.language.options.de'), false)
+            ->assertSee(__('settings.language.options.ar'), false)
+            ->assertDontSee(__('common.actions.save'), false);
+    }
 
     public function test_authenticated_user_with_locale_de_sets_app_locale(): void
     {
@@ -29,7 +45,7 @@ class LocaleFoundationTest extends TestCase
         $user = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
         $user->update(['locale' => 'ar']);
 
-        $response = $this->actingAs($user)->get(route('settings.language.edit'));
+        $response = $this->actingAs($user)->get(route('imports.index'));
 
         $response->assertOk();
         $this->assertSame('ar', app()->getLocale());
@@ -57,10 +73,21 @@ class LocaleFoundationTest extends TestCase
         $user->update(['locale' => 'de']);
 
         $this->actingAs($user)
-            ->get(route('settings.language.edit'))
+            ->get(route('imports.index'))
             ->assertOk()
             ->assertSee('dir="ltr"', false)
             ->assertSee('lang="de"', false);
+    }
+
+    public function test_carbon_uses_german_month_name_for_de_locale(): void
+    {
+        $this->seedAccountingData();
+        $user = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $user->update(['locale' => 'de']);
+
+        $this->actingAs($user)->get(route('imports.index'));
+
+        $this->assertSame('Juni', Carbon::create(2026, 6, 1)->translatedFormat('F'));
     }
 
     public function test_invalid_locale_is_rejected_on_update(): void
@@ -69,23 +96,23 @@ class LocaleFoundationTest extends TestCase
         $user = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
 
         $this->actingAs($user)
-            ->from(route('settings.language.edit'))
+            ->from(route('imports.index'))
             ->put(route('settings.language.update'), ['locale' => 'fr'])
             ->assertSessionHasErrors('locale');
 
         $this->assertSame('en', $user->fresh()->locale);
     }
 
-    public function test_user_can_switch_language_to_german(): void
+    public function test_user_can_switch_language_to_german_and_returns_to_previous_page(): void
     {
         $this->seedAccountingData();
         $user = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
 
         $this->actingAs($user)
-            ->from(route('settings.language.edit'))
+            ->from(route('imports.index'))
             ->put(route('settings.language.update'), ['locale' => 'de'])
-            ->assertRedirect(route('settings.language.edit'))
-            ->assertSessionHas('status', __('settings.language.saved'));
+            ->assertRedirect(route('imports.index'))
+            ->assertSessionMissing('status');
 
         $this->assertSame('de', $user->fresh()->locale);
     }
@@ -96,8 +123,9 @@ class LocaleFoundationTest extends TestCase
         $user = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
 
         $this->actingAs($user)
+            ->from(route('imports.index'))
             ->put(route('settings.language.update'), ['locale' => 'ar'])
-            ->assertRedirect();
+            ->assertRedirect(route('imports.index'));
 
         $this->assertSame('ar', $user->fresh()->locale);
     }
@@ -109,22 +137,10 @@ class LocaleFoundationTest extends TestCase
         $user->update(['locale' => 'de']);
 
         $this->actingAs($user)
+            ->from(route('imports.index'))
             ->put(route('settings.language.update'), ['locale' => 'en'])
-            ->assertRedirect();
+            ->assertRedirect(route('imports.index'));
 
         $this->assertSame('en', $user->fresh()->locale);
-    }
-
-    public function test_language_settings_page_uses_translations(): void
-    {
-        $this->seedAccountingData();
-        $user = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
-        $user->update(['locale' => 'de']);
-
-        $this->actingAs($user)
-            ->get(route('settings.language.edit'))
-            ->assertOk()
-            ->assertSee('Sprache', false)
-            ->assertSee('Speichern', false);
     }
 }

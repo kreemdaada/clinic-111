@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Import log')
+@section('title', __('import.overview.title'))
 
 @push('styles')
 <style>
@@ -662,7 +662,8 @@
 @php
     use App\Enums\ReportStatus;
 
-    $reportMonthLabel = $dailyReport->report_date->format('F Y');
+    $reportMonthLabel = $dailyReport->report_date->locale(app()->getLocale())->translatedFormat('F Y');
+    $clinicCurrencyCode = $clinicCurrency ?? 'AED';
     $entryCount = $dailyReport->dailyWorkRows()->count();
     $needsReview = $dailyReport->status === ReportStatus::NeedsReview;
     $hasRealProblems = false;
@@ -708,19 +709,19 @@
 
 <div class="extraction-page-header">
     <div>
-        <h1 class="page-title">{{ $showImportComplete ? 'Import complete' : 'Import log' }}</h1>
+        <h1 class="page-title">{{ $showImportComplete ? __('import.overview.completed') : __('import.overview.title') }}</h1>
         <div class="extraction-page-meta">
             <span>{{ $reportMonthLabel }}</span>
             <span>{{ $dailyReport->source_file_name }}</span>
         </div>
     </div>
     <div class="extraction-toolbar">
-        <a href="{{ route('imports.index') }}" class="btn btn-ghost">← Back</a>
-        <a href="{{ route('daily-report.edit', $dailyReport) }}" class="btn btn-secondary">Edit rows</a>
+        <a href="{{ route('imports.index') }}" class="btn btn-ghost">← {{ __('common.actions.back') }}</a>
+        <a href="{{ route('daily-report.edit', $dailyReport) }}" class="btn btn-secondary">{{ __('import.overview.actions.edit_data') }}</a>
         @if ($log !== null)
-        <a href="{{ route('imports.income', $dailyReport) }}" class="btn btn-primary">Download Excel</a>
+        <a href="{{ route('imports.income', $dailyReport) }}" class="btn btn-primary">{{ __('import.overview.actions.download_excel') }}</a>
         @if (auth()->user()?->isAdmin())
-        <a href="{{ route('logs.extraction.download', $dailyReport) }}" class="btn btn-ghost" style="font-size:0.8125rem;">JSON</a>
+        <a href="{{ route('logs.extraction.download', $dailyReport) }}" class="btn btn-ghost" style="font-size:0.8125rem;">{{ __('import.overview.actions.download_json') }}</a>
         @endif
         @endif
     </div>
@@ -736,16 +737,16 @@
 
 @if ($log === null)
 <div class="card">
-    <p class="extraction-muted">No import log for this report. Re-import the daily report to generate one.</p>
+    <p class="extraction-muted">{{ __('import.overview.no_log') }}</p>
 </div>
 @else
 <div class="card" style="margin-bottom:1rem;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
         <div>
-            <h2 class="card-title" style="margin-bottom:0.35rem;">Monthly export</h2>
+            <h2 class="card-title" style="margin-bottom:0.35rem;">{{ __('import.overview.monthly_report') }}</h2>
             <div class="extraction-export-filename">{{ $incomeDownloadFileName }}</div>
             <div class="extraction-export-meta" style="margin-top:0.35rem;">
-                {{ $entryCount }} {{ $entryCount === 1 ? 'entry' : 'entries' }}@if ($needsReview) · Review required @endif
+                {{ $entryCount }} {{ $entryCount === 1 ? __('import.overview.entry_one') : __('import.overview.entry_many') }}@if ($needsReview) · {{ __('import.overview.review_required') }} @endif
             </div>
         </div>
     </div>
@@ -755,24 +756,24 @@
 <div class="extraction-metrics">
     @if ($problemCount > 0)
     <div class="extraction-metric extraction-metric--error">
-        <div class="extraction-metric-label">Problems</div>
+        <div class="extraction-metric-label">{{ __('import.overview.problems') }}</div>
         <div class="extraction-metric-value">{{ $problemCount }}</div>
     </div>
     @endif
     @if ($hintCount > 0)
     <div class="extraction-metric extraction-metric--warning">
-        <div class="extraction-metric-label">Warnings</div>
+        <div class="extraction-metric-label">{{ __('import.overview.notes') }}</div>
         <div class="extraction-metric-value">{{ $hintCount }}</div>
     </div>
     @endif
 </div>
 @else
-<p class="extraction-muted" style="margin-bottom:1rem;">No issues found.</p>
+<p class="extraction-muted" style="margin-bottom:1rem;">{{ __('import.overview.no_problems') }}</p>
 @endif
 
 @if (count($unknownDoctorErrors) > 0)
 <div class="card extraction-unresolved-card">
-    <h2 class="extraction-unresolved-title">Doctor not found</h2>
+    <h2 class="extraction-unresolved-title">{{ __('import.overview.doctor_not_found') }}</h2>
     @php
         $unknownLabels = array_values(array_filter(array_map(
             fn (array $unknownDoctor) => trim((string) ($unknownDoctor['label'] ?? '')),
@@ -781,20 +782,18 @@
     @endphp
     @if (count($unknownLabels) === 1)
     <p class="extraction-unresolved-note" style="margin-bottom:0;">
-        The name "{{ $unknownLabels[0] }}" could not be matched to a doctor.
-        Please check the name in the Excel file.
+        {{ __('import.overview.doctor_not_found_single', ['name' => $unknownLabels[0]]) }}
     </p>
     @else
     <p class="extraction-unresolved-note" style="margin-bottom:0;">
-        These names could not be matched to a doctor: {{ implode(', ', $unknownLabels) }}.
-        Please check the names in the Excel file.
+        {{ __('import.overview.doctor_not_found_many', ['names' => implode(', ', $unknownLabels)]) }}
     </p>
     @endif
 </div>
 @endif
 
 <div class="card">
-    <h2 class="extraction-section-title">Summary by doctor</h2>
+    <h2 class="extraction-section-title">{{ __('import.overview.summary_by_doctor') }}</h2>
     <div class="extraction-doctor-tabs" id="extraction-doctor-tabs">
         @foreach ($doctorCodes as $code)
         <button type="button" class="extraction-doctor-tab" data-doctor-select="{{ $code }}">{{ $doctorTotals[$code]['display_name'] ?? $code }}</button>
@@ -804,13 +803,13 @@
         <table>
             <thead>
                 <tr>
-                    <th>Doctor</th>
-                    <th>Days</th>
-                    <th>Skipped</th>
-                    <th>Unmatched</th>
-                    <th>Paid ({{ $clinicCurrency ?? 'AED' }})</th>
-                    <th>Lab cost ({{ $clinicCurrency ?? 'AED' }})</th>
-                    <th>Issues</th>
+                    <th>{{ __('import.overview.table.doctor') }}</th>
+                    <th>{{ __('import.overview.table.days') }}</th>
+                    <th>{{ __('import.overview.table.skipped') }}</th>
+                    <th>{{ __('import.overview.table.unmatched') }}</th>
+                    <th>{{ __('import.overview.table.revenue', ['currency' => $clinicCurrencyCode]) }}</th>
+                    <th>{{ __('import.overview.table.lab_costs', ['currency' => $clinicCurrencyCode]) }}</th>
+                    <th>{{ __('import.overview.table.issues') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -828,7 +827,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7">No data.</td>
+                    <td colspan="7">{{ __('import.overview.no_data') }}</td>
                 </tr>
                 @endforelse
             </tbody>
@@ -837,10 +836,10 @@
 </div>
 
 <div class="extraction-toolbar-row">
-    <span class="extraction-toolbar-hint" id="extraction-pick-doctor">Select a doctor</span>
+    <span class="extraction-toolbar-hint" id="extraction-pick-doctor">{{ __('import.overview.select_doctor') }}</span>
     <span style="display:flex;gap:0.5rem;">
-        <button type="button" class="extraction-toggle-btn" id="extraction-expand-all">Expand all</button>
-        <button type="button" class="extraction-toggle-btn" id="extraction-collapse-all">Collapse all</button>
+        <button type="button" class="extraction-toggle-btn" id="extraction-expand-all">{{ __('import.overview.show_all') }}</button>
+        <button type="button" class="extraction-toggle-btn" id="extraction-collapse-all">{{ __('import.overview.hide_all') }}</button>
     </span>
 </div>
 
@@ -856,7 +855,7 @@ $rows = $importedByDoctor[$doctorCode] ?? [];
         <h2 class="extraction-panel-title">
             {{ $doctorTotals[$doctorCode]['display_name'] ?? $doctorCode }}
         </h2>
-        <span class="extraction-section-note">{{ count($rows) }} {{ count($rows) === 1 ? 'entry' : 'entries' }}</span>
+        <span class="extraction-section-note">{{ count($rows) }} {{ count($rows) === 1 ? __('import.overview.entry_one') : __('import.overview.entry_many') }}</span>
     </div>
 
     @foreach ($rows as $row)
@@ -874,21 +873,21 @@ $rows = $importedByDoctor[$doctorCode] ?? [];
         <summary>
             <div class="extraction-row-head">
                 <div class="extraction-row-head-main">
-                    <span class="extraction-row-day">Day {{ $row['sheet_day'] ?? '—' }}</span>
+                    <span class="extraction-row-day">{{ __('import.overview.row.day', ['day' => $row['sheet_day'] ?? '—']) }}</span>
                     <div class="extraction-row-amounts">
-                        <span class="extraction-row-amount">Paid <strong>{{ $row['display_paid_total'] ?? $row['paid_total_aed'] ?? '0.00' }}</strong> {{ $clinicCurrency ?? 'AED' }}</span>
-                        <span class="extraction-row-amount">Lab <strong>{{ $row['display_lab_total'] ?? $row['lab_total_aed'] ?? '0.00' }}</strong> {{ $clinicCurrency ?? 'AED' }}</span>
+                        <span class="extraction-row-amount">{{ __('import.overview.row.paid') }} <strong>{{ $row['display_paid_total'] ?? $row['paid_total_aed'] ?? '0.00' }}</strong> {{ $clinicCurrencyCode }}</span>
+                        <span class="extraction-row-amount">{{ __('import.overview.row.lab') }} <strong>{{ $row['display_lab_total'] ?? $row['lab_total_aed'] ?? '0.00' }}</strong> {{ $clinicCurrencyCode }}</span>
                     </div>
                     <div class="extraction-row-badges">
                         @if ($issueCount > 0)
-                        <span class="extraction-row-badge extraction-row-badge--warning">{{ $issueCount }} {{ $issueCount === 1 ? 'issue' : 'issues' }}</span>
+                        <span class="extraction-row-badge extraction-row-badge--warning">{{ $issueCount }} {{ $issueCount === 1 ? __('import.overview.row.issue_one') : __('import.overview.row.issue_many') }}</span>
                         @endif
                         @if (! $isImported)
-                        <span class="extraction-row-badge extraction-row-badge--error">Not imported</span>
+                        <span class="extraction-row-badge extraction-row-badge--error">{{ __('import.overview.row.not_imported') }}</span>
                         @endif
                     </div>
                 </div>
-                <span class="extraction-row-ref">Row {{ $row['excel_row'] ?? '—' }}</span>
+                <span class="extraction-row-ref">{{ __('import.overview.row.excel_row', ['row' => $row['excel_row'] ?? '—']) }}</span>
             </div>
         </summary>
         <div class="extraction-detail-body">
@@ -906,42 +905,42 @@ $rows = $importedByDoctor[$doctorCode] ?? [];
             <div class="extraction-treatment-block">{{ $treatmentDisplay }}</div>
             <div class="extraction-entry-body">
                 <div>
-                    <div class="extraction-entry-block-title">Payment</div>
+                    <div class="extraction-entry-block-title">{{ __('import.overview.detail.payment') }}</div>
                     <div class="extraction-entry-lines">
-                        <div>Cash ({{ $primaryCashLabel ?? $clinicCurrency ?? 'AED' }}): {{ $row['display_primary_cash'] ?? $row['dhs_aed'] ?? '0.00' }}</div>
+                        <div>{{ __('import.overview.detail.cash', ['currency' => $primaryCashLabel ?? $clinicCurrencyCode]) }} {{ $row['display_primary_cash'] ?? $row['dhs_aed'] ?? '0.00' }}</div>
                         @if ($foreignCashCurrency)
-                        <div>Cash ({{ $row['display_foreign_currency'] ?? $foreignCashCurrency }}): {{ $row['display_foreign_cash'] ?? $row['usd'] ?? '0.00' }}
-                            <span class="extraction-entry-line-muted">(→ {{ $row['display_foreign_in_clinic'] ?? $row['usd_to_aed'] ?? '0.00' }} {{ $clinicCurrency ?? 'AED' }})</span>
+                        <div>{{ __('import.overview.detail.cash', ['currency' => $row['display_foreign_currency'] ?? $foreignCashCurrency]) }} {{ $row['display_foreign_cash'] ?? $row['usd'] ?? '0.00' }}
+                            <span class="extraction-entry-line-muted">{{ __('import.overview.detail.foreign_converted', ['amount' => $row['display_foreign_in_clinic'] ?? $row['usd_to_aed'] ?? '0.00', 'currency' => $clinicCurrencyCode]) }}</span>
                         </div>
                         @endif
-                        <div>Card (Visa, {{ $clinicCurrency ?? 'AED' }}): {{ $row['display_visa'] ?? $row['visa_aed'] ?? '0.00' }}</div>
-                        <div class="extraction-entry-total">Total paid: {{ $row['display_paid_total'] ?? $row['paid_total_aed'] ?? '0.00' }} {{ $clinicCurrency ?? 'AED' }}</div>
+                        <div>{{ __('import.overview.detail.card', ['currency' => $clinicCurrencyCode]) }} {{ $row['display_visa'] ?? $row['visa_aed'] ?? '0.00' }}</div>
+                        <div class="extraction-entry-total">{{ __('import.overview.detail.total_paid') }} {{ $row['display_paid_total'] ?? $row['paid_total_aed'] ?? '0.00' }} {{ $clinicCurrencyCode }}</div>
                     </div>
                     @if ($diag && ! ($diag['payments']['payment_ok'] ?? true))
                     <p class="extraction-issue-line extraction-issue-line--error" style="margin:0.5rem 0 0;">
-                        Payment total does not match cash and card amounts.
+                        {{ __('import.overview.detail.payment_mismatch') }}
                     </p>
                     @endif
                 </div>
                 <div>
-                    <div class="extraction-entry-block-title">Lab costs</div>
+                    <div class="extraction-entry-block-title">{{ __('import.overview.detail.lab_costs') }}</div>
                     @if ($diag && ($diag['job']['lines'] ?? []) !== [])
                     <div class="extraction-entry-lines">
                         @foreach ($diag['job']['lines'] as $jobLine)
                         <div>
                             {{ $jobLine['code'] }} × {{ $jobLine['quantity'] }}
-                            @ {{ $jobLine['display_unit_cost'] ?? $jobLine['unit_cost_aed'] }} {{ $clinicCurrency ?? 'AED' }}
-                            = <strong>{{ $jobLine['display_line_total'] ?? $jobLine['line_total_aed'] }} {{ $clinicCurrency ?? 'AED' }}</strong>
+                            @ {{ $jobLine['display_unit_cost'] ?? $jobLine['unit_cost_aed'] }} {{ $clinicCurrencyCode }}
+                            = <strong>{{ $jobLine['display_line_total'] ?? $jobLine['line_total_aed'] }} {{ $clinicCurrencyCode }}</strong>
                         </div>
                         @endforeach
-                        <div class="extraction-entry-total">Total lab: {{ $diag['job']['display_total'] ?? $diag['job']['total_aed'] ?? '0.00' }} {{ $clinicCurrency ?? 'AED' }}</div>
+                        <div class="extraction-entry-total">{{ __('import.overview.detail.total_lab') }} {{ $diag['job']['display_total'] ?? $diag['job']['total_aed'] ?? '0.00' }} {{ $clinicCurrencyCode }}</div>
                     </div>
                     @else
-                    <p class="extraction-empty-note" style="margin:0;">No lab costs for this treatment.</p>
+                    <p class="extraction-empty-note" style="margin:0;">{{ __('import.overview.detail.no_lab_costs') }}</p>
                     @endif
                     @if ($diag && ($diag['treatments_ignored'] ?? []) !== [])
                     <div class="extraction-entry-lines" style="margin-top:0.5rem;">
-                        <div class="extraction-entry-line-muted">Without lab cost:</div>
+                        <div class="extraction-entry-line-muted">{{ __('import.overview.detail.without_lab_cost') }}</div>
                         @foreach ($diag['treatments_ignored'] as $t)
                         <div>{{ $t['code'] }} × {{ $t['quantity'] }}</div>
                         @endforeach
@@ -950,16 +949,16 @@ $rows = $importedByDoctor[$doctorCode] ?? [];
                 </div>
                 @if ($nurseEntries !== [])
                 <div style="margin-top:0.75rem;">
-                    <div class="extraction-entry-block-title">Nurse commission</div>
+                    <div class="extraction-entry-block-title">{{ __('import.overview.detail.nurse_commission') }}</div>
                     <div class="extraction-entry-lines">
                         @foreach ($nurseEntries as $entry)
                         <div class="extraction-treatment-block" style="margin-bottom:0.5rem;">
                             <strong>{{ $entry['treatment_name'] }}</strong><br>
-                            Quantity: {{ $entry['quantity'] }}<br>
-                            Nurse: {{ $entry['nurse_name'] }}<br>
-                            Treatment price: {{ $entry['treatment_price'] }} {{ $entry['treatment_price_currency'] }}<br>
-                            Commission: {{ rtrim(rtrim($entry['commission_percentage'], '0'), '.') }} %<br>
-                            Nurse commission: {{ $entry['total_commission_aed'] }} AED
+                            {{ __('import.overview.detail.quantity') }} {{ $entry['quantity'] }}<br>
+                            {{ __('import.overview.detail.nurse') }} {{ $entry['nurse_name'] }}<br>
+                            {{ __('import.overview.detail.treatment_price') }} {{ $entry['treatment_price'] }} {{ $entry['treatment_price_currency'] }}<br>
+                            {{ __('import.overview.detail.commission') }} {{ rtrim(rtrim($entry['commission_percentage'], '0'), '.') }} %<br>
+                            {{ __('import.overview.detail.nurse_commission_amount') }} {{ $entry['total_commission_aed'] }} AED
                         </div>
                         @endforeach
                     </div>
