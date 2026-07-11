@@ -80,13 +80,13 @@
         <input class="form-input" type="text" name="currency" value="{{ $currency }}" maxlength="3" placeholder="{{ $clinicCurrency ?? 'AED' }}">
     </div>
     <div style="display:flex;gap:0.5rem;align-items:center;">
-        <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
-        <a href="{{ route('doctor-fixed-fees.index', request()->only('from')) }}" class="btn btn-ghost btn-sm">Reset</a>
+        <button type="submit" class="btn btn-secondary btn-sm">{{ __('common.filter.filter') }}</button>
+        <a href="{{ route('doctor-fixed-fees.index', request()->only('from')) }}" class="btn btn-ghost btn-sm">{{ __('common.filter.reset') }}</a>
     </div>
 </form>
 
 <div style="margin-bottom:1rem;">
-    <button type="button" class="btn btn-primary btn-sm" data-open-create>Add fee rule</button>
+    <button type="button" class="btn btn-primary btn-sm" data-open-create>{{ __('configuration.actions.add_fee_rule') }}</button>
 </div>
 
 <div class="card dff-table-wrap">
@@ -135,23 +135,23 @@
                             data-activate-url="{{ route('doctor-fixed-fees.activate', $fee) }}"
                             data-destroy-url="{{ route('doctor-fixed-fees.destroy', $fee) }}"
                             data-duplicate-url="{{ route('doctor-fixed-fees.duplicate', $fee) }}"
-                        >Edit</button>
+                        >{{ __('common.actions.edit') }}</button>
                         @if ($fee->is_active)
                         <form method="POST" action="{{ route('doctor-fixed-fees.destroy', $fee) }}" class="inline-form"
-                            data-confirm-title="Delete"
-                            data-confirm-ok="Delete"
+                            data-confirm-title="{{ __('common.confirm.delete') }}"
+                            data-confirm-ok="{{ __('common.confirm.delete') }}"
                             data-confirm-danger="1"
-                            data-confirm="Soft delete fee rule #{{ $fee->id }}? Historical accounting data is preserved.">
+                            data-confirm="{{ __('configuration.confirm.delete_fee_rule', ['id' => $fee->id]) }}">
                             @csrf
             @include('partials.configuration-return-hidden')
                             @method('DELETE')
-                            <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Delete</button>
+                            <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">{{ __('common.actions.delete') }}</button>
                         </form>
                         @else
                         <form method="POST" action="{{ route('doctor-fixed-fees.activate', $fee) }}" class="inline-form">
                             @csrf
             @include('partials.configuration-return-hidden')
-                            <button type="submit" class="btn btn-secondary btn-sm">Activate</button>
+                            <button type="submit" class="btn btn-secondary btn-sm">{{ __('common.actions.activate') }}</button>
                         </form>
                         @endif
                     </div>
@@ -183,8 +183,8 @@
             <input type="hidden" name="return_currency" value="{{ $currency }}">
             @include('doctor-fixed-fees._form-fields', ['prefix' => 'create', 'defaultCurrency' => $clinicCurrency ?? 'AED'])
             <div class="dff-modal-actions">
-                <button type="button" class="btn btn-ghost btn-sm" data-close-modal>Cancel</button>
-                <button type="submit" class="btn btn-primary btn-sm">Create</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-close-modal>{{ __('common.actions.cancel') }}</button>
+                <button type="submit" class="btn btn-primary btn-sm">{{ __('common.actions.create') }}</button>
             </div>
         </form>
     </div>
@@ -218,16 +218,16 @@
                 </select>
             </div>
             <div class="dff-modal-actions">
-                <button type="button" class="btn btn-ghost btn-sm" data-close-modal>Cancel</button>
-                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-close-modal>{{ __('common.actions.cancel') }}</button>
+                <button type="submit" class="btn btn-primary btn-sm">{{ __('common.actions.save') }}</button>
             </div>
         </form>
         <div style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
             <form method="POST" id="dff-deactivate-form"
-                data-confirm-title="Delete"
-                data-confirm-ok="Delete"
+                data-confirm-title="{{ __('common.confirm.delete') }}"
+                data-confirm-ok="{{ __('common.confirm.delete') }}"
                 data-confirm-danger="1"
-                data-confirm="Soft delete this fee rule? Historical accounting data is preserved.">
+                data-confirm="{{ __('configuration.confirm.delete_fee_rule_generic') }}">
                 @csrf
             @include('partials.configuration-return-hidden')
                 @method('DELETE')
@@ -240,9 +240,9 @@
                 @csrf
             @include('partials.configuration-return-hidden')
             </form>
-            <button type="submit" form="dff-deactivate-form" class="btn btn-ghost btn-sm" id="dff-deactivate-btn" style="color:var(--danger);">Delete</button>
-            <button type="submit" form="dff-activate-form" class="btn btn-secondary btn-sm" id="dff-activate-btn">Activate</button>
-            <button type="submit" form="dff-duplicate-form" class="btn btn-ghost btn-sm" id="dff-duplicate-btn">Duplicate</button>
+            <button type="submit" form="dff-deactivate-form" class="btn btn-ghost btn-sm" id="dff-deactivate-btn" style="color:var(--danger);">{{ __('common.actions.delete') }}</button>
+            <button type="submit" form="dff-activate-form" class="btn btn-secondary btn-sm" id="dff-activate-btn">{{ __('common.actions.activate') }}</button>
+            <button type="submit" form="dff-duplicate-form" class="btn btn-ghost btn-sm" id="dff-duplicate-btn">{{ __('common.actions.duplicate') }}</button>
         </div>
     </div>
 </div>

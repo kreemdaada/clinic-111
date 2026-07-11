@@ -111,13 +111,13 @@
         </select>
     </div>
     <div class="clinic-admin-actions">
-        <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
-        <a href="{{ route('clinics.index') }}" class="btn btn-ghost btn-sm">Reset</a>
+        <button type="submit" class="btn btn-secondary btn-sm">{{ __('common.filter.filter') }}</button>
+        <a href="{{ route('clinics.index') }}" class="btn btn-ghost btn-sm">{{ __('common.filter.reset') }}</a>
     </div>
 </form>
 
 <article class="card clinic-create-card">
-    <h2 style="font-size:1rem;margin:0 0 1rem;">Create clinic</h2>
+    <h2 style="font-size:1rem;margin:0 0 1rem;">{{ __('configuration.actions.create_clinic') }}</h2>
     <form method="POST" action="{{ route('clinics.store') }}" class="clinic-admin-form">
         @csrf
         <div class="form-group" style="margin:0;">
@@ -146,7 +146,7 @@
             <input class="form-input" type="text" name="country" value="{{ old('country') }}" required>
         </div>
         <div class="clinic-admin-actions">
-            <button type="submit" class="btn btn-primary btn-sm">Create</button>
+            <button type="submit" class="btn btn-primary btn-sm">{{ __('common.actions.create') }}</button>
         </div>
     </form>
 </article>
@@ -209,25 +209,25 @@
                 </select>
             </div>
             <div class="clinic-admin-actions">
-                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                <button type="submit" class="btn btn-primary btn-sm">{{ __('common.actions.save') }}</button>
             </div>
         </form>
 
         <div class="clinic-admin-actions" style="margin-top:0.75rem;">
             @if ($clinic->is_active)
             <form method="POST" action="{{ route('clinics.destroy', $clinic) }}"
-                data-confirm-title="Delete"
-                data-confirm-ok="Delete"
+                data-confirm-title="{{ __('common.confirm.delete') }}"
+                data-confirm-ok="{{ __('common.confirm.delete') }}"
                 data-confirm-danger="1"
-                data-confirm="Soft delete {{ $clinic->code }}? The clinic record is kept for future tenant scoping.">
+                data-confirm="{{ __('configuration.confirm.delete_clinic', ['code' => $clinic->code]) }}">
                 @csrf
                 @method('DELETE')
-                <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Delete</button>
+                <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">{{ __('common.actions.delete') }}</button>
             </form>
             @else
             <form method="POST" action="{{ route('clinics.activate', $clinic) }}">
                 @csrf
-                <button type="submit" class="btn btn-secondary btn-sm">Activate</button>
+                <button type="submit" class="btn btn-secondary btn-sm">{{ __('common.actions.activate') }}</button>
             </form>
             @endif
         </div>

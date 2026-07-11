@@ -30,12 +30,12 @@
 
     <form method="POST" action="{{ route('verification.send') }}">
         @csrf
-        <button type="submit" class="btn btn-primary">Resend verification email</button>
+        <button type="submit" class="btn btn-primary">{{ __('auth.resend_verification') }}</button>
     </form>
 
     <form method="POST" action="{{ route('logout') }}" style="margin-top:1rem;">
         @csrf
-        <button type="submit" class="btn btn-ghost">Sign out</button>
+        <button type="submit" class="btn btn-ghost">{{ __('navigation.user.logout') }}</button>
     </form>
 </div>
 @endsection

@@ -11,6 +11,13 @@ return [
         'activate' => 'Activate',
         'deactivate' => 'Deactivate',
         'apply' => 'Apply',
+        'open' => 'Open',
+        'unlock' => 'Unlock',
+        'approve' => 'Approve',
+        'duplicate' => 'Duplicate',
+        'upload' => 'Upload',
+        'add' => 'Add',
+        'save_changes' => 'Save changes',
     ],
     'status' => [
         'active' => 'Active',

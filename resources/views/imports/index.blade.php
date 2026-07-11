@@ -74,7 +74,7 @@
 
         <div id="dropzone" class="dropzone">
             <div class="dropzone-icon">📊</div>
-            <div class="dropzone-title">Upload file</div>
+            <div class="dropzone-title">{{ __('import.index.upload_file') }}</div>
             <div class="dropzone-hint">Drop here or click to browse — .xlsx, .xlsm only</div>
             <input type="file" id="file-input" name="file" accept=".xlsx,.xlsm" style="display:none;" required>
         </div>
@@ -84,7 +84,7 @@
         </div>
 
         <div class="import-actions" style="margin-top:1.25rem;">
-            <button type="submit" id="submit-btn" class="btn btn-primary" @if(isset($canImport) && ! $canImport) disabled @endif>Start import</button>
+            <button type="submit" id="submit-btn" class="btn btn-primary" @if(isset($canImport) && ! $canImport) disabled @endif>{{ __('import.index.start_import') }}</button>
             <div id="spinner" class="spinner">
                 <span>Processing report… this may take a minute for large files.</span>
             </div>
@@ -119,17 +119,17 @@
                     <td>{{ $report->daily_work_rows_count }}</td>
                     <td>
                         <div class="table-actions">
-                            <a href="{{ route('logs.extraction', $report) }}" class="btn btn-secondary btn-sm">View log</a>
-                            <a href="{{ route('daily-report.edit', $report) }}" class="btn btn-secondary btn-sm">Edit rows</a>
-                            <a href="{{ route('imports.income', $report) }}" class="btn btn-secondary btn-sm">Income Excel</a>
+                            <a href="{{ route('logs.extraction', $report) }}" class="btn btn-secondary btn-sm">{{ __('import.index.view_log') }}</a>
+                            <a href="{{ route('daily-report.edit', $report) }}" class="btn btn-secondary btn-sm">{{ __('import.index.edit_rows') }}</a>
+                            <a href="{{ route('imports.income', $report) }}" class="btn btn-secondary btn-sm">{{ __('import.index.income_excel') }}</a>
                             <form method="POST" action="{{ route('imports.destroy', $report) }}" class="inline-form"
-                                data-confirm-title="Delete import"
-                                data-confirm-ok="Delete"
+                                data-confirm-title="{{ __('import.index.delete_title') }}"
+                                data-confirm-ok="{{ __('common.actions.delete') }}"
                                 data-confirm-danger="1"
-                                data-confirm="Delete this import and all its data? This cannot be undone.">
+                                data-confirm="{{ __('import.index.delete_message') }}">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="btn btn-secondary btn-sm">Delete</button>
+                                <button type="submit" class="btn btn-secondary btn-sm">{{ __('common.actions.delete') }}</button>
                             </form>
                         </div>
                     </td>

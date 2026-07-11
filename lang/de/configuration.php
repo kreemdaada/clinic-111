@@ -5,6 +5,25 @@ return [
     'continue_configuration' => 'Konfiguration fortsetzen',
     'view_setup_progress' => 'Einrichtungsfortschritt anzeigen',
 
+    'actions' => [
+        'create_laboratory' => 'Labor erstellen',
+        'create_price' => 'Preis erstellen',
+        'add_fee_rule' => 'Gebührenregel hinzufügen',
+        'create_user' => 'Benutzer erstellen',
+        'reset_password' => 'Passwort zurücksetzen',
+        'create_clinic' => 'Praxis erstellen',
+    ],
+
+    'confirm' => [
+        'delete_lab' => ':code soft löschen? Der Labordatensatz bleibt für historische Berichte erhalten.',
+        'delete_clinic' => ':code soft löschen? Der Praxisdatensatz bleibt für künftiges Mandanten-Scoping erhalten.',
+        'delete_lab_price' => 'Laborpreis #:id soft löschen? Historische Laboraufträge bleiben erhalten.',
+        'delete_lab_price_generic' => 'Diesen Laborpreis soft löschen? Historische Laboraufträge bleiben erhalten.',
+        'delete_fee_rule' => 'Gebührenregel #:id soft löschen? Historische Arbeitsposten bleiben erhalten.',
+        'delete_fee_rule_generic' => 'Diese Gebührenregel soft löschen? Historische Arbeitsposten bleiben erhalten.',
+        'delete_user' => ':email soft löschen? Das Konto wird deaktiviert, nicht aus der Datenbank entfernt.',
+    ],
+
     'flash' => [
         'lab_created' => 'Labor :code erstellt.',
         'lab_updated' => 'Labor :code aktualisiert.',

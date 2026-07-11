@@ -11,6 +11,13 @@ return [
         'activate' => 'تفعيل',
         'deactivate' => 'إلغاء التفعيل',
         'apply' => 'تطبيق',
+        'open' => 'فتح',
+        'unlock' => 'فتح القفل',
+        'approve' => 'اعتماد',
+        'duplicate' => 'نسخ',
+        'upload' => 'رفع',
+        'add' => 'إضافة',
+        'save_changes' => 'حفظ التغييرات',
     ],
     'status' => [
         'active' => 'نشط',

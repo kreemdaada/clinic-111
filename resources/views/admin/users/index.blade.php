@@ -51,7 +51,7 @@
 @endif
 
 <article class="card user-create-card">
-    <h2 style="font-size:1rem;margin:0 0 1rem;">Create user</h2>
+    <h2 style="font-size:1rem;margin:0 0 1rem;">{{ __('configuration.actions.create_user') }}</h2>
     <form method="POST" action="{{ route('admin.users.store') }}" class="user-admin-form">
         @csrf
         @include('partials.configuration-return-hidden')
@@ -83,7 +83,7 @@
             </label>
         </div>
         <div class="user-admin-actions">
-            <button type="submit" class="btn btn-primary btn-sm">Create user</button>
+            <button type="submit" class="btn btn-primary btn-sm">{{ __('configuration.actions.create_user') }}</button>
         </div>
     </form>
 </article>
@@ -136,7 +136,7 @@
                 @endif
             </div>
             <div class="user-admin-actions">
-                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                <button type="submit" class="btn btn-primary btn-sm">{{ __('common.actions.save') }}</button>
             </div>
         </form>
 
@@ -156,20 +156,20 @@
                     </label>
                 </div>
                 <div class="user-admin-actions">
-                    <button type="submit" class="btn btn-secondary btn-sm">Reset password</button>
+                    <button type="submit" class="btn btn-secondary btn-sm">{{ __('configuration.actions.reset_password') }}</button>
                 </div>
             </form>
 
             @if (auth()->id() !== $user->id && $user->is_active)
             <form method="POST" action="{{ route('admin.users.destroy', $user) }}"
-                data-confirm-title="Delete"
-                data-confirm-ok="Delete"
+                data-confirm-title="{{ __('common.confirm.delete') }}"
+                data-confirm-ok="{{ __('common.confirm.delete') }}"
                 data-confirm-danger="1"
-                data-confirm="Soft delete {{ $user->email }}? The account is kept but cannot log in.">
+                data-confirm="{{ __('configuration.confirm.delete_user', ['email' => $user->email]) }}">
                 @csrf
         @include('partials.configuration-return-hidden')
                 @method('DELETE')
-                <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Delete</button>
+                <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">{{ __('common.actions.delete') }}</button>
             </form>
             @endif
         </div>

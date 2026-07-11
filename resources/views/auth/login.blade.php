@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Sign in')
+@section('title', __('auth.sign_in'))
 
 @push('styles')
 <style>
@@ -68,13 +68,13 @@
                 <label class="form-label" for="password">Password</label>
                 <input class="form-input" type="password" id="password" name="password" required>
             </div>
-            <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+            <button type="submit" class="btn btn-primary btn-block">{{ __('auth.sign_in') }}</button>
         </form>
 
         <p class="login-footer">
-            <a href="{{ route('register-clinic.create') }}">Register a new clinic</a>
+            <a href="{{ route('register-clinic.create') }}">{{ __('auth.register_clinic') }}</a>
             ·
-            <a href="{{ route('landing') }}">Back to homepage</a>
+            <a href="{{ route('landing') }}">{{ __('auth.back_to_homepage') }}</a>
         </p>
     </div>
 </div>

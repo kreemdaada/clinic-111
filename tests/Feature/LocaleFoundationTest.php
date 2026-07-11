@@ -303,6 +303,60 @@ class LocaleFoundationTest extends TestCase
         }
     }
 
+    public function test_german_user_sees_translated_buttons_on_key_pages(): void
+    {
+        $this->seedAccountingData();
+        $user = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $user->update(['locale' => 'de']);
+
+        $this->actingAs($user)
+            ->get(route('imports.index'))
+            ->assertOk()
+            ->assertSee(__('import.index.start_import', [], 'de'), false)
+            ->assertSee(__('import.index.upload_file', [], 'de'), false)
+            ->assertDontSee('>Start import<', false);
+
+        $this->actingAs($user)
+            ->get(route('labs.index'))
+            ->assertOk()
+            ->assertSee(__('common.filter.reset', [], 'de'), false)
+            ->assertSee(__('common.actions.save', [], 'de'), false)
+            ->assertDontSee('>Save<', false);
+
+        $this->actingAs($user)
+            ->get(route('daily-report.index'))
+            ->assertOk()
+            ->assertSee(__('daily_reports.actions.create_report', [], 'de'), false)
+            ->assertDontSee('>Create report<', false);
+    }
+
+    public function test_arabic_user_sees_translated_buttons_on_key_pages(): void
+    {
+        $this->seedAccountingData();
+        $user = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $user->update(['locale' => 'ar']);
+
+        $this->actingAs($user)
+            ->get(route('imports.index'))
+            ->assertOk()
+            ->assertSee('dir="rtl"', false)
+            ->assertSee(__('import.index.start_import', [], 'ar'), false)
+            ->assertDontSee('>Start import<', false);
+
+        $this->actingAs($user)
+            ->get(route('labs.index'))
+            ->assertOk()
+            ->assertSee(__('common.actions.delete', [], 'ar'), false)
+            ->assertSee(__('common.actions.save', [], 'ar'), false);
+
+        $this->actingAs($user)
+            ->get(route('admin.users.index'))
+            ->assertOk()
+            ->assertSee(__('configuration.actions.create_user', [], 'ar'), false)
+            ->assertSee(__('configuration.actions.reset_password', [], 'ar'), false)
+            ->assertDontSee('>Create user<', false);
+    }
+
     public function test_arabic_import_overview_month_label_uses_western_year_digits(): void
     {
         $this->seedAccountingData();

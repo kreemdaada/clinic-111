@@ -788,8 +788,8 @@
             </nav>
 
             <div class="lp-header-actions">
-                <a href="{{ route('login') }}" class="lp-btn lp-btn-ghost">Sign in</a>
-                <a href="{{ route('register-clinic.create') }}" class="lp-btn lp-btn-primary">Start free trial</a>
+                <a href="{{ route('login') }}" class="lp-btn lp-btn-ghost">{{ __('auth.sign_in') }}</a>
+                <a href="{{ route('register-clinic.create') }}" class="lp-btn lp-btn-primary">{{ __('auth.start_free_trial') }}</a>
             </div>
 
             <button type="button" class="lp-menu-toggle" id="lp-menu-toggle" aria-expanded="false"
@@ -802,13 +802,13 @@
         </div>
 
         <nav class="lp-mobile-nav lp-container" id="lp-mobile-nav" aria-label="Mobile navigation">
-            <a href="#features" class="lp-btn lp-btn-ghost">Features</a>
-            <a href="#benefits" class="lp-btn lp-btn-ghost">Benefits</a>
-            <a href="#how-it-works" class="lp-btn lp-btn-ghost">How it works</a>
-            <a href="#security" class="lp-btn lp-btn-ghost">Security</a>
-            <a href="#faq" class="lp-btn lp-btn-ghost">FAQ</a>
-            <a href="{{ route('login') }}" class="lp-btn lp-btn-secondary">Sign in</a>
-            <a href="{{ route('register-clinic.create') }}" class="lp-btn lp-btn-primary">Start free trial</a>
+            <a href="#features" class="lp-btn lp-btn-ghost">{{ __('landing.nav.features') }}</a>
+            <a href="#benefits" class="lp-btn lp-btn-ghost">{{ __('landing.nav.benefits') }}</a>
+            <a href="#how-it-works" class="lp-btn lp-btn-ghost">{{ __('landing.nav.how_it_works') }}</a>
+            <a href="#security" class="lp-btn lp-btn-ghost">{{ __('landing.nav.security') }}</a>
+            <a href="#faq" class="lp-btn lp-btn-ghost">{{ __('landing.nav.faq') }}</a>
+            <a href="{{ route('login') }}" class="lp-btn lp-btn-secondary">{{ __('auth.sign_in') }}</a>
+            <a href="{{ route('register-clinic.create') }}" class="lp-btn lp-btn-primary">{{ __('auth.start_free_trial') }}</a>
         </nav>
     </header>
 
@@ -823,8 +823,8 @@
                         structured, and without complicated spreadsheet work.
                     </p>
                     <div class="lp-hero-actions">
-                        <a href="{{ route('register-clinic.create') }}" class="lp-btn lp-btn-primary">Start free trial</a>
-                        <a href="#features" class="lp-btn lp-btn-secondary">Explore features</a>
+                        <a href="{{ route('register-clinic.create') }}" class="lp-btn lp-btn-primary">{{ __('auth.start_free_trial') }}</a>
+                        <a href="#features" class="lp-btn lp-btn-secondary">{{ __('auth.explore_features') }}</a>
                     </div>
                 </div>
                 <div class="lp-hero-visual lp-reveal">
@@ -1155,8 +1155,8 @@
                 <h2 id="cta-heading">Bring clarity to your practice numbers</h2>
                 <p>Turn your existing data into understandable financial insights.</p>
                 <div class="lp-cta-actions">
-                    <a href="{{ route('register-clinic.create') }}" class="lp-btn lp-btn-primary">Start free trial</a>
-                    <a href="{{ route('login') }}" class="lp-btn lp-btn-secondary">Sign in</a>
+                    <a href="{{ route('register-clinic.create') }}" class="lp-btn lp-btn-primary">{{ __('auth.start_free_trial') }}</a>
+                    <a href="{{ route('login') }}" class="lp-btn lp-btn-secondary">{{ __('auth.sign_in') }}</a>
                 </div>
             </div>
         </section>
@@ -1188,7 +1188,7 @@
                         @endif
                         <li><a href="{{ route('legal.imprint') }}">Impressum</a></li>
                         <li><a href="{{ route('legal.privacy') }}">Datenschutz</a></li>
-                        <li><a href="{{ route('login') }}">Sign in</a></li>
+                        <li><a href="{{ route('login') }}">{{ __('auth.sign_in') }}</a></li>
                     </ul>
                 </div>
             </div>

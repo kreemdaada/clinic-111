@@ -1,6 +1,15 @@
 <?php
 
 return [
+    'index' => [
+        'upload_file' => 'رفع ملف',
+        'start_import' => 'بدء الاستيراد',
+        'view_log' => 'عرض السجل',
+        'edit_rows' => 'تعديل الصفوف',
+        'income_excel' => 'Excel الدخل',
+        'delete_title' => 'حذف الاستيراد',
+        'delete_message' => 'حذف هذا الاستيراد وجميع بياناته؟ لا يمكن التراجع عن ذلك.',
+    ],
     'overview' => [
         'title' => 'نظرة عامة على الاستيراد',
         'completed' => 'تم الاستيراد',

@@ -342,20 +342,20 @@
         <p class="page-subtitle" style="margin:0;">{{ $dailyReport->report_date->format('F Y') }} — {{ $dailyReport->source_file_name }} · {{ $dailyReport->status->value }}</p>
     </div>
     <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
-        <a href="{{ route('daily-report.index') }}" class="btn btn-ghost">← All reports</a>
-        <a href="{{ route('imports.income', $dailyReport) }}" class="btn btn-secondary">Income Excel</a>
+        <a href="{{ route('daily-report.index') }}" class="btn btn-ghost">{{ __('daily_reports.actions.all_reports') }}</a>
+        <a href="{{ route('imports.income', $dailyReport) }}" class="btn btn-secondary">{{ __('import.index.income_excel') }}</a>
         @if (auth()->user()->isAdmin())
         @if (in_array($dailyReport->status->value, ['calculated', 'needs_review'], true))
         <form method="POST" action="{{ route('daily-report.approve', $dailyReport) }}">
             @csrf
-            <button type="submit" class="btn btn-primary">Approve & lock</button>
+            <button type="submit" class="btn btn-primary">{{ __('daily_reports.actions.approve_lock') }}</button>
         </form>
         @endif
         @if ($dailyReport->isLocked())
         <form method="POST" action="{{ route('daily-report.unlock', $dailyReport) }}" style="display:flex;gap:0.5rem;align-items:center;">
             @csrf
-            <input type="text" name="reason" placeholder="Unlock reason (required)" required class="form-input" style="min-width:220px;">
-            <button type="submit" class="btn btn-secondary">Unlock</button>
+            <input type="text" name="reason" placeholder="{{ __('daily_reports.actions.unlock_reason_placeholder') }}" required class="form-input" style="min-width:220px;">
+            <button type="submit" class="btn btn-secondary">{{ __('common.actions.unlock') }}</button>
         </form>
         @endif
         @endif
@@ -390,7 +390,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
                 <strong style="font-size:0.875rem;">Doctors</strong>
                 @if (auth()->user()->isAdmin())
-                <button type="button" class="btn btn-secondary btn-sm" id="dr-add-doctor-open">+ Add</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="dr-add-doctor-open">+ {{ __('common.actions.add') }}</button>
                 @endif
             </div>
             <div class="dr-doctor-list" id="dr-doctor-list">
@@ -425,7 +425,7 @@
                 <h2 class="card-title" id="dr-entry-title">New entry</h2>
                 <input class="form-input dr-treatment-search" type="search" id="dr-treatment-search" placeholder="Search by treatment code or name…" hidden @if($readOnly) disabled @endif>
             </div>
-            <p class="card-description" id="dr-selection-hint">Select a doctor and a calendar day — or click <strong>Edit</strong> on an imported row below.</p>
+            <p class="card-description" id="dr-selection-hint">Select a doctor and a calendar day — or click <strong>{{ __('common.actions.edit') }}</strong> on an imported row below.</p>
 
             <div class="dr-treatment-grid" id="dr-treatment-grid" hidden>
                 <p class="extraction-muted" id="dr-treatment-loading">Loading treatments…</p>
@@ -478,8 +478,8 @@
             </div>
 
             <div style="margin-top:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
-                <button type="button" class="btn btn-primary" id="dr-save-row" disabled @if($readOnly) hidden @endif>Save entry</button>
-                <button type="button" class="btn btn-ghost" id="dr-cancel-edit" hidden>Cancel edit</button>
+                <button type="button" class="btn btn-primary" id="dr-save-row" disabled @if($readOnly) hidden @endif>{{ __('daily_reports.actions.save_entry') }}</button>
+                <button type="button" class="btn btn-ghost" id="dr-cancel-edit" hidden>{{ __('daily_reports.actions.cancel_edit') }}</button>
             </div>
         </div>
 
@@ -527,8 +527,8 @@
                 </select>
             </div>
             <div style="display:flex;gap:0.5rem;justify-content:flex-end;">
-                <button type="button" class="btn btn-ghost" id="dr-add-doctor-cancel">Cancel</button>
-                <button type="submit" class="btn btn-primary">Add doctor</button>
+                <button type="button" class="btn btn-ghost" id="dr-add-doctor-cancel">{{ __('common.actions.cancel') }}</button>
+                <button type="submit" class="btn btn-primary">{{ __('daily_reports.actions.add_doctor') }}</button>
             </div>
         </form>
     </div>
@@ -553,9 +553,22 @@ $editorConfig = [
 'dateFrom' => request('from'),
 'dateTo' => request('to'),
 ];
+$drUiLabels = [
+    'new_entry' => __('daily_reports.actions.new_entry'),
+    'save_entry' => __('daily_reports.actions.save_entry'),
+    'save_changes' => __('common.actions.save_changes'),
+    'edit_entry' => __('daily_reports.actions.edit_entry'),
+    'edit' => __('common.actions.edit'),
+    'delete' => __('common.actions.delete'),
+    'delete_row_title' => __('daily_reports.actions.delete_row_title'),
+    'delete_row_message' => __('daily_reports.actions.delete_row_message'),
+];
 @endphp
 <script type="application/json" id="dr-editor-config">
     @json($editorConfig)
+</script>
+<script type="application/json" id="dr-ui-labels">
+    @json($drUiLabels)
 </script>
 <script>
     (function() {
@@ -573,6 +586,7 @@ $editorConfig = [
             dateTo
         } =
         JSON.parse(document.getElementById('dr-editor-config').textContent);
+        const uiLabels = JSON.parse(document.getElementById('dr-ui-labels').textContent);
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
 
         let selectedDoctorId = null;
@@ -1009,8 +1023,8 @@ $editorConfig = [
 
         function resetEmptyDayForm() {
             editingRowId = null;
-            entryTitle.textContent = 'New entry';
-            saveBtn.textContent = 'Save entry';
+            entryTitle.textContent = uiLabels.new_entry;
+            saveBtn.textContent = uiLabels.save_entry;
             cancelEditBtn.hidden = true;
             setPaymentInputs(null);
             treatmentSearchQuery = '';
@@ -1038,8 +1052,8 @@ $editorConfig = [
         async function startEditRow(row) {
             if (readOnly) return;
             editingRowId = row.id;
-            entryTitle.textContent = 'Edit entry';
-            saveBtn.textContent = 'Save changes';
+            entryTitle.textContent = uiLabels.edit_entry;
+            saveBtn.textContent = uiLabels.save_changes;
             cancelEditBtn.hidden = false;
             treatmentSearchQuery = '';
             if (treatmentSearch) {
@@ -1154,8 +1168,8 @@ $editorConfig = [
                 </div>
                 ${nurseLines ? `<div class="extraction-muted" style="margin:0 0 0.35rem;">Nurse commission: ${nurseLines}</div>` : ''}
                 <div class="dr-row-actions">
-                    ${readOnly ? '' : `<button type="button" class="btn btn-primary btn-sm" data-edit-row="${r.id}">Edit</button>`}
-                    ${readOnly ? '' : `<button type="button" class="btn btn-secondary btn-sm" data-delete-row="${r.id}">Delete</button>`}
+                    ${readOnly ? '' : `<button type="button" class="btn btn-primary btn-sm" data-edit-row="${r.id}">${uiLabels.edit}</button>`}
+                    ${readOnly ? '' : `<button type="button" class="btn btn-secondary btn-sm" data-delete-row="${r.id}">${uiLabels.delete}</button>`}
                 </div>
             </div>
         `;
@@ -1172,9 +1186,9 @@ $editorConfig = [
                 btn.addEventListener('click', async () => {
                     const confirmed = typeof window.clinicConfirm === 'function' ?
                         await window.clinicConfirm({
-                            title: 'Delete row',
-                            message: 'Delete this patient row and all its treatments?',
-                            okText: 'Delete',
+                            title: uiLabels.delete_row_title,
+                            message: uiLabels.delete_row_message,
+                            okText: uiLabels.delete,
                             danger: true,
                         }) :
                         true;

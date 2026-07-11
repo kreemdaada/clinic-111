@@ -214,7 +214,7 @@
             </div>
 
             <div class="dr-field-submit">
-                <button type="submit" class="btn btn-primary" style="white-space:nowrap;">Create report</button>
+                <button type="submit" class="btn btn-primary" style="white-space:nowrap;">{{ __('daily_reports.actions.create_report') }}</button>
             </div>
         </form>
 
@@ -254,16 +254,16 @@
                 </div>
                 <span class="badge badge-{{ $report->status->value }}">{{ str_replace('_', ' ', $report->status->value) }}</span>
                 <div class="dr-report-actions">
-                    <a href="{{ route('daily-report.edit', $report) }}" class="btn btn-secondary btn-sm">Open</a>
+                    <a href="{{ route('daily-report.edit', $report) }}" class="btn btn-secondary btn-sm">{{ __('common.actions.open') }}</a>
                     @unless ($report->isLocked())
                     <form method="POST" action="{{ route('daily-report.destroy', $report) }}"
-                        data-confirm-title="Delete report"
-                        data-confirm-ok="Delete"
+                        data-confirm-title="{{ __('daily_reports.actions.delete_report_title') }}"
+                        data-confirm-ok="{{ __('common.actions.delete') }}"
                         data-confirm-danger="1"
-                        data-confirm="Delete report #{{ $report->id }} and all its entries?">
+                        data-confirm="{{ __('daily_reports.actions.delete_report_message', ['id' => $report->id]) }}">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" class="btn btn-ghost btn-sm">Delete</button>
+                        <button type="submit" class="btn btn-ghost btn-sm">{{ __('common.actions.delete') }}</button>
                     </form>
                     @endunless
                 </div>
