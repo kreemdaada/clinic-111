@@ -55,7 +55,7 @@ class NurseAdminController extends Controller
 
         return redirect()
             ->route('nurses.index', $this->filterRedirectParams($request))
-            ->with('success', "Nurse {$nurse->code} created.");
+            ->with('success', __('nurses.flash.created', ['code' => $nurse->code]));
     }
 
     public function update(UpdateNurseRequest $request, Nurse $nurse): RedirectResponse
@@ -64,7 +64,7 @@ class NurseAdminController extends Controller
 
         return redirect()
             ->route('nurses.index', $this->filterRedirectParams($request))
-            ->with('success', "Nurse {$nurse->code} updated.");
+            ->with('success', __('nurses.flash.updated', ['code' => $nurse->code]));
     }
 
     public function destroy(Request $request, Nurse $nurse): RedirectResponse
@@ -75,7 +75,7 @@ class NurseAdminController extends Controller
 
         return redirect()
             ->route('nurses.index', $this->mergeConfigurationReturn($request, $request->only(['search', 'status', 'page'])))
-            ->with('success', "Nurse {$code} deactivated.");
+            ->with('success', __('nurses.flash.deactivated', ['code' => $code]));
     }
 
     public function activate(Request $request, Nurse $nurse): RedirectResponse
@@ -84,7 +84,7 @@ class NurseAdminController extends Controller
 
         return redirect()
             ->route('nurses.index', $this->mergeConfigurationReturn($request, $request->only(['search', 'status', 'page'])))
-            ->with('success', "Nurse {$nurse->code} activated.");
+            ->with('success', __('nurses.flash.activated', ['code' => $nurse->code]));
     }
 
     /**

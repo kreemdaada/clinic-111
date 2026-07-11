@@ -12,6 +12,12 @@ return [
     'deactivate_confirm_title' => 'Deactivate nurse',
     'deactivate_confirm' => 'Deactivate :name? They will no longer be available for new X-ray entries.',
     'deactivate_confirm_generic' => 'Deactivate this nurse? They will no longer be available for new X-ray entries.',
+    'flash' => [
+        'created' => 'Nurse :code created.',
+        'updated' => 'Nurse :code updated.',
+        'deactivated' => 'Nurse :code deactivated.',
+        'activated' => 'Nurse :code activated.',
+    ],
     'commission_rates' => [
         'heading' => 'Nurse commission rates',
         'description' => 'Assign a commission percentage per X-ray treatment. The nurse only appears in the daily report editor after a rate is added here.',

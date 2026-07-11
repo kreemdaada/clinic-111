@@ -103,7 +103,7 @@ class ImportController extends Controller
 
         if ($dailyReport->isLocked()) {
             return back()->withErrors([
-                'delete' => 'Approved or locked reports cannot be deleted.',
+                'delete' => __('messages.reports.locked_cannot_delete'),
             ]);
         }
 
@@ -117,6 +117,6 @@ class ImportController extends Controller
 
         return redirect()
             ->route('imports.index')
-            ->with('status', 'Import deleted.');
+            ->with('status', __('configuration.flash.import_deleted'));
     }
 }

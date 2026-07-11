@@ -53,15 +53,15 @@
 
 @if (isset($canImport) && ! $canImport)
     <div class="alert alert-error">
-        {{ \App\Services\Configuration\BusinessConfigurationService::INCOMPLETE_MESSAGE }}
+        {{ \App\Services\Configuration\BusinessConfigurationService::incompleteMessage() }}
         @if (isset($configurationStatus['current_step']))
             @php
                 $nextStep = collect($configurationStatus['steps'] ?? [])->firstWhere('key', $configurationStatus['current_step']);
             @endphp
             @if ($nextStep)
                 <div style="margin-top:0.75rem;">
-                    <a href="{{ route($nextStep['index_route']) }}" class="btn btn-primary btn-sm">Continue configuration</a>
-                    <a href="{{ route('configuration.dashboard') }}" class="btn btn-ghost btn-sm">View setup progress</a>
+                    <a href="{{ route($nextStep['index_route']) }}" class="btn btn-primary btn-sm">{{ __('configuration.continue_configuration') }}</a>
+                    <a href="{{ route('configuration.dashboard') }}" class="btn btn-ghost btn-sm">{{ __('configuration.view_setup_progress') }}</a>
                 </div>
             @endif
         @endif

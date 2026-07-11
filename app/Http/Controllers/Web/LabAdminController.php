@@ -49,7 +49,7 @@ class LabAdminController extends Controller
 
         return redirect()
             ->route('labs.index', $this->mergeConfigurationReturn($request, $request->only(['search', 'status'])))
-            ->with('success', "Laboratory {$lab->code} created.");
+            ->with('success', __('configuration.flash.lab_created', ['code' => $lab->code]));
     }
 
     public function update(UpdateLabRequest $request, Lab $lab): RedirectResponse
@@ -58,7 +58,7 @@ class LabAdminController extends Controller
 
         return redirect()
             ->route('labs.index', $this->mergeConfigurationReturn($request, $request->only(['search', 'status'])))
-            ->with('success', "Laboratory {$lab->code} updated.");
+            ->with('success', __('configuration.flash.lab_updated', ['code' => $lab->code]));
     }
 
     public function destroy(Request $request, Lab $lab): RedirectResponse
@@ -69,7 +69,7 @@ class LabAdminController extends Controller
 
         return redirect()
             ->route('labs.index', $this->mergeConfigurationReturn($request))
-            ->with('success', "Laboratory {$code} deleted.");
+            ->with('success', __('configuration.flash.lab_deleted', ['code' => $code]));
     }
 
     public function activate(Request $request, Lab $lab): RedirectResponse
@@ -78,6 +78,6 @@ class LabAdminController extends Controller
 
         return redirect()
             ->route('labs.index', $this->mergeConfigurationReturn($request))
-            ->with('success', "Laboratory {$lab->code} activated.");
+            ->with('success', __('configuration.flash.lab_activated', ['code' => $lab->code]));
     }
 }

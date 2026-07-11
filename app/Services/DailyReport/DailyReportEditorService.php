@@ -55,7 +55,7 @@ class DailyReportEditorService
             ->whereIn('status', [ReportStatus::Approved, ReportStatus::Locked])
             ->exists()
         ) {
-            throw new RuntimeException('An approved or locked report already exists for this month.');
+            throw new RuntimeException(__('messages.reports.month_report_exists'));
         }
 
         return DailyReport::query()->create([
@@ -83,7 +83,7 @@ class DailyReportEditorService
         $this->assertSameClinic($dailyReport);
 
         if ($dailyReport->isLocked()) {
-            throw new RuntimeException('Approved or locked reports are read-only.');
+            throw new RuntimeException(__('messages.reports.read_only'));
         }
 
         $doctor = $this->forCurrentClinic(Doctor::class)->where('is_active', true)->findOrFail($payload['doctor_id']);
@@ -91,14 +91,14 @@ class DailyReportEditorService
         $monthStart = Carbon::parse($dailyReport->report_date)->startOfMonth();
 
         if ($day < 1 || $day > $monthStart->daysInMonth) {
-            throw new RuntimeException('Invalid calendar day for this month.');
+            throw new RuntimeException(__('messages.reports.invalid_day'));
         }
 
         $workDate = $monthStart->copy()->day($day);
         $treatmentText = TreatmentTextBuilder::fromLines($payload['treatment_lines'] ?? []);
 
         if ($treatmentText === '') {
-            throw new RuntimeException('Select at least one treatment with quantity.');
+            throw new RuntimeException(__('messages.reports.select_treatment'));
         }
 
         $dhs = $this->decimal($payload['dhs_amount'] ?? '0');
@@ -221,7 +221,7 @@ class DailyReportEditorService
         $this->assertSameClinic($dailyWorkRow);
 
         if ($dailyReport->isLocked()) {
-            throw new RuntimeException('Approved or locked reports are read-only.');
+            throw new RuntimeException(__('messages.reports.read_only'));
         }
 
         if ($dailyWorkRow->daily_report_id !== $dailyReport->id) {

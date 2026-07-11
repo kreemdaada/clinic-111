@@ -46,8 +46,8 @@ trait ValidatesTreatmentPriceFields
     protected function treatmentPriceFieldMessages(): array
     {
         return [
-            'treatment_price.min' => 'The treatment price must be greater than zero.',
-            'treatment_price.decimal' => 'The treatment price may have at most two decimal places.',
+            'treatment_price.min' => __('validation.custom.treatment_price.min'),
+            'treatment_price.decimal' => __('validation.custom.treatment_price.decimal'),
         ];
     }
 
@@ -67,14 +67,14 @@ trait ValidatesTreatmentPriceFields
             if ($hasPrice && ! $hasCurrency) {
                 $validator->errors()->add(
                     'treatment_price_currency',
-                    'Please select a currency for the treatment price.',
+                    __('validation.custom.treatment_price_currency.required'),
                 );
             }
 
             if (! $hasPrice && $hasCurrency) {
                 $validator->errors()->add(
                     'treatment_price',
-                    'Please enter a treatment price.',
+                    __('validation.custom.treatment_price.required'),
                 );
             }
 
@@ -84,14 +84,14 @@ trait ValidatesTreatmentPriceFields
                 if (! $hasPrice) {
                     $validator->errors()->add(
                         'treatment_price',
-                        'A treatment price is required when nurse commission is required.',
+                        __('validation.custom.treatment_price.required_for_commission'),
                     );
                 }
 
                 if (! $hasCurrency) {
                     $validator->errors()->add(
                         'treatment_price_currency',
-                        'A currency is required when nurse commission is required.',
+                        __('validation.custom.treatment_price_currency.required_for_commission'),
                     );
                 }
             }

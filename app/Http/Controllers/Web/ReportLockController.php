@@ -47,6 +47,6 @@ class ReportLockController extends Controller
             return back()->withErrors(['unlock' => $exception->getMessage()]);
         }
 
-        return back()->with('success', 'Unlocked for editing.');
+        return back()->with('success', __('messages.reports.unlocked_for_editing'));
     }
 }

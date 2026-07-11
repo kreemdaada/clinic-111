@@ -40,7 +40,7 @@ class DoctorAdminController extends Controller
 
         return redirect()
             ->route('doctors.index', $this->mergeConfigurationReturn($request))
-            ->with('success', "Doctor {$doctor->code} created.");
+            ->with('success', __('doctors.flash.created', ['code' => $doctor->code]));
     }
 
     public function update(UpdateDoctorRequest $request, Doctor $doctor): RedirectResponse
@@ -49,7 +49,7 @@ class DoctorAdminController extends Controller
 
         return redirect()
             ->route('doctors.index', $this->mergeConfigurationReturn($request))
-            ->with('success', "Doctor {$doctor->code} updated.");
+            ->with('success', __('doctors.flash.updated', ['code' => $doctor->code]));
     }
 
     public function destroy(Request $request, Doctor $doctor): RedirectResponse
@@ -60,6 +60,6 @@ class DoctorAdminController extends Controller
 
         return redirect()
             ->route('doctors.index', $this->mergeConfigurationReturn($request))
-            ->with('success', "Doctor {$code} deleted.");
+            ->with('success', __('doctors.flash.deleted', ['code' => $code]));
     }
 }

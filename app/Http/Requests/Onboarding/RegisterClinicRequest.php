@@ -45,7 +45,7 @@ class RegisterClinicRequest extends FormRequest
             }
 
             if (! $captcha->verify($this->input('captcha_token'), $this)) {
-                $validator->errors()->add('captcha_token', 'CAPTCHA verification failed.');
+                $validator->errors()->add('captcha_token', __('validation.custom.captcha_token.failed'));
             }
         });
     }
@@ -55,11 +55,9 @@ class RegisterClinicRequest extends FormRequest
      */
     public function messages(): array
     {
-        $genericRegistrationFailure = 'Registration could not be completed. Please check your details and try again.';
-
         return [
-            'clinic_code.unique' => $genericRegistrationFailure,
-            'owner_email.unique' => $genericRegistrationFailure,
+            'clinic_code.unique' => __('validation.custom.clinic_code.unique'),
+            'owner_email.unique' => __('validation.custom.owner_email.unique'),
         ];
     }
 

@@ -25,7 +25,7 @@ class NurseCommissionRateAdminController extends Controller
             return back()->withInput()->withErrors($exception->errors());
         }
 
-        return back()->with('success', 'Nurse commission rate created.');
+        return back()->with('success', __('configuration.flash.nurse_commission_rate_created'));
     }
 
     public function updateForNurse(UpdateNurseCommissionRateRequest $request, Nurse $nurse, NurseCommissionRate $nurseCommissionRate): RedirectResponse
@@ -38,7 +38,7 @@ class NurseCommissionRateAdminController extends Controller
             return back()->withInput()->withErrors($exception->errors());
         }
 
-        return back()->with('success', 'Nurse commission rate updated.');
+        return back()->with('success', __('configuration.flash.nurse_commission_rate_updated'));
     }
 
     public function destroyForNurse(Nurse $nurse, NurseCommissionRate $nurseCommissionRate): RedirectResponse
@@ -47,7 +47,7 @@ class NurseCommissionRateAdminController extends Controller
 
         $this->rateManagementService->deactivate($nurseCommissionRate);
 
-        return back()->with('success', 'Nurse commission rate deactivated.');
+        return back()->with('success', __('configuration.flash.nurse_commission_rate_deactivated'));
     }
 
     public function activateForNurse(Nurse $nurse, NurseCommissionRate $nurseCommissionRate): RedirectResponse
@@ -60,7 +60,7 @@ class NurseCommissionRateAdminController extends Controller
             return back()->withInput()->withErrors($exception->errors());
         }
 
-        return back()->with('success', 'Nurse commission rate activated.');
+        return back()->with('success', __('configuration.flash.nurse_commission_rate_activated'));
     }
 
     private function assertRateBelongsToNurse(Nurse $nurse, NurseCommissionRate $rate): void

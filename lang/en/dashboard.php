@@ -20,7 +20,6 @@ return [
     'ready_for_import_label' => 'Ready for Import',
     'yes' => 'Yes',
     'no' => 'No',
-    'continue_setup' => 'Continue setup',
     'stats' => [
         'total' => 'Total',
         'active' => 'Active',
@@ -40,5 +39,47 @@ return [
     'status' => [
         'label' => 'Configuration status',
         'percent_complete' => ':percent percent complete',
+    ],
+    'modules' => [
+        'manage_doctors' => 'Manage doctors',
+        'manage_treatments' => 'Manage treatments',
+        'manage_nurses' => 'Manage nurses',
+    ],
+    'steps' => [
+        'doctors' => [
+            'label' => 'Doctors',
+            'description' => 'Add at least one active doctor.',
+        ],
+        'labs' => [
+            'label' => 'Laboratories',
+            'description' => 'Keep at least one active laboratory.',
+        ],
+        'treatments' => [
+            'label' => 'Treatments',
+            'description' => 'Add at least one active treatment code.',
+        ],
+        'lab_prices' => [
+            'label' => 'Lab Prices',
+            'description' => 'Add at least one active lab price.',
+        ],
+        'doctor_fixed_fees' => [
+            'label' => 'Doctor Fixed Fees',
+            'description_required' => 'Configure fee rules for no-commission doctors.',
+            'description_optional' => 'Optional unless you use no-commission doctors.',
+        ],
+        'import' => [
+            'label' => 'Import Report',
+            'description' => 'Import your first daily Excel report.',
+        ],
+    ],
+    'warnings' => [
+        'no_active_labs' => 'No active laboratories are configured.',
+        'no_active_treatments' => 'No active treatments are configured.',
+        'no_active_lab_prices' => 'No active lab prices are configured.',
+        'no_active_fixed_fees' => 'No active no-commission fee rules are configured.',
+        'inactive_doctors' => ':count doctor(s) are inactive.',
+        'fixed_doctors_without_fees' => 'Active no-commission doctor(s) without fee rules: :codes.',
+        'lab_cost_treatments_without_prices' => 'Lab-cost treatment(s) without active prices: :codes.',
+        'percentage_doctors_missing_rate' => 'Percentage doctor(s) without a valid commission rate: :codes.',
     ],
 ];

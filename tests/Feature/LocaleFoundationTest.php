@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Lab;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -222,5 +223,52 @@ class LocaleFoundationTest extends TestCase
             ->assertSee('dir="rtl"', false)
             ->assertSee('دخل الشهر', false)
             ->assertDontSee('<h1 class="page-title">Monthly Income</h1>', false);
+    }
+
+    public function test_german_user_sees_translated_validation_error_for_invalid_locale(): void
+    {
+        $this->seedAccountingData();
+        $user = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $user->update(['locale' => 'de']);
+
+        $this->actingAs($user)
+            ->from(route('imports.index'))
+            ->put(route('settings.language.update'), ['locale' => 'fr'])
+            ->assertSessionHasErrors('locale');
+
+        $errors = session('errors')->get('locale');
+        $this->assertContains(__('validation.custom.locale.in', [], 'de'), $errors);
+    }
+
+    public function test_german_user_sees_translated_configuration_dashboard_module_labels(): void
+    {
+        $this->seedAccountingData();
+        $user = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $user->update(['locale' => 'de']);
+
+        $this->actingAs($user)
+            ->get(route('configuration.dashboard'))
+            ->assertOk()
+            ->assertSee('Ärzte verwalten', false)
+            ->assertDontSee('Manage doctors', false);
+    }
+
+    public function test_arabic_user_sees_translated_doctor_flash_message_after_create(): void
+    {
+        $this->seedAccountingData();
+        $user = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $user->update(['locale' => 'ar']);
+        $mainLab = Lab::query()->where('code', 'MAIN_LAB')->firstOrFail();
+
+        $this->actingAs($user)
+            ->post(route('doctors.store'), [
+                'code' => 'AR_DOC',
+                'name' => 'Dr Arabic',
+                'commission_type' => 'percentage',
+                'commission_percentage' => '30',
+                'default_lab_id' => $mainLab->id,
+            ])
+            ->assertRedirect(route('doctors.index'))
+            ->assertSessionHas('success', __('doctors.flash.created', ['code' => 'AR_DOC'], 'ar'));
     }
 }

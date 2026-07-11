@@ -35,7 +35,11 @@ class NurseCommissionApprovalGuard
             $treatmentName = $workItem->treatment->name;
             $workDate = $workItem->dailyWorkRow->work_date?->toDateString() ?? 'unknown date';
 
-            $messages[] = "A nurse must be selected for {$treatmentName} (doctor {$doctorCode}, {$workDate}).";
+            $messages[] = __('messages.reports.nurse_required', [
+                'treatment' => $treatmentName,
+                'doctor' => $doctorCode,
+                'date' => $workDate,
+            ]);
         }
 
         return $messages;

@@ -50,7 +50,7 @@ class EmailVerificationController extends Controller
 
         return redirect()
             ->intended(route('configuration.dashboard'))
-            ->with('success', 'Your email address has been verified.');
+            ->with('success', __('messages.auth.email_verified'));
     }
 
     public function send(Request $request): RedirectResponse

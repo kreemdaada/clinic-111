@@ -49,7 +49,7 @@ class ClinicAdminController extends Controller
 
         return redirect()
             ->route('clinics.index', $this->filterRedirectParams($request))
-            ->with('success', "Clinic {$clinic->code} created.");
+            ->with('success', __('configuration.flash.clinic_created', ['code' => $clinic->code]));
     }
 
     public function update(UpdateClinicRequest $request, Clinic $clinic): RedirectResponse
@@ -58,7 +58,7 @@ class ClinicAdminController extends Controller
 
         return redirect()
             ->route('clinics.index', $this->filterRedirectParams($request))
-            ->with('success', "Clinic {$clinic->code} updated.");
+            ->with('success', __('configuration.flash.clinic_updated', ['code' => $clinic->code]));
     }
 
     public function destroy(Clinic $clinic): RedirectResponse
@@ -69,7 +69,7 @@ class ClinicAdminController extends Controller
 
         return redirect()
             ->route('clinics.index')
-            ->with('success', "Clinic {$code} deleted.");
+            ->with('success', __('configuration.flash.clinic_deleted', ['code' => $code]));
     }
 
     public function activate(Clinic $clinic): RedirectResponse
@@ -78,7 +78,7 @@ class ClinicAdminController extends Controller
 
         return redirect()
             ->route('clinics.index')
-            ->with('success', "Clinic {$clinic->code} activated.");
+            ->with('success', __('configuration.flash.clinic_activated', ['code' => $clinic->code]));
     }
 
     /**

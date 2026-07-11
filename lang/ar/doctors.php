@@ -13,6 +13,11 @@ return [
     'commission_percent' => 'العمولة %',
     'default_lab' => 'المختبر الافتراضي',
     'delete_confirm' => 'حذف ناعم لـ :code؟ يبقى سجل الطبيب للتقارير السابقة.',
+    'flash' => [
+        'created' => 'تم إنشاء الطبيب :code.',
+        'updated' => 'تم تحديث الطبيب :code.',
+        'deleted' => 'تم حذف الطبيب :code.',
+    ],
     'fields' => [
         'code' => 'الرمز',
         'name' => 'الاسم',

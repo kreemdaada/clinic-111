@@ -44,11 +44,9 @@ class UserAdminController extends Controller
             return back()->withInput()->withErrors(['create' => $exception->getMessage()]);
         }
 
-        $message = 'User created.';
-
-        if ($result['temporary_password'] !== null) {
-            $message .= ' Temporary password: '.$result['temporary_password'];
-        }
+        $message = $result['temporary_password'] !== null
+            ? __('configuration.flash.user_created_with_password', ['password' => $result['temporary_password']])
+            : __('configuration.flash.user_created');
 
         return redirect()
             ->route('admin.users.index', $this->mergeConfigurationReturn($request))
@@ -67,7 +65,7 @@ class UserAdminController extends Controller
 
         return redirect()
             ->route('admin.users.index', $this->mergeConfigurationReturn($request))
-            ->with('success', "User {$account->email} updated.");
+            ->with('success', __('configuration.flash.user_updated', ['email' => $account->email]));
     }
 
     public function destroy(Request $request, int $managedUser): RedirectResponse
@@ -82,7 +80,7 @@ class UserAdminController extends Controller
 
         return redirect()
             ->route('admin.users.index', $this->mergeConfigurationReturn($request))
-            ->with('success', "User {$account->email} deleted.");
+            ->with('success', __('configuration.flash.user_deleted', ['email' => $account->email]));
     }
 
     public function resetPassword(ResetUserPasswordRequest $request, int $managedUser): RedirectResponse
@@ -95,11 +93,9 @@ class UserAdminController extends Controller
             return back()->withErrors(['password' => $exception->getMessage()]);
         }
 
-        $message = 'Password reset.';
-
-        if ($result['temporary_password'] !== null) {
-            $message .= ' Temporary password: '.$result['temporary_password'];
-        }
+        $message = $result['temporary_password'] !== null
+            ? __('configuration.flash.password_reset_with_password', ['password' => $result['temporary_password']])
+            : __('configuration.flash.password_reset');
 
         return redirect()
             ->route('admin.users.index', $this->mergeConfigurationReturn($request))

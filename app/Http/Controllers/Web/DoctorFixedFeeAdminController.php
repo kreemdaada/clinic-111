@@ -66,7 +66,7 @@ class DoctorFixedFeeAdminController extends Controller
 
         return redirect()
             ->route('doctor-fixed-fees.index', $this->filterRedirectParams($request))
-            ->with('success', "Fee rule #{$fee->id} created.");
+            ->with('success', __('configuration.flash.fee_rule_created', ['id' => $fee->id]));
     }
 
     public function update(UpdateDoctorFixedFeeRequest $request, DoctorFixedFee $doctorFixedFee): RedirectResponse
@@ -75,7 +75,7 @@ class DoctorFixedFeeAdminController extends Controller
 
         return redirect()
             ->route('doctor-fixed-fees.index', $this->filterRedirectParams($request))
-            ->with('success', "Fee rule #{$doctorFixedFee->id} updated.");
+            ->with('success', __('configuration.flash.fee_rule_updated', ['id' => $doctorFixedFee->id]));
     }
 
     public function destroy(Request $request, DoctorFixedFee $doctorFixedFee): RedirectResponse
@@ -86,7 +86,7 @@ class DoctorFixedFeeAdminController extends Controller
 
         return redirect()
             ->route('doctor-fixed-fees.index', $this->filterRedirectParams($request))
-            ->with('success', "Fee rule #{$id} deleted.");
+            ->with('success', __('configuration.flash.fee_rule_deleted', ['id' => $id]));
     }
 
     public function activate(Request $request, DoctorFixedFee $doctorFixedFee): RedirectResponse
@@ -95,7 +95,7 @@ class DoctorFixedFeeAdminController extends Controller
 
         return redirect()
             ->route('doctor-fixed-fees.index', $this->filterRedirectParams($request))
-            ->with('success', "Fee rule #{$doctorFixedFee->id} activated.");
+            ->with('success', __('configuration.flash.fee_rule_activated', ['id' => $doctorFixedFee->id]));
     }
 
     public function duplicate(Request $request, DoctorFixedFee $doctorFixedFee): RedirectResponse
@@ -104,7 +104,7 @@ class DoctorFixedFeeAdminController extends Controller
 
         return redirect()
             ->route('doctor-fixed-fees.index', $this->filterRedirectParams($request))
-            ->with('success', "Fee rule duplicated as #{$copy->id} (inactive). Adjust dates and activate when ready.");
+            ->with('success', __('configuration.flash.fee_rule_duplicated', ['id' => $copy->id]));
     }
 
     /**

@@ -20,7 +20,6 @@ return [
     'ready_for_import_label' => 'Bereit für Import',
     'yes' => 'Ja',
     'no' => 'Nein',
-    'continue_setup' => 'Einrichtung fortsetzen',
     'stats' => [
         'total' => 'Gesamt',
         'active' => 'Aktiv',
@@ -40,5 +39,47 @@ return [
     'status' => [
         'label' => 'Konfigurationsstatus',
         'percent_complete' => ':percent Prozent abgeschlossen',
+    ],
+    'modules' => [
+        'manage_doctors' => 'Ärzte verwalten',
+        'manage_treatments' => 'Behandlungen verwalten',
+        'manage_nurses' => 'Nurses verwalten',
+    ],
+    'steps' => [
+        'doctors' => [
+            'label' => 'Ärzte',
+            'description' => 'Mindestens einen aktiven Arzt hinzufügen.',
+        ],
+        'labs' => [
+            'label' => 'Laboratorien',
+            'description' => 'Mindestens ein aktives Labor pflegen.',
+        ],
+        'treatments' => [
+            'label' => 'Behandlungen',
+            'description' => 'Mindestens einen aktiven Behandlungscode hinzufügen.',
+        ],
+        'lab_prices' => [
+            'label' => 'Laborpreise',
+            'description' => 'Mindestens einen aktiven Laborpreis hinzufügen.',
+        ],
+        'doctor_fixed_fees' => [
+            'label' => 'Arzt-Festgebühren',
+            'description_required' => 'Gebührenregeln für Ärzte ohne Provision konfigurieren.',
+            'description_optional' => 'Optional, sofern keine Ärzte ohne Provision genutzt werden.',
+        ],
+        'import' => [
+            'label' => 'Bericht importieren',
+            'description' => 'Ersten täglichen Excel-Bericht importieren.',
+        ],
+    ],
+    'warnings' => [
+        'no_active_labs' => 'Keine aktiven Laboratorien konfiguriert.',
+        'no_active_treatments' => 'Keine aktiven Behandlungen konfiguriert.',
+        'no_active_lab_prices' => 'Keine aktiven Laborpreise konfiguriert.',
+        'no_active_fixed_fees' => 'Keine aktiven Gebührenregeln ohne Provision konfiguriert.',
+        'inactive_doctors' => ':count Arzt/Ärzte sind inaktiv.',
+        'fixed_doctors_without_fees' => 'Aktive Ärzte ohne Provision ohne Gebührenregeln: :codes.',
+        'lab_cost_treatments_without_prices' => 'Behandlungen mit Laborkosten ohne aktive Preise: :codes.',
+        'percentage_doctors_missing_rate' => 'Prozent-Ärzte ohne gültigen Provisionssatz: :codes.',
     ],
 ];

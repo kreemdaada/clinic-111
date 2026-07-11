@@ -29,8 +29,8 @@ class ConfigurationDashboardTest extends TestCase
             ->assertSee(__('dashboard.title'))
             ->assertSee(__('dashboard.recent_activity'))
             ->assertSee(__('dashboard.health'))
-            ->assertSee('Doctors', false)
-            ->assertSee('Manage doctors', false)
+            ->assertSee(__('doctors.title'), false)
+            ->assertSee(__('dashboard.modules.manage_doctors'), false)
             ->assertSee(route('labs.index'), false);
     }
 
@@ -73,7 +73,7 @@ class ConfigurationDashboardTest extends TestCase
         $this->actingAs($admin)
             ->get(route('configuration.dashboard'))
             ->assertOk()
-            ->assertSee('No active laboratories are configured.', false);
+            ->assertSee(__('dashboard.warnings.no_active_labs'), false);
     }
 
     public function test_navigation_links_to_configuration_dashboard(): void

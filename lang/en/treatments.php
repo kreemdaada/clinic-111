@@ -21,6 +21,12 @@ return [
     'delete_confirm_title' => 'Delete',
     'delete_confirm' => 'Soft delete :code? Historical work items are preserved.',
     'delete_confirm_generic' => 'Soft delete this treatment? Historical work items are preserved.',
+    'flash' => [
+        'created' => 'Treatment :code created.',
+        'updated' => 'Treatment :code updated.',
+        'deleted' => 'Treatment :code deleted.',
+        'activated' => 'Treatment :code activated.',
+    ],
     'table' => [
         'treatment_price' => 'Treatment price',
         'nurse_commission' => 'Nurse commission',

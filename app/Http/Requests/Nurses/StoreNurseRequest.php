@@ -42,8 +42,8 @@ class StoreNurseRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'code.unique' => 'This nurse code is already in use in your clinic.',
-            'code.regex' => 'Nurse code may only contain letters, numbers, hyphens, and underscores.',
+            'code.unique' => __('validation.custom.nurse.code_unique'),
+            'code.regex' => __('validation.custom.nurse.code_regex'),
         ];
     }
 }

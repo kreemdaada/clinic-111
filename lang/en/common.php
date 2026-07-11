@@ -37,5 +37,14 @@ return [
         'ok' => 'Confirm',
         'cancel' => 'Cancel',
         'delete' => 'Delete',
+        'are_you_sure' => 'Are you sure?',
+    ],
+    'flash' => [
+        'saved' => 'Saved.',
+        'created' => 'Created.',
+        'updated' => 'Updated.',
+        'deleted' => 'Deleted.',
+        'failed' => 'Something went wrong.',
+        'check_form' => 'Please check the form.',
     ],
 ];

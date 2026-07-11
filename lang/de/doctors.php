@@ -13,6 +13,11 @@ return [
     'commission_percent' => 'Provision %',
     'default_lab' => 'Standardlabor',
     'delete_confirm' => ':code soft löschen? Der Arztdatensatz bleibt für historische Berichte erhalten.',
+    'flash' => [
+        'created' => 'Arzt :code erstellt.',
+        'updated' => 'Arzt :code aktualisiert.',
+        'deleted' => 'Arzt :code gelöscht.',
+    ],
     'fields' => [
         'code' => 'Code',
         'name' => 'Name',
