@@ -246,10 +246,10 @@ class ClinicOnboardingTest extends TestCase
     {
         $this->get(route('register-clinic.create'))
             ->assertOk()
-            ->assertSee('Register Your Clinic')
-            ->assertSee('AED — UAE Dirham')
-            ->assertSee('Asia/Dubai (UAE)')
-            ->assertSee('America/New_York (US Eastern)');
+            ->assertSee(__('onboarding.register.heading'), false)
+            ->assertSee('AED — '.__('onboarding.currencies.AED'), false)
+            ->assertSee(__('onboarding.timezones.Asia_Dubai'), false)
+            ->assertSee(__('onboarding.timezones.America_New_York'), false);
     }
 
     public function test_onboarding_accepts_selected_currency_and_timezone(): void
