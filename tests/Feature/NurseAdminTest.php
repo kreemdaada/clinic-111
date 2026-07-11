@@ -32,8 +32,8 @@ class NurseAdminTest extends TestCase
         $this->actingAs($admin)
             ->get(route('nurses.index'))
             ->assertOk()
-            ->assertSee('Nurses')
-            ->assertSee('Create nurse');
+            ->assertSee(__('nurses.title'))
+            ->assertSee(__('nurses.create'));
     }
 
     public function test_viewer_cannot_access_nurse_admin(): void

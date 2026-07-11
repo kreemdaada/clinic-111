@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Treatments')
+@section('title', __('treatments.title'))
 
 @push('styles')
 <style>
@@ -32,7 +32,7 @@
 
 @section('content')
 @include('partials.configuration-back-link', ['showConfigurationBack' => $showConfigurationBack ?? false])
-<h1 class="page-title">Treatments</h1>
+<h1 class="page-title">{{ __('treatments.title') }}</h1>
 
 @if (session('success'))
 <div class="alert alert-success">{{ session('success') }}</div>
@@ -47,38 +47,38 @@
     <input type="hidden" name="from" value="{{ \App\Support\ConfigurationReturnContext::VALUE }}">
     @endif
     <div class="form-group" style="margin:0;min-width:200px;">
-        <label class="form-label">Search</label>
-        <input class="form-input" type="search" id="tx-search-input" name="search" value="{{ $search }}" placeholder="Search by treatment code or name" data-treatment-search-reset>
+        <label class="form-label">{{ __('common.filter.search') }}</label>
+        <input class="form-input" type="search" id="tx-search-input" name="search" value="{{ $search }}" placeholder="{{ __('treatments.search_placeholder') }}" data-treatment-search-reset>
     </div>
     <div class="form-group" style="margin:0;">
-        <label class="form-label">Status</label>
+        <label class="form-label">{{ __('common.filter.status') }}</label>
         <select class="form-input" name="status">
-            <option value="all" @selected($status === 'all')>All</option>
-            <option value="active" @selected($status === 'active')>Active</option>
-            <option value="inactive" @selected($status === 'inactive')>Inactive</option>
+            <option value="all" @selected($status === 'all')>{{ __('common.status.all') }}</option>
+            <option value="active" @selected($status === 'active')>{{ __('common.status.active') }}</option>
+            <option value="inactive" @selected($status === 'inactive')>{{ __('common.status.inactive') }}</option>
         </select>
     </div>
     <div style="display:flex;gap:0.5rem;align-items:center;">
-        <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
-        <a href="{{ route('treatments.index', request()->only('from')) }}" class="btn btn-ghost btn-sm">Reset</a>
+        <button type="submit" class="btn btn-secondary btn-sm">{{ __('common.filter.filter') }}</button>
+        <a href="{{ route('treatments.index', request()->only('from')) }}" class="btn btn-ghost btn-sm">{{ __('common.filter.reset') }}</a>
     </div>
 </form>
 
 <div style="margin-bottom:1rem;">
-    <button type="button" class="btn btn-primary btn-sm" data-open-create>Create treatment</button>
+    <button type="button" class="btn btn-primary btn-sm" data-open-create>{{ __('treatments.create') }}</button>
 </div>
 
 <div class="card tx-table-wrap">
     <table>
         <thead>
             <tr>
-                <th>Code</th>
-                <th>Name</th>
-                <th>Treatment price</th>
-                <th>Nurse commission</th>
-                <th>Lab cost</th>
-                <th>Status</th>
-                <th>Usage</th>
+                <th>{{ __('common.table.code') }}</th>
+                <th>{{ __('common.table.name') }}</th>
+                <th>{{ __('treatments.table.treatment_price') }}</th>
+                <th>{{ __('treatments.table.nurse_commission') }}</th>
+                <th>{{ __('treatments.table.lab_cost') }}</th>
+                <th>{{ __('common.filter.status') }}</th>
+                <th>{{ __('treatments.table.usage') }}</th>
                 <th></th>
             </tr>
         </thead>
@@ -99,14 +99,14 @@
                     —
                     @endif
                 </td>
-                <td><span class="tx-flag @if($treatment->requires_nurse_commission) is-on @endif">{{ $treatment->requires_nurse_commission ? 'Required' : 'Not required' }}</span></td>
-                <td><span class="tx-flag @if($treatment->has_lab_cost) is-on @endif">{{ $treatment->has_lab_cost ? 'Yes' : 'No' }}</span></td>
+                <td><span class="tx-flag @if($treatment->requires_nurse_commission) is-on @endif">{{ $treatment->requires_nurse_commission ? __('treatments.nurse_commission_required_yes') : __('treatments.nurse_commission_required_no') }}</span></td>
+                <td><span class="tx-flag @if($treatment->has_lab_cost) is-on @endif">{{ $treatment->has_lab_cost ? __('common.yes') : __('common.no') }}</span></td>
                 <td>
                     <span class="tx-status-pill @if($treatment->is_active) is-active @endif">
-                        {{ $treatment->is_active ? 'Active' : 'Inactive' }}
+                        {{ $treatment->is_active ? __('common.status.active') : __('common.status.inactive') }}
                     </span>
                 </td>
-                <td>{{ $treatment->work_items_count }} {{ Str::plural('item', $treatment->work_items_count) }}</td>
+                <td>{{ $treatment->work_items_count }} {{ $treatment->work_items_count === 1 ? __('treatments.item_one') : __('treatments.item_many') }}</td>
                 <td>
                     <div class="table-actions">
                         <button
@@ -124,30 +124,30 @@
                             data-update-url="{{ route('treatments.update', $treatment) }}"
                             data-activate-url="{{ route('treatments.activate', $treatment) }}"
                             data-destroy-url="{{ route('treatments.destroy', $treatment) }}"
-                        >Edit</button>
+                        >{{ __('common.actions.edit') }}</button>
                         @if ($treatment->is_active)
                         <form method="POST" action="{{ route('treatments.destroy', $treatment) }}" class="inline-form"
-                            data-confirm-title="Delete"
-                            data-confirm-ok="Delete"
+                            data-confirm-title="{{ __('treatments.delete_confirm_title') }}"
+                            data-confirm-ok="{{ __('common.actions.delete') }}"
                             data-confirm-danger="1"
-                            data-confirm="Soft delete {{ $treatment->code }}? Historical work items are preserved.">
+                            data-confirm="{{ __('treatments.delete_confirm', ['code' => $treatment->code]) }}">
                             @csrf
                             @include('partials.configuration-return-hidden')
                             @method('DELETE')
-                            <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Delete</button>
+                            <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">{{ __('common.actions.delete') }}</button>
                         </form>
                         @else
                         <form method="POST" action="{{ route('treatments.activate', $treatment) }}" class="inline-form">
                             @csrf
                             @include('partials.configuration-return-hidden')
-                            <button type="submit" class="btn btn-secondary btn-sm">Activate</button>
+                            <button type="submit" class="btn btn-secondary btn-sm">{{ __('common.actions.activate') }}</button>
                         </form>
                         @endif
                     </div>
                 </td>
             </tr>
             @empty
-            <tr><td colspan="8" style="color:var(--text-muted);">No treatments match your filters.</td></tr>
+            <tr><td colspan="8" style="color:var(--text-muted);">{{ __('treatments.empty') }}</td></tr>
             @endforelse
         </tbody>
     </table>
@@ -160,7 +160,7 @@
 <div class="tx-modal-backdrop" id="tx-create-modal" aria-hidden="true"
     data-open-on-load="{{ ($errors->any() && old('_form') !== 'edit') ? '1' : '0' }}">
     <div class="tx-modal" role="dialog">
-        <h2>Create treatment</h2>
+        <h2>{{ __('treatments.create_heading') }}</h2>
         <form method="POST" action="{{ route('treatments.store') }}">
             @csrf
             @include('partials.configuration-return-hidden')
@@ -169,24 +169,24 @@
             <input type="hidden" name="return_status" value="{{ $status }}">
             @include('partials.configuration-return-hidden')
             <div class="form-group">
-                <label class="form-label">Code</label>
+                <label class="form-label">{{ __('common.table.code') }}</label>
                 <input class="form-input" type="text" name="code" value="{{ old('code') }}" required>
             </div>
             <div class="form-group">
-                <label class="form-label">Name</label>
+                <label class="form-label">{{ __('common.table.name') }}</label>
                 <input class="form-input" type="text" name="name" value="{{ old('name') }}" required>
             </div>
             <div class="form-group">
-                <label class="form-label">Description</label>
+                <label class="form-label">{{ __('treatments.description') }}</label>
                 <textarea class="form-input" name="description" rows="2">{{ old('description') }}</textarea>
             </div>
             <div class="form-group">
-                <label class="form-label">Treatment price</label>
-                <p style="color:var(--text-muted);font-size:0.8125rem;margin:-0.25rem 0 0.5rem;">Price charged for this treatment.</p>
+                <label class="form-label">{{ __('treatments.treatment_price') }}</label>
+                <p style="color:var(--text-muted);font-size:0.8125rem;margin:-0.25rem 0 0.5rem;">{{ __('treatments.treatment_price_hint') }}</p>
                 <div class="tx-grid-2">
-                    <input class="form-input" type="number" name="treatment_price" value="{{ old('treatment_price') }}" min="0.01" step="0.01" placeholder="0.00">
+                    <input class="form-input" type="number" name="treatment_price" value="{{ old('treatment_price') }}" min="0.01" step="0.01" placeholder="{{ __('treatments.price_placeholder') }}">
                     <select class="form-input" name="treatment_price_currency">
-                        <option value="">Select currency</option>
+                        <option value="">{{ __('treatments.select_currency') }}</option>
                         @foreach ($currencies as $currencyCode)
                         <option value="{{ $currencyCode }}" @selected(old('treatment_price_currency') === $currencyCode)>{{ $currencyCode }}</option>
                         @endforeach
@@ -197,19 +197,19 @@
                 <input type="hidden" name="requires_nurse_commission" value="0">
                 <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.875rem;">
                     <input type="checkbox" name="requires_nurse_commission" value="1" id="tx-create-requires-nurse-commission" @checked(old('requires_nurse_commission'))>
-                    Nurse commission required
+                    {{ __('treatments.nurse_commission_required') }}
                 </label>
             </div>
             <div class="form-group" data-tx-lab-cost-group>
                 <input type="hidden" name="has_lab_cost" value="0">
                 <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.875rem;">
                     <input type="checkbox" name="has_lab_cost" value="1" id="tx-create-has-lab-cost" @checked(old('has_lab_cost'))>
-                    External lab cost
+                    {{ __('treatments.external_lab_cost') }}
                 </label>
             </div>
             <div class="tx-modal-actions">
-                <button type="button" class="btn btn-ghost btn-sm" data-close-modal>Cancel</button>
-                <button type="submit" class="btn btn-primary btn-sm">Create</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-close-modal>{{ __('common.actions.cancel') }}</button>
+                <button type="submit" class="btn btn-primary btn-sm">{{ __('common.actions.create') }}</button>
             </div>
         </form>
     </div>
@@ -218,7 +218,7 @@
 <div class="tx-modal-backdrop" id="tx-edit-modal" aria-hidden="true"
     data-open-on-load="{{ ($errors->any() && old('_form') === 'edit') ? '1' : '0' }}">
     <div class="tx-modal" role="dialog">
-        <h2>Edit treatment</h2>
+        <h2>{{ __('treatments.edit_heading') }}</h2>
         <form method="POST" id="tx-edit-form" action="{{ old('_update_url') }}">
             @csrf
             @include('partials.configuration-return-hidden')
@@ -232,24 +232,24 @@
             @include('partials.configuration-return-hidden')
             <input type="hidden" name="return_page" value="{{ request('page') }}">
             <div class="form-group">
-                <label class="form-label">Code</label>
+                <label class="form-label">{{ __('common.table.code') }}</label>
                 <input class="form-input" type="text" name="code" id="tx-edit-code" value="{{ old('code') }}" required>
             </div>
             <div class="form-group">
-                <label class="form-label">Name</label>
+                <label class="form-label">{{ __('common.table.name') }}</label>
                 <input class="form-input" type="text" name="name" id="tx-edit-name" value="{{ old('name') }}" required>
             </div>
             <div class="form-group">
-                <label class="form-label">Description</label>
+                <label class="form-label">{{ __('treatments.description') }}</label>
                 <textarea class="form-input" name="description" id="tx-edit-description" rows="2">{{ old('description') }}</textarea>
             </div>
             <div class="form-group">
-                <label class="form-label">Treatment price</label>
-                <p style="color:var(--text-muted);font-size:0.8125rem;margin:-0.25rem 0 0.5rem;">Price charged for this treatment.</p>
+                <label class="form-label">{{ __('treatments.treatment_price') }}</label>
+                <p style="color:var(--text-muted);font-size:0.8125rem;margin:-0.25rem 0 0.5rem;">{{ __('treatments.treatment_price_hint') }}</p>
                 <div class="tx-grid-2">
-                    <input class="form-input" type="number" name="treatment_price" id="tx-edit-treatment-price" value="{{ old('treatment_price') }}" min="0.01" step="0.01" placeholder="0.00">
+                    <input class="form-input" type="number" name="treatment_price" id="tx-edit-treatment-price" value="{{ old('treatment_price') }}" min="0.01" step="0.01" placeholder="{{ __('treatments.price_placeholder') }}">
                     <select class="form-input" name="treatment_price_currency" id="tx-edit-treatment-price-currency">
-                        <option value="">Select currency</option>
+                        <option value="">{{ __('treatments.select_currency') }}</option>
                         @foreach ($currencies as $currencyCode)
                         <option value="{{ $currencyCode }}" @selected(old('treatment_price_currency') === $currencyCode)>{{ $currencyCode }}</option>
                         @endforeach
@@ -260,34 +260,34 @@
                 <input type="hidden" name="requires_nurse_commission" value="0">
                 <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.875rem;">
                     <input type="checkbox" name="requires_nurse_commission" value="1" id="tx-edit-requires-nurse-commission" @checked(old('requires_nurse_commission'))>
-                    Nurse commission required
+                    {{ __('treatments.nurse_commission_required') }}
                 </label>
             </div>
             <div class="form-group" data-tx-lab-cost-group>
                 <input type="hidden" name="has_lab_cost" value="0">
                 <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.875rem;">
                     <input type="checkbox" name="has_lab_cost" value="1" id="tx-edit-has-lab-cost" @checked(old('has_lab_cost'))>
-                    External lab cost
+                    {{ __('treatments.external_lab_cost') }}
                 </label>
             </div>
             <div class="form-group">
-                <label class="form-label">Status</label>
+                <label class="form-label">{{ __('common.filter.status') }}</label>
                 <select class="form-input" name="is_active" id="tx-edit-is-active">
-                    <option value="1" @selected(old('is_active', '1') === '1')>Active</option>
-                    <option value="0" @selected(old('is_active') === '0')>Inactive</option>
+                    <option value="1" @selected(old('is_active', '1') === '1')>{{ __('common.status.active') }}</option>
+                    <option value="0" @selected(old('is_active') === '0')>{{ __('common.status.inactive') }}</option>
                 </select>
             </div>
             <div class="tx-modal-actions">
-                <button type="button" class="btn btn-ghost btn-sm" data-close-modal>Cancel</button>
-                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-close-modal>{{ __('common.actions.cancel') }}</button>
+                <button type="submit" class="btn btn-primary btn-sm">{{ __('common.actions.save') }}</button>
             </div>
         </form>
         <div style="margin-top:0.75rem;display:flex;gap:0.5rem;">
             <form method="POST" id="tx-deactivate-form"
-                data-confirm-title="Delete"
-                data-confirm-ok="Delete"
+                data-confirm-title="{{ __('treatments.delete_confirm_title') }}"
+                data-confirm-ok="{{ __('common.actions.delete') }}"
                 data-confirm-danger="1"
-                data-confirm="Soft delete this treatment? Historical work items are preserved.">
+                data-confirm="{{ __('treatments.delete_confirm_generic') }}">
                 @csrf
             @include('partials.configuration-return-hidden')
                 @method('DELETE')
@@ -296,8 +296,8 @@
                 @csrf
             @include('partials.configuration-return-hidden')
             </form>
-            <button type="submit" form="tx-deactivate-form" class="btn btn-ghost btn-sm" id="tx-deactivate-btn" style="color:var(--danger);">Delete</button>
-            <button type="submit" form="tx-activate-form" class="btn btn-secondary btn-sm" id="tx-activate-btn">Activate</button>
+            <button type="submit" form="tx-deactivate-form" class="btn btn-ghost btn-sm" id="tx-deactivate-btn" style="color:var(--danger);">{{ __('common.actions.delete') }}</button>
+            <button type="submit" form="tx-activate-form" class="btn btn-secondary btn-sm" id="tx-activate-btn">{{ __('common.actions.activate') }}</button>
         </div>
     </div>
 </div>

@@ -1,0 +1,30 @@
+<?php
+
+return [
+    'title' => 'Behandlungen',
+    'search_placeholder' => 'Nach Behandlungscode oder Name suchen',
+    'create' => 'Behandlung anlegen',
+    'create_heading' => 'Behandlung anlegen',
+    'edit_heading' => 'Behandlung bearbeiten',
+    'empty' => 'Keine Behandlungen entsprechen Ihren Filtern.',
+    'description' => 'Beschreibung',
+    'treatment_price' => 'Behandlungspreis',
+    'treatment_price_hint' => 'Preis für diese Behandlung.',
+    'price_placeholder' => '0.00',
+    'select_currency' => 'Währung wählen',
+    'nurse_commission_required' => 'Assistenten-Provision erforderlich',
+    'external_lab_cost' => 'Externe Labor-Kosten',
+    'nurse_commission_required_yes' => 'Erforderlich',
+    'nurse_commission_required_no' => 'Nicht erforderlich',
+    'item_one' => 'Eintrag',
+    'item_many' => 'Einträge',
+    'delete_confirm_title' => 'Löschen',
+    'delete_confirm' => ':code soft löschen? Historische Arbeitsposten bleiben erhalten.',
+    'delete_confirm_generic' => 'Diese Behandlung soft löschen? Historische Arbeitsposten bleiben erhalten.',
+    'table' => [
+        'treatment_price' => 'Behandlungspreis',
+        'nurse_commission' => 'Assistenten-Provision',
+        'lab_cost' => 'Labor-Kosten',
+        'usage' => 'Verwendung',
+    ],
+];

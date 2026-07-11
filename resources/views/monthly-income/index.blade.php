@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Monthly Income')
+@section('title', __('reports.monthly_income.title'))
 
 @push('styles')
 <style>
@@ -73,34 +73,34 @@
 @section('content')
 <div class="mi-intro">
     <div>
-        <h1 class="page-title">Monthly Income</h1>
-        <p class="page-subtitle">Per-doctor income breakdown including OPG treatment values and nurse commission.</p>
+        <h1 class="page-title">{{ __('reports.monthly_income.title') }}</h1>
+        <p class="page-subtitle">{{ __('reports.monthly_income.subtitle') }}</p>
     </div>
     <form method="GET" action="{{ route('monthly-income.index') }}" class="mi-filter">
-        <label for="month">Period</label>
+        <label for="month">{{ __('common.filter.period') }}</label>
         <input class="form-input" type="month" id="month" name="month" value="{{ $selectedMonth }}" style="width:auto;">
-        <button type="submit" class="btn btn-secondary btn-sm">Apply</button>
+        <button type="submit" class="btn btn-secondary btn-sm">{{ __('common.filter.apply') }}</button>
     </form>
 </div>
 
 @if ($summaries->isEmpty())
     <div class="mi-empty">
-        <p>No active doctors or income data for {{ $selectedMonth }}.</p>
+        <p>{{ __('reports.monthly_income.empty', ['month' => $selectedMonth]) }}</p>
     </div>
 @else
     <div class="card mi-table-wrap">
         <table class="mi-table">
             <thead>
                 <tr>
-                    <th scope="col">Doctor</th>
-                    <th scope="col">Total</th>
-                    <th scope="col">Lab</th>
-                    <th scope="col">Net</th>
-                    <th scope="col">Doctor Income</th>
-                    <th scope="col">OPG-Normal</th>
-                    <th scope="col">OPG-3D</th>
-                    <th scope="col">Nurse Commission</th>
-                    <th scope="col">Clinic Income</th>
+                    <th scope="col">{{ __('reports.monthly_income.table.doctor') }}</th>
+                    <th scope="col">{{ __('reports.monthly_income.table.total') }}</th>
+                    <th scope="col">{{ __('reports.monthly_income.table.lab') }}</th>
+                    <th scope="col">{{ __('reports.monthly_income.table.net') }}</th>
+                    <th scope="col">{{ __('reports.monthly_income.table.doctor_income') }}</th>
+                    <th scope="col">{{ __('reports.monthly_income.table.opg_normal') }}</th>
+                    <th scope="col">{{ __('reports.monthly_income.table.opg_3d') }}</th>
+                    <th scope="col">{{ __('reports.monthly_income.table.nurse_commission') }}</th>
+                    <th scope="col">{{ __('reports.monthly_income.table.clinic_income') }}</th>
                 </tr>
             </thead>
             <tbody>

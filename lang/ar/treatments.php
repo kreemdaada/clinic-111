@@ -1,0 +1,30 @@
+<?php
+
+return [
+    'title' => 'العلاجات',
+    'search_placeholder' => 'البحث برمز العلاج أو الاسم',
+    'create' => 'إنشاء علاج',
+    'create_heading' => 'إنشاء علاج',
+    'edit_heading' => 'تعديل علاج',
+    'empty' => 'لا توجد علاجات تطابق عوامل التصفية.',
+    'description' => 'الوصف',
+    'treatment_price' => 'سعر العلاج',
+    'treatment_price_hint' => 'السعر المفروض لهذا العلاج.',
+    'price_placeholder' => '0.00',
+    'select_currency' => 'اختر العملة',
+    'nurse_commission_required' => 'عمولة الممرض مطلوبة',
+    'external_lab_cost' => 'تكلفة المختبر الخارجي',
+    'nurse_commission_required_yes' => 'مطلوب',
+    'nurse_commission_required_no' => 'غير مطلوب',
+    'item_one' => 'عنصر',
+    'item_many' => 'عناصر',
+    'delete_confirm_title' => 'حذف',
+    'delete_confirm' => 'حذف ناعم لـ :code؟ تبقى عناصر العمل السابقة محفوظة.',
+    'delete_confirm_generic' => 'حذف ناعم لهذا العلاج؟ تبقى عناصر العمل السابقة محفوظة.',
+    'table' => [
+        'treatment_price' => 'سعر العلاج',
+        'nurse_commission' => 'عمولة الممرض',
+        'lab_cost' => 'تكلفة المختبر',
+        'usage' => 'الاستخدام',
+    ],
+];

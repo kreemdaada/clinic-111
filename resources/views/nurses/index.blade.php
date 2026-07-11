@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Nurses')
+@section('title', __('nurses.title'))
 
 @push('styles')
 <style>
@@ -36,8 +36,8 @@
 
 @section('content')
 @include('partials.configuration-back-link', ['showConfigurationBack' => $showConfigurationBack ?? false])
-<h1 class="page-title">Nurses</h1>
-<p style="color:var(--text-muted);margin:-0.5rem 0 1.25rem;font-size:0.9375rem;">Manage the nurses who perform X-ray procedures at your clinic.</p>
+<h1 class="page-title">{{ __('nurses.title') }}</h1>
+<p style="color:var(--text-muted);margin:-0.5rem 0 1.25rem;font-size:0.9375rem;">{{ __('nurses.subtitle') }}</p>
 
 @if (session('success'))
 <div class="alert alert-success">{{ session('success') }}</div>
@@ -52,34 +52,34 @@
     <input type="hidden" name="from" value="{{ \App\Support\ConfigurationReturnContext::VALUE }}">
     @endif
     <div class="form-group" style="margin:0;min-width:200px;">
-        <label class="form-label">Search</label>
-        <input class="form-input" type="search" id="nurse-search-input" name="search" value="{{ $search }}" placeholder="Search by nurse code or name" data-nurse-search-reset>
+        <label class="form-label">{{ __('common.filter.search') }}</label>
+        <input class="form-input" type="search" id="nurse-search-input" name="search" value="{{ $search }}" placeholder="{{ __('nurses.search_placeholder') }}" data-nurse-search-reset>
     </div>
     <div class="form-group" style="margin:0;">
-        <label class="form-label">Status</label>
+        <label class="form-label">{{ __('common.filter.status') }}</label>
         <select class="form-input" name="status">
-            <option value="all" @selected($status === 'all')>All</option>
-            <option value="active" @selected($status === 'active')>Active</option>
-            <option value="inactive" @selected($status === 'inactive')>Inactive</option>
+            <option value="all" @selected($status === 'all')>{{ __('common.status.all') }}</option>
+            <option value="active" @selected($status === 'active')>{{ __('common.status.active') }}</option>
+            <option value="inactive" @selected($status === 'inactive')>{{ __('common.status.inactive') }}</option>
         </select>
     </div>
     <div style="display:flex;gap:0.5rem;align-items:center;">
-        <button type="submit" class="btn btn-secondary btn-sm">Filter</button>
-        <a href="{{ route('nurses.index', request()->only('from')) }}" class="btn btn-ghost btn-sm">Reset</a>
+        <button type="submit" class="btn btn-secondary btn-sm">{{ __('common.filter.filter') }}</button>
+        <a href="{{ route('nurses.index', request()->only('from')) }}" class="btn btn-ghost btn-sm">{{ __('common.filter.reset') }}</a>
     </div>
 </form>
 
 <div style="margin-bottom:1rem;">
-    <button type="button" class="btn btn-primary btn-sm" data-open-create>Create nurse</button>
+    <button type="button" class="btn btn-primary btn-sm" data-open-create>{{ __('nurses.create') }}</button>
 </div>
 
 <div class="card nurse-table-wrap">
     <table>
         <thead>
             <tr>
-                <th>Code</th>
-                <th>Name</th>
-                <th>Status</th>
+                <th>{{ __('common.table.code') }}</th>
+                <th>{{ __('common.table.name') }}</th>
+                <th>{{ __('common.filter.status') }}</th>
                 <th></th>
             </tr>
         </thead>
@@ -90,7 +90,7 @@
                 <td>{{ $nurse->name }}</td>
                 <td>
                     <span class="nurse-status-pill @if($nurse->is_active) is-active @endif">
-                        {{ $nurse->is_active ? 'Active' : 'Inactive' }}
+                        {{ $nurse->is_active ? __('common.status.active') : __('common.status.inactive') }}
                     </span>
                 </td>
                 <td>
@@ -116,20 +116,20 @@
                                 'destroy_url' => route('nurses.commission-rates.destroy', [$nurse, $rate]),
                                 'activate_url' => route('nurses.commission-rates.activate', [$nurse, $rate]),
                             ])->values())) }}"
-                        >Edit</button>
+                        >{{ __('common.actions.edit') }}</button>
                         @if ($nurse->is_active)
                         <form method="POST" action="{{ route('nurses.destroy', $nurse) }}" class="inline-form"
-                            data-confirm-title="Deactivate nurse"
-                            data-confirm-ok="Deactivate"
+                            data-confirm-title="{{ __('nurses.deactivate_confirm_title') }}"
+                            data-confirm-ok="{{ __('common.actions.deactivate') }}"
                             data-confirm-danger="1"
-                            data-confirm="Deactivate {{ $nurse->name }}? They will no longer be available for new X-ray entries.">
+                            data-confirm="{{ __('nurses.deactivate_confirm', ['name' => $nurse->name]) }}">
                             @csrf
                             @include('partials.configuration-return-hidden')
                             <input type="hidden" name="search" value="{{ $search }}">
                             <input type="hidden" name="status" value="{{ $status }}">
                             <input type="hidden" name="page" value="{{ request('page') }}">
                             @method('DELETE')
-                            <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Deactivate</button>
+                            <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">{{ __('common.actions.deactivate') }}</button>
                         </form>
                         @else
                         <form method="POST" action="{{ route('nurses.activate', $nurse) }}" class="inline-form">
@@ -138,14 +138,14 @@
                             <input type="hidden" name="search" value="{{ $search }}">
                             <input type="hidden" name="status" value="{{ $status }}">
                             <input type="hidden" name="page" value="{{ request('page') }}">
-                            <button type="submit" class="btn btn-secondary btn-sm">Activate</button>
+                            <button type="submit" class="btn btn-secondary btn-sm">{{ __('common.actions.activate') }}</button>
                         </form>
                         @endif
                     </div>
                 </td>
             </tr>
             @empty
-            <tr><td colspan="4" style="color:var(--text-muted);">No nurses match your filters.</td></tr>
+            <tr><td colspan="4" style="color:var(--text-muted);">{{ __('nurses.empty') }}</td></tr>
             @endforelse
         </tbody>
     </table>
@@ -158,7 +158,7 @@
 <div class="nurse-modal-backdrop" id="nurse-create-modal" aria-hidden="true"
     data-open-on-load="{{ ($errors->any() && old('_form') !== 'edit') ? '1' : '0' }}">
     <div class="nurse-modal" role="dialog">
-        <h2>Create nurse</h2>
+        <h2>{{ __('nurses.create_heading') }}</h2>
         <form method="POST" action="{{ route('nurses.store') }}">
             @csrf
             @include('partials.configuration-return-hidden')
@@ -167,16 +167,16 @@
             <input type="hidden" name="return_status" value="{{ $status }}">
             <input type="hidden" name="return_page" value="{{ request('page') }}">
             <div class="form-group">
-                <label class="form-label">Code</label>
-                <input class="form-input" type="text" name="code" value="{{ old('code') }}" placeholder="NURSE_01" required>
+                <label class="form-label">{{ __('common.table.code') }}</label>
+                <input class="form-input" type="text" name="code" value="{{ old('code') }}" placeholder="{{ __('nurses.code_placeholder') }}" required>
             </div>
             <div class="form-group">
-                <label class="form-label">Name</label>
+                <label class="form-label">{{ __('common.table.name') }}</label>
                 <input class="form-input" type="text" name="name" value="{{ old('name') }}" required>
             </div>
             <div class="nurse-modal-actions">
-                <button type="button" class="btn btn-ghost btn-sm" data-close-modal>Cancel</button>
-                <button type="submit" class="btn btn-primary btn-sm">Create</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-close-modal>{{ __('common.actions.cancel') }}</button>
+                <button type="submit" class="btn btn-primary btn-sm">{{ __('common.actions.create') }}</button>
             </div>
         </form>
     </div>
@@ -190,7 +190,7 @@
         'name' => $treatment->name,
     ])->values())) }}">
     <div class="nurse-modal" role="dialog">
-        <h2>Edit nurse</h2>
+        <h2>{{ __('nurses.edit_heading') }}</h2>
         <form method="POST" id="nurse-edit-form" action="{{ old('_update_url') }}">
             @csrf
             @include('partials.configuration-return-hidden')
@@ -203,21 +203,21 @@
             <input type="hidden" name="return_status" value="{{ $status }}">
             <input type="hidden" name="return_page" value="{{ request('page') }}">
             <div class="form-group">
-                <label class="form-label">Code</label>
+                <label class="form-label">{{ __('common.table.code') }}</label>
                 <input class="form-input" type="text" name="code" id="nurse-edit-code" value="{{ old('code') }}" required>
             </div>
             <div class="form-group">
-                <label class="form-label">Name</label>
+                <label class="form-label">{{ __('common.table.name') }}</label>
                 <input class="form-input" type="text" name="name" id="nurse-edit-name" value="{{ old('name') }}" required>
             </div>
             <div class="nurse-modal-actions">
-                <button type="button" class="btn btn-ghost btn-sm" data-close-modal>Cancel</button>
-                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-close-modal>{{ __('common.actions.cancel') }}</button>
+                <button type="submit" class="btn btn-primary btn-sm">{{ __('common.actions.save') }}</button>
             </div>
         </form>
         <div class="nurse-commission-rates" id="nurse-commission-rates-section">
-            <h3>Nurse commission rates</h3>
-            <p style="color:var(--text-muted);font-size:0.8125rem;margin:0 0 0.75rem;">Assign a commission percentage per X-ray treatment. The nurse only appears in the daily report editor after a rate is added here.</p>
+            <h3>{{ __('nurses.commission_rates.heading') }}</h3>
+            <p style="color:var(--text-muted);font-size:0.8125rem;margin:0 0 0.75rem;">{{ __('nurses.commission_rates.description') }}</p>
             <div id="nurse-commission-rates-table-wrap"></div>
             <form method="POST" id="nurse-commission-rate-create-form" class="nurse-commission-grid">
                 @csrf
@@ -226,29 +226,29 @@
                 <input type="hidden" name="return_status" value="{{ $status }}">
                 <input type="hidden" name="return_page" value="{{ request('page') }}">
                 <div class="form-group" style="margin:0;">
-                    <label class="form-label">Treatment</label>
+                    <label class="form-label">{{ __('nurses.commission_rates.treatment') }}</label>
                     <select class="form-input" name="treatment_id" id="nurse-commission-treatment-select" required>
-                        <option value="">Select treatment</option>
+                        <option value="">{{ __('nurses.commission_rates.select_treatment') }}</option>
                         @foreach ($commissionTreatments as $treatment)
                         <option value="{{ $treatment->id }}">{{ $treatment->name }} ({{ $treatment->code }})</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="form-group" style="margin:0;">
-                    <label class="form-label">Commission %</label>
-                    <input class="form-input" type="number" name="commission_percentage" min="0.01" max="100" step="0.01" required placeholder="5.00">
+                    <label class="form-label">{{ __('nurses.commission_rates.commission_percent') }}</label>
+                    <input class="form-input" type="number" name="commission_percentage" min="0.01" max="100" step="0.01" required placeholder="{{ __('nurses.commission_rates.placeholder') }}">
                 </div>
                 <div class="nurse-modal-actions" style="grid-column:1/-1;margin-top:0;">
-                    <button type="submit" class="btn btn-secondary btn-sm">Add rate</button>
+                    <button type="submit" class="btn btn-secondary btn-sm">{{ __('nurses.commission_rates.add_rate') }}</button>
                 </div>
             </form>
         </div>
         <div style="margin-top:0.75rem;display:flex;gap:0.5rem;">
             <form method="POST" id="nurse-deactivate-form"
-                data-confirm-title="Deactivate nurse"
-                data-confirm-ok="Deactivate"
+                data-confirm-title="{{ __('nurses.deactivate_confirm_title') }}"
+                data-confirm-ok="{{ __('common.actions.deactivate') }}"
                 data-confirm-danger="1"
-                data-confirm="Deactivate this nurse? They will no longer be available for new X-ray entries.">
+                data-confirm="{{ __('nurses.deactivate_confirm_generic') }}">
                 @csrf
                 @include('partials.configuration-return-hidden')
                 @method('DELETE')
@@ -257,15 +257,33 @@
                 @csrf
                 @include('partials.configuration-return-hidden')
             </form>
-            <button type="submit" form="nurse-deactivate-form" class="btn btn-ghost btn-sm" id="nurse-deactivate-btn" style="color:var(--danger);">Deactivate</button>
-            <button type="submit" form="nurse-activate-form" class="btn btn-secondary btn-sm" id="nurse-activate-btn">Activate</button>
+            <button type="submit" form="nurse-deactivate-form" class="btn btn-ghost btn-sm" id="nurse-deactivate-btn" style="color:var(--danger);">{{ __('common.actions.deactivate') }}</button>
+            <button type="submit" form="nurse-activate-form" class="btn btn-secondary btn-sm" id="nurse-activate-btn">{{ __('common.actions.activate') }}</button>
         </div>
     </div>
 </div>
 @endsection
 
 @push('scripts')
+@php
+$nurseUiLabels = [
+    'empty' => __('nurses.commission_rates.empty'),
+    'treatment' => __('nurses.commission_rates.treatment'),
+    'rate' => __('nurses.commission_rates.rate'),
+    'status' => __('common.filter.status'),
+    'active' => __('common.status.active'),
+    'inactive' => __('common.status.inactive'),
+    'save' => __('common.actions.save'),
+    'deactivate' => __('common.actions.deactivate'),
+    'activate' => __('common.actions.activate'),
+];
+@endphp
+<script type="application/json" id="nurse-ui-labels">
+{!! json_encode($nurseUiLabels, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+</script>
 <script>
+const nurseUiLabels = JSON.parse(document.getElementById('nurse-ui-labels').textContent);
+
 document.addEventListener('DOMContentLoaded', function () {
     const createModal = document.getElementById('nurse-create-modal');
     const editModal = document.getElementById('nurse-edit-modal');
@@ -296,7 +314,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (!rates.length) {
-            commissionRatesTableWrap.innerHTML = '<p style="color:var(--text-muted);font-size:0.8125rem;margin:0 0 0.75rem;">No commission rates yet.</p>';
+            commissionRatesTableWrap.innerHTML = `<p style="color:var(--text-muted);font-size:0.8125rem;margin:0 0 0.75rem;">${nurseUiLabels.empty}</p>`;
             return;
         }
 
@@ -304,9 +322,9 @@ document.addEventListener('DOMContentLoaded', function () {
             <table>
                 <thead>
                     <tr>
-                        <th>Treatment</th>
-                        <th>Rate</th>
-                        <th>Status</th>
+                        <th>${nurseUiLabels.treatment}</th>
+                        <th>${nurseUiLabels.rate}</th>
+                        <th>${nurseUiLabels.status}</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -319,22 +337,22 @@ document.addEventListener('DOMContentLoaded', function () {
                                     <input type="hidden" name="_token" value="${csrf}">
                                     <input type="hidden" name="_method" value="PUT">
                                     <input class="form-input" type="number" name="commission_percentage" value="${rate.commission_percentage}" min="0.01" max="100" step="0.01" style="width:5.5rem;">
-                                    <button type="submit" class="btn btn-ghost btn-sm">Save</button>
+                                    <button type="submit" class="btn btn-ghost btn-sm">${nurseUiLabels.save}</button>
                                 </form>
                             </td>
-                            <td><span class="nurse-status-pill ${rate.is_active ? 'is-active' : ''}">${rate.is_active ? 'Active' : 'Inactive'}</span></td>
+                            <td><span class="nurse-status-pill ${rate.is_active ? 'is-active' : ''}">${rate.is_active ? nurseUiLabels.active : nurseUiLabels.inactive}</span></td>
                             <td>
                                 <div class="nurse-commission-rate-actions">
                                     ${rate.is_active ? `
                                         <form method="POST" action="${rate.destroy_url}">
                                             <input type="hidden" name="_token" value="${csrf}">
                                             <input type="hidden" name="_method" value="DELETE">
-                                            <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Deactivate</button>
+                                            <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">${nurseUiLabels.deactivate}</button>
                                         </form>
                                     ` : `
                                         <form method="POST" action="${rate.activate_url}">
                                             <input type="hidden" name="_token" value="${csrf}">
-                                            <button type="submit" class="btn btn-secondary btn-sm">Activate</button>
+                                            <button type="submit" class="btn btn-secondary btn-sm">${nurseUiLabels.activate}</button>
                                         </form>
                                     `}
                                 </div>

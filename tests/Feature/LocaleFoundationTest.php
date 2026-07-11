@@ -182,4 +182,45 @@ class LocaleFoundationTest extends TestCase
             ->assertOk()
             ->assertSee('النشاط الأخير', false);
     }
+
+    public function test_german_user_sees_translated_doctors_and_practice_overview_pages(): void
+    {
+        $this->seedAccountingData();
+        $user = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $user->update(['locale' => 'de']);
+
+        $this->actingAs($user)
+            ->get(route('doctors.index'))
+            ->assertOk()
+            ->assertSee('Ärzte', false)
+            ->assertSee('Provisionstyp', false)
+            ->assertDontSee('<h1 class="page-title">Doctors</h1>', false);
+
+        $this->actingAs($user)
+            ->get(route('clinic.financial-overview'))
+            ->assertOk()
+            ->assertSee('Praxisübersicht', false)
+            ->assertDontSee('<h1 class="page-title">Practice Overview</h1>', false);
+    }
+
+    public function test_arabic_user_sees_translated_doctors_and_monthly_income_with_rtl(): void
+    {
+        $this->seedAccountingData();
+        $user = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
+        $user->update(['locale' => 'ar']);
+
+        $this->actingAs($user)
+            ->get(route('doctors.index'))
+            ->assertOk()
+            ->assertSee('dir="rtl"', false)
+            ->assertSee('الأطباء', false)
+            ->assertDontSee('<h1 class="page-title">Doctors</h1>', false);
+
+        $this->actingAs($user)
+            ->get(route('monthly-income.index'))
+            ->assertOk()
+            ->assertSee('dir="rtl"', false)
+            ->assertSee('دخل الشهر', false)
+            ->assertDontSee('<h1 class="page-title">Monthly Income</h1>', false);
+    }
 }
