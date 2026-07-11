@@ -3,6 +3,8 @@
 use App\Exceptions\UserFacingException;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\SecurityHeadersMiddleware;
+use App\Http\Middleware\SetLocale;
+use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -25,7 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo(function () {
             $user = Auth::user();
 
-            if ($user !== null && ! $user->hasVerifiedEmail()) {
+            if ($user instanceof User && ! $user->hasVerifiedEmail()) {
                 return route('verification.notice');
             }
 
@@ -33,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $middleware->append(SecurityHeadersMiddleware::class);
+        $middleware->appendToGroup('web', SetLocale::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

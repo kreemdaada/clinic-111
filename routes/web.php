@@ -21,6 +21,7 @@ use App\Http\Controllers\Web\NurseCommissionRateAdminController;
 use App\Http\Controllers\Web\ReportLockController;
 use App\Http\Controllers\Web\TreatmentAdminController;
 use App\Http\Controllers\Web\UserAdminController;
+use App\Http\Controllers\Web\UserLocaleController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [LandingController::class, 'index'])->name('landing');
@@ -48,6 +49,9 @@ Route::middleware('auth')->group(function () {
         ->name('verification.send');
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+    Route::get('/settings/language', [UserLocaleController::class, 'edit'])->name('settings.language.edit');
+    Route::put('/settings/language', [UserLocaleController::class, 'update'])->name('settings.language.update');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
