@@ -62,7 +62,7 @@ class LegalPagesTest extends TestCase
         $this->get(route('landing'))
             ->assertOk()
             ->assertSee('href="mailto:contact@dentalfinance.test"', false)
-            ->assertSee('Contact', false);
+            ->assertSee(__('landing.footer.contact'), false);
     }
 
     public function test_login_and_registration_routes_remain_available(): void

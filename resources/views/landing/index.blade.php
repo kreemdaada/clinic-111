@@ -1,9 +1,9 @@
 @extends('layouts.landing')
 
-@section('title', 'DentalFinance – Financial reporting for dental practices')
-@section('meta_description', 'DentalFinance helps dental practices import, analyse, and report on revenue, costs, and practice performance.')
-@section('og_title', 'DentalFinance – Financial reporting for dental practices')
-@section('og_description', 'DentalFinance helps dental practices import, analyse, and report on revenue, costs, and practice performance.')
+@section('title', __('landing.meta.title'))
+@section('meta_description', __('landing.meta.description'))
+@section('og_title', __('landing.meta.og_title'))
+@section('og_description', __('landing.meta.og_description'))
 
 @section('landing_styles')
     /* Hero */
@@ -35,7 +35,9 @@
 
     .lp-hero-actions {
         display: flex;
+        flex-direction: column;
         flex-wrap: wrap;
+        align-items: center;
         gap: 0.75rem;
     }
 
@@ -334,7 +336,9 @@
 
     .lp-cta-actions {
         display: flex;
+        flex-direction: column;
         flex-wrap: wrap;
+        align-items: center;
         justify-content: center;
         gap: 0.75rem;
     }
@@ -715,6 +719,8 @@
         margin-top: 1rem;
         text-align: center;
     }
+
+    @media (min-width: 640px) {
         .lp-features-grid {
             grid-template-columns: repeat(2, 1fr);
         }
@@ -775,25 +781,43 @@
 @endsection
 
 @section('content')
+    @php
+        $navLinks = [
+            'features' => 'features',
+            'benefits' => 'benefits',
+            'how_it_works' => 'how-it-works',
+            'security' => 'security',
+            'faq' => 'faq',
+        ];
+
+        $featureCardKeys = [
+            'excel_import',
+            'revenue_costs',
+            'financial_reports',
+            'treatment_management',
+            'lab_configuration',
+            'multi_tenant',
+        ];
+    @endphp
+
     <header class="lp-header">
         <div class="lp-container lp-header-inner">
             <a href="{{ route('landing') }}" class="lp-logo">Dental<span>Finance</span></a>
 
-            <nav class="lp-nav" aria-label="Main navigation">
-                <a href="#features">Features</a>
-                <a href="#benefits">Benefits</a>
-                <a href="#how-it-works">How it works</a>
-                <a href="#security">Security</a>
-                <a href="#faq">FAQ</a>
+            <nav class="lp-nav" aria-label="{{ __('landing.nav.main_aria') }}">
+                @foreach ($navLinks as $key => $anchor)
+                    <a href="#{{ $anchor }}">{{ __('landing.nav.' . $key) }}</a>
+                @endforeach
             </nav>
 
             <div class="lp-header-actions">
-                <a href="{{ route('login') }}" class="lp-btn lp-btn-ghost">Sign in</a>
-                <a href="{{ route('register-clinic.create') }}" class="lp-btn lp-btn-primary">Start free trial</a>
+                <a href="{{ route('login') }}" class="lp-btn lp-btn-ghost">{{ __('landing.actions.login') }}</a>
+                <a href="{{ route('register-clinic.create') }}"
+                    class="lp-btn lp-btn-primary">{{ __('landing.actions.get_started') }}</a>
             </div>
 
             <button type="button" class="lp-menu-toggle" id="lp-menu-toggle" aria-expanded="false"
-                aria-controls="lp-mobile-nav" aria-label="Open menu">
+                aria-controls="lp-mobile-nav" aria-label="{{ __('landing.nav.open_menu') }}">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     aria-hidden="true">
                     <path d="M4 6h16M4 12h16M4 18h16" />
@@ -801,14 +825,13 @@
             </button>
         </div>
 
-        <nav class="lp-mobile-nav lp-container" id="lp-mobile-nav" aria-label="Mobile navigation">
-            <a href="#features" class="lp-btn lp-btn-ghost">Features</a>
-            <a href="#benefits" class="lp-btn lp-btn-ghost">Benefits</a>
-            <a href="#how-it-works" class="lp-btn lp-btn-ghost">How it works</a>
-            <a href="#security" class="lp-btn lp-btn-ghost">Security</a>
-            <a href="#faq" class="lp-btn lp-btn-ghost">FAQ</a>
-            <a href="{{ route('login') }}" class="lp-btn lp-btn-secondary">Sign in</a>
-            <a href="{{ route('register-clinic.create') }}" class="lp-btn lp-btn-primary">Start free trial</a>
+        <nav class="lp-mobile-nav lp-container" id="lp-mobile-nav" aria-label="{{ __('landing.nav.main_aria') }}">
+            @foreach ($navLinks as $key => $anchor)
+                <a href="#{{ $anchor }}" class="lp-btn lp-btn-ghost">{{ __('landing.nav.' . $key) }}</a>
+            @endforeach
+            <a href="{{ route('login') }}" class="lp-btn lp-btn-secondary">{{ __('landing.actions.login') }}</a>
+            <a href="{{ route('register-clinic.create') }}"
+                class="lp-btn lp-btn-primary">{{ __('landing.actions.get_started') }}</a>
         </nav>
     </header>
 
@@ -816,15 +839,13 @@
         <section class="lp-hero lp-container" aria-labelledby="hero-heading">
             <div class="lp-hero-grid">
                 <div class="lp-reveal">
-                    <p class="lp-eyebrow">B2B financial reporting for dental practices</p>
-                    <h1 id="hero-heading">Financial clarity for your dental practice</h1>
-                    <p class="lp-hero-lead">
-                        Import your practice data, analyse revenue and costs, and create clear reports — centrally,
-                        structured, and without complicated spreadsheet work.
-                    </p>
+                    <p class="lp-eyebrow">{{ __('landing.hero.eyebrow') }}</p>
+                    <h1 id="hero-heading">{{ __('landing.hero.title') }}</h1>
+                    <p class="lp-hero-lead">{{ __('landing.hero.lead') }}</p>
                     <div class="lp-hero-actions">
-                        <a href="{{ route('register-clinic.create') }}" class="lp-btn lp-btn-primary">Start free trial</a>
-                        <a href="#features" class="lp-btn lp-btn-secondary">Explore features</a>
+                        <a href="{{ route('register-clinic.create') }}"
+                            class="lp-btn lp-btn-primary">{{ __('landing.actions.get_started') }}</a>
+                        <a href="#features" class="lp-btn lp-btn-secondary">{{ __('landing.actions.explore_features') }}</a>
                     </div>
                 </div>
                 <div class="lp-hero-visual lp-reveal">
@@ -833,59 +854,34 @@
             </div>
         </section>
 
-        <section class="lp-trust" aria-label="Trust highlights">
+        <section class="lp-trust" aria-label="{{ __('landing.trust.title') }}">
             <div class="lp-container">
-                <p class="lp-trust-title">Built for modern dental practices</p>
+                <p class="lp-trust-title">{{ __('landing.trust.title') }}</p>
                 <ul class="lp-trust-list">
-                    <li>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" aria-hidden="true">
-                            <path d="M20 6L9 17l-5-5" />
-                        </svg>
-                        Structured Excel imports
-                    </li>
-                    <li>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" aria-hidden="true">
-                            <path d="M20 6L9 17l-5-5" />
-                        </svg>
-                        Transparent calculations
-                    </li>
-                    <li>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" aria-hidden="true">
-                            <path d="M20 6L9 17l-5-5" />
-                        </svg>
-                        Practice-specific reports
-                    </li>
-                    <li>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" aria-hidden="true">
-                            <path d="M20 6L9 17l-5-5" />
-                        </svg>
-                        Secure tenant isolation
-                    </li>
+                    @foreach (trans('landing.trust.items') as $item)
+                        <li>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" aria-hidden="true">
+                                <path d="M20 6L9 17l-5-5" />
+                            </svg>
+                            {{ $item }}
+                        </li>
+                    @endforeach
                 </ul>
             </div>
         </section>
 
         <section class="lp-section lp-container" aria-labelledby="problem-heading">
             <div class="lp-reveal">
-                <h2 class="lp-section-title" id="problem-heading">Practice numbers should be easy to understand</h2>
+                <h2 class="lp-section-title" id="problem-heading">{{ __('landing.problem.title') }}</h2>
                 <div class="lp-problem-grid">
                     <ul class="lp-problem-list">
-                        <li>Scattered Excel files across folders and team members</li>
-                        <li>Manual calculations that are hard to audit and easy to get wrong</li>
-                        <li>Unclear cost structures between treatments, labs, and overhead</li>
-                        <li>Time-consuming monthly evaluations that delay decisions</li>
-                        <li>No reliable comparison between treatments, labs, and time periods</li>
+                        @foreach (trans('landing.problem.items') as $item)
+                            <li>{{ $item }}</li>
+                        @endforeach
                     </ul>
                     <div class="lp-problem-callout">
-                        <p>
-                            <strong>DentalFinance</strong> brings your billing and performance data into one structured
-                            platform — so owners and practice managers can see revenue, costs, and results without
-                            rebuilding spreadsheets every month.
-                        </p>
+                        <p>{!! __('landing.problem.callout', ['product_name' => __('landing.problem.callout_product_name_html')]) !!}</p>
                     </div>
                 </div>
             </div>
@@ -893,125 +889,95 @@
 
         <section class="lp-section lp-section-muted" id="features" aria-labelledby="features-heading">
             <div class="lp-container lp-reveal">
-                <p class="lp-eyebrow">Features</p>
-                <h2 class="lp-section-title" id="features-heading">Everything you need to understand practice finances</h2>
-                <p class="lp-section-lead">From Excel import to income reports — designed for dental practice workflows.</p>
+                <p class="lp-eyebrow">{{ __('landing.features.eyebrow') }}</p>
+                <h2 class="lp-section-title" id="features-heading">{{ __('landing.features.title') }}</h2>
+                <p class="lp-section-lead">{{ __('landing.features.lead') }}</p>
 
                 <div class="lp-features-grid">
-                    <article class="lp-feature-card">
-                        <div class="lp-feature-icon" aria-hidden="true">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
-                            </svg>
-                        </div>
-                        <h3>Excel import</h3>
-                        <p>Import structured practice data quickly and with full traceability.</p>
-                    </article>
+                    @foreach ($featureCardKeys as $featureKey)
+                        <article class="lp-feature-card">
+                            <div class="lp-feature-icon" aria-hidden="true">
+                                @switch($featureKey)
+                                    @case('excel_import')
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                            stroke-width="2">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
+                                        </svg>
+                                    @break
 
-                    <article class="lp-feature-card">
-                        <div class="lp-feature-icon" aria-hidden="true">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                            </svg>
-                        </div>
-                        <h3>Revenue &amp; costs</h3>
-                        <p>Analyse revenue, lab costs, and other key financial metrics for your practice.</p>
-                    </article>
+                                    @case('revenue_costs')
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                            stroke-width="2">
+                                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                        </svg>
+                                    @break
 
-                    <article class="lp-feature-card">
-                        <div class="lp-feature-icon" aria-hidden="true">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path d="M3 3v18h18M7 16l4-4 4 4 5-6" />
-                            </svg>
-                        </div>
-                        <h3>Financial reports</h3>
-                        <p>Create clear monthly, annual, and performance reports from imported data.</p>
-                    </article>
+                                    @case('financial_reports')
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                            stroke-width="2">
+                                            <path d="M3 3v18h18M7 16l4-4 4 4 5-6" />
+                                        </svg>
+                                    @break
 
-                    <article class="lp-feature-card">
-                        <div class="lp-feature-icon" aria-hidden="true">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-                            </svg>
-                        </div>
-                        <h3>Treatment management</h3>
-                        <p>Manage treatments, prices, and associated costs in one central place.</p>
-                    </article>
+                                    @case('treatment_management')
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                            stroke-width="2">
+                                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                                        </svg>
+                                    @break
 
-                    <article class="lp-feature-card">
-                        <div class="lp-feature-icon" aria-hidden="true">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path
-                                    d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                            </svg>
-                        </div>
-                        <h3>Lab configuration</h3>
-                        <p>Configure labs, cost models, and practice-specific settings.</p>
-                    </article>
+                                    @case('lab_configuration')
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                            stroke-width="2">
+                                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                                        </svg>
+                                    @break
 
-                    <article class="lp-feature-card">
-                        <div class="lp-feature-icon" aria-hidden="true">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <rect x="3" y="3" width="7" height="7" />
-                                <rect x="14" y="3" width="7" height="7" />
-                                <rect x="3" y="14" width="7" height="7" />
-                                <rect x="14" y="14" width="7" height="7" />
-                            </svg>
-                        </div>
-                        <h3>Multi-tenant platform</h3>
-                        <p>Each practice works in a fully separated and protected environment.</p>
-                    </article>
+                                    @case('multi_tenant')
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                            stroke-width="2">
+                                            <rect x="3" y="3" width="7" height="7" />
+                                            <rect x="14" y="3" width="7" height="7" />
+                                            <rect x="3" y="14" width="7" height="7" />
+                                            <rect x="14" y="14" width="7" height="7" />
+                                        </svg>
+                                    @break
+                                @endswitch
+                            </div>
+                            <h3>{{ __('landing.features.cards.' . $featureKey . '.title') }}</h3>
+                            <p>{{ __('landing.features.cards.' . $featureKey . '.description') }}</p>
+                        </article>
+                    @endforeach
                 </div>
             </div>
         </section>
 
         <section class="lp-section lp-container" id="how-it-works" aria-labelledby="steps-heading">
             <div class="lp-reveal">
-                <p class="lp-eyebrow">How it works</p>
-                <h2 class="lp-section-title" id="steps-heading">From spreadsheet to insight in three steps</h2>
+                <p class="lp-eyebrow">{{ __('landing.steps.eyebrow') }}</p>
+                <h2 class="lp-section-title" id="steps-heading">{{ __('landing.steps.title') }}</h2>
 
                 <div class="lp-steps">
-                    <article class="lp-step">
-                        <div class="lp-step-num" aria-hidden="true">1</div>
-                        <div>
-                            <h3>Import your data</h3>
-                            <p>Upload your prepared Excel file securely to the platform.</p>
-                        </div>
-                    </article>
-                    <article class="lp-step">
-                        <div class="lp-step-num" aria-hidden="true">2</div>
-                        <div>
-                            <h3>Automatic processing</h3>
-                            <p>DentalFinance validates and processes data according to defined rules.</p>
-                        </div>
-                    </article>
-                    <article class="lp-step">
-                        <div class="lp-step-num" aria-hidden="true">3</div>
-                        <div>
-                            <h3>Understand the results</h3>
-                            <p>Use clear metrics and reports to support informed practice decisions.</p>
-                        </div>
-                    </article>
+                    @foreach (trans('landing.steps.items') as $step)
+                        <article class="lp-step">
+                            <div class="lp-step-num" aria-hidden="true">{{ $loop->iteration }}</div>
+                            <div>
+                                <h3>{{ $step['title'] }}</h3>
+                                <p>{{ $step['description'] }}</p>
+                            </div>
+                        </article>
+                    @endforeach
                 </div>
             </div>
         </section>
 
         <section class="lp-section lp-section-muted" id="product" aria-labelledby="product-heading">
             <div class="lp-container lp-reveal">
-                <p class="lp-eyebrow">Product preview</p>
-                <h2 class="lp-section-title" id="product-heading">See your practice numbers at a glance</h2>
-                <p class="lp-section-lead">
-                    A structured overview of revenue, costs, and results — with import status and month-over-month
-                    comparison.
-                </p>
+                <p class="lp-eyebrow">{{ __('landing.product.eyebrow') }}</p>
+                <h2 class="lp-section-title" id="product-heading">{{ __('landing.product.title') }}</h2>
+                <p class="lp-section-lead">{{ __('landing.product.lead') }}</p>
                 <div class="lp-product-wrap">
                     @include('landing.partials.dashboard-mockup', ['variant' => 'full'])
                 </div>
@@ -1020,16 +986,9 @@
 
         <section class="lp-section lp-container" id="benefits" aria-labelledby="benefits-heading">
             <div class="lp-reveal">
-                <h2 class="lp-section-title" id="benefits-heading">More overview. Less spreadsheet work.</h2>
+                <h2 class="lp-section-title" id="benefits-heading">{{ __('landing.benefits.title') }}</h2>
                 <div class="lp-benefits-grid">
-                    @foreach ([
-                        'Central data foundation for your practice finances',
-                        'Fewer manual errors in monthly calculations',
-                        'Faster monthly evaluations',
-                        'Traceable, rule-based calculations',
-                        'Clear overview of lab and treatment costs',
-                        'Better-informed practice decisions',
-                    ] as $benefit)
+                    @foreach (trans('landing.benefits.items') as $benefit)
                         <div class="lp-benefit">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2" aria-hidden="true">
@@ -1044,119 +1003,45 @@
 
         <section class="lp-section lp-section-muted" id="security" aria-labelledby="security-heading">
             <div class="lp-container lp-reveal">
-                <p class="lp-eyebrow">Security &amp; privacy</p>
-                <h2 class="lp-section-title" id="security-heading">Built with practice data protection in mind</h2>
-                <p class="lp-section-lead">
-                    DentalFinance does not store patient records and is not designed to process identifiable patient data.
-                </p>
+                <p class="lp-eyebrow">{{ __('landing.security.eyebrow') }}</p>
+                <h2 class="lp-section-title" id="security-heading">{{ __('landing.security.title') }}</h2>
+                <p class="lp-section-lead">{{ __('landing.security.lead') }}</p>
 
                 <div class="lp-security-grid">
-                    <article class="lp-security-item">
-                        <h3>Encrypted transmission</h3>
-                        <p>All communication with the platform is protected via HTTPS.</p>
-                    </article>
-                    <article class="lp-security-item">
-                        <h3>Role-based access</h3>
-                        <p>User permissions control who can import data, configure settings, and view reports.</p>
-                    </article>
-                    <article class="lp-security-item">
-                        <h3>Separated practice areas</h3>
-                        <p>Each practice operates in its own isolated tenant — data is never mixed between clinics.</p>
-                    </article>
-                    <article class="lp-security-item">
-                        <h3>Controlled imports</h3>
-                        <p>Excel uploads are validated and logged so you can review what was processed.</p>
-                    </article>
-                    <article class="lp-security-item">
-                        <h3>No cross-practice data</h3>
-                        <p>Queries and exports are scoped to the authenticated practice only.</p>
-                    </article>
-                    <article class="lp-security-item">
-                        <h3>EU-ready hosting</h3>
-                        <p>Designed for deployment on servers in Germany or the EU, depending on your environment setup.</p>
-                    </article>
+                    @foreach (trans('landing.security.items') as $item)
+                        <article class="lp-security-item">
+                            <h3>{{ $item['title'] }}</h3>
+                            <p>{{ $item['description'] }}</p>
+                        </article>
+                    @endforeach
                 </div>
             </div>
         </section>
 
         <section class="lp-section lp-section-muted" id="faq" aria-labelledby="faq-heading">
             <div class="lp-container lp-reveal">
-                <p class="lp-eyebrow">FAQ</p>
-                <h2 class="lp-section-title" id="faq-heading">Frequently asked questions</h2>
+                <p class="lp-eyebrow">{{ __('landing.faq.eyebrow') }}</p>
+                <h2 class="lp-section-title" id="faq-heading">{{ __('landing.faq.title') }}</h2>
 
                 <div class="lp-faq">
-                    <details>
-                        <summary>Who is DentalFinance for?</summary>
-                        <div class="lp-faq-answer">
-                            DentalFinance is built for dental practice owners, practice managers, and anyone responsible
-                            for the commercial side of a clinic — including new practice founders who need structured
-                            financial reporting from day one.
-                        </div>
-                    </details>
-                    <details>
-                        <summary>Which Excel files can be imported?</summary>
-                        <div class="lp-faq-answer">
-                            The platform imports structured daily report Excel files (.xlsx / .xlsm) containing billing
-                            and performance data. After registration, configure your treatments, labs, and doctors so
-                            imports can be processed correctly.
-                        </div>
-                    </details>
-                    <details>
-                        <summary>Is patient data required?</summary>
-                        <div class="lp-faq-answer">
-                            No. DentalFinance is designed for financial and operational practice data — not patient
-                            records. It should not be used to store identifiable patient information.
-                        </div>
-                    </details>
-                    <details>
-                        <summary>Can I configure treatments and lab costs myself?</summary>
-                        <div class="lp-faq-answer">
-                            Yes. You can manage treatments, prices, labs, and lab price schedules through the
-                            configuration area. The platform uses these settings when calculating costs during import
-                            and reporting.
-                        </div>
-                    </details>
-                    <details>
-                        <summary>Are different practices' data kept separate?</summary>
-                        <div class="lp-faq-answer">
-                            Yes. Each practice is a separate tenant. Users only see data belonging to their own clinic —
-                            there is no shared view across practices.
-                        </div>
-                    </details>
-                    <details>
-                        <summary>Can I export reports?</summary>
-                        <div class="lp-faq-answer">
-                            Yes. After importing a daily report, you can download a Server Income Excel export with
-                            per-doctor income breakdowns. Import logs can also be downloaded as JSON for audit
-                            purposes.
-                        </div>
-                    </details>
-                    <details>
-                        <summary>Do I need special technical skills?</summary>
-                        <div class="lp-faq-answer">
-                            No development skills are required. If you can prepare your practice Excel file and manage
-                            basic configuration (treatments, labs, users), you can use the platform. Initial setup is
-                            guided through the configuration dashboard.
-                        </div>
-                    </details>
-                    <details>
-                        <summary>How can I try DentalFinance?</summary>
-                        <div class="lp-faq-answer">
-                            Register your practice to start a free trial. You will set up your clinic, configure the
-                            essentials, and can then import your first Excel file to see results.
-                        </div>
-                    </details>
+                    @foreach (trans('landing.faq.items') as $item)
+                        <details>
+                            <summary>{{ $item['question'] }}</summary>
+                            <div class="lp-faq-answer">{{ $item['answer'] }}</div>
+                        </details>
+                    @endforeach
                 </div>
             </div>
         </section>
 
         <section class="lp-cta-band" aria-labelledby="cta-heading">
             <div class="lp-container lp-reveal">
-                <h2 id="cta-heading">Bring clarity to your practice numbers</h2>
-                <p>Turn your existing data into understandable financial insights.</p>
+                <h2 id="cta-heading">{{ __('landing.cta.title') }}</h2>
+                <p>{{ __('landing.cta.lead') }}</p>
                 <div class="lp-cta-actions">
-                    <a href="{{ route('register-clinic.create') }}" class="lp-btn lp-btn-primary">Start free trial</a>
-                    <a href="{{ route('login') }}" class="lp-btn lp-btn-secondary">Sign in</a>
+                    <a href="{{ route('register-clinic.create') }}"
+                        class="lp-btn lp-btn-primary">{{ __('landing.actions.get_started') }}</a>
+                    <a href="{{ route('login') }}" class="lp-btn lp-btn-secondary">{{ __('landing.actions.login') }}</a>
                 </div>
             </div>
         </section>
@@ -1167,33 +1052,30 @@
             <div class="lp-footer-grid">
                 <div>
                     <div class="lp-footer-brand">DentalFinance</div>
-                    <p class="lp-footer-desc">
-                        Financial reporting software for dental practices — import Excel data, analyse revenue and costs,
-                        and create structured reports.
-                    </p>
+                    <p class="lp-footer-desc">{{ __('landing.footer.description') }}</p>
                 </div>
                 <div>
-                    <h3>Product</h3>
+                    <h3>{{ __('landing.footer.product_heading') }}</h3>
                     <ul class="lp-footer-links">
-                        <li><a href="#features">Features</a></li>
-                        <li><a href="#how-it-works">How it works</a></li>
-                        <li><a href="#faq">FAQ</a></li>
+                        <li><a href="#features">{{ __('landing.nav.features') }}</a></li>
+                        <li><a href="#how-it-works">{{ __('landing.nav.how_it_works') }}</a></li>
+                        <li><a href="#faq">{{ __('landing.nav.faq') }}</a></li>
                     </ul>
                 </div>
                 <div>
-                    <h3>Legal &amp; access</h3>
+                    <h3>{{ __('landing.footer.legal_heading') }}</h3>
                     <ul class="lp-footer-links">
                         @if ($publicContactMailto)
-                            <li><a href="{{ $publicContactMailto }}">Contact</a></li>
+                            <li><a href="{{ $publicContactMailto }}">{{ __('landing.footer.contact') }}</a></li>
                         @endif
-                        <li><a href="{{ route('legal.imprint') }}">Impressum</a></li>
-                        <li><a href="{{ route('legal.privacy') }}">Datenschutz</a></li>
-                        <li><a href="{{ route('login') }}">Sign in</a></li>
+                        <li><a href="{{ route('legal.imprint') }}">{{ __('landing.footer.imprint') }}</a></li>
+                        <li><a href="{{ route('legal.privacy') }}">{{ __('landing.footer.privacy') }}</a></li>
+                        <li><a href="{{ route('login') }}">{{ __('landing.actions.login') }}</a></li>
                     </ul>
                 </div>
             </div>
             <div class="lp-footer-bottom">
-                &copy; {{ date('Y') }} DentalFinance. All rights reserved.
+                {{ __('landing.footer.copyright', ['year' => date('Y')]) }}
             </div>
         </div>
     </footer>

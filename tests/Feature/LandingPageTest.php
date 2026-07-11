@@ -14,8 +14,8 @@ class LandingPageTest extends TestCase
     {
         $this->get(route('landing'))
             ->assertOk()
-            ->assertSee('Financial clarity for your dental practice', false)
-            ->assertSee('Start free trial', false)
+            ->assertSee(__('landing.hero.title'), false)
+            ->assertSee(__('landing.actions.get_started'), false)
             ->assertSee(route('register-clinic.create'), false)
             ->assertSee(route('login'), false);
     }
