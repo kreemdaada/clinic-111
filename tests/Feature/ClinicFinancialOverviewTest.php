@@ -57,8 +57,8 @@ class ClinicFinancialOverviewTest extends TestCase
         $this->actingAs($this->authenticateAdmin())
             ->get(route('clinic.financial-overview'))
             ->assertOk()
-            ->assertSee('Practice Overview', false)
-            ->assertSee('<h1 class="page-title">Practice Overview</h1>', false);
+            ->assertSee(__('reports.practice_overview.title'), false)
+            ->assertSee('<h1 class="page-title">'.e(__('reports.practice_overview.title')).'</h1>', false);
     }
 
     public function test_navigation_contains_overview_route(): void
@@ -67,7 +67,7 @@ class ClinicFinancialOverviewTest extends TestCase
             ->get(route('imports.index'))
             ->assertOk()
             ->assertSee(route('clinic.financial-overview'), false)
-            ->assertSee('Overview', false);
+            ->assertSee(__('navigation.overview'), false);
     }
 
     public function test_empty_state_when_no_data(): void
@@ -75,7 +75,7 @@ class ClinicFinancialOverviewTest extends TestCase
         $this->actingAs($this->authenticateAdmin())
             ->get(route('clinic.financial-overview', ['month' => '2020-01']))
             ->assertOk()
-            ->assertSee('No accounting data', false)
+            ->assertSee(__('reports.practice_overview.empty', ['month' => '2020-01']), false)
             ->assertSee(route('imports.index'), false);
     }
 
@@ -170,8 +170,8 @@ class ClinicFinancialOverviewTest extends TestCase
         $this->actingAs($this->authenticateAdmin())
             ->get(route('clinic.financial-overview', ['month' => '2026-06']))
             ->assertOk()
-            ->assertSee('No accounting data', false)
-            ->assertSee('awaiting review are excluded', false)
+            ->assertSee(__('reports.practice_overview.empty', ['month' => '2026-06']), false)
+            ->assertSee(__('reports.practice_overview.needs_review', ['count' => 1]), false)
             ->assertDontSee('AED 5000.00', false);
     }
 
@@ -192,8 +192,8 @@ class ClinicFinancialOverviewTest extends TestCase
         $this->actingAs($this->authenticateAdmin())
             ->get(route('clinic.financial-overview', ['month' => '2026-06']))
             ->assertOk()
-            ->assertSee('Top treatments by allocated revenue', false)
-            ->assertSee('Allocated revenue', false);
+            ->assertSee(__('reports.practice_overview.top_treatments'), false)
+            ->assertSee(__('reports.practice_overview.table.allocated_revenue'), false);
     }
 
     public function test_usd_clinic_overview_displays_amounts_in_usd_without_aed_factor(): void

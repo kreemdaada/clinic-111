@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Doctors')
+@section('title', __('doctors.title'))
 
 @push('styles')
 <style>
@@ -79,7 +79,7 @@
 
 @section('content')
 @include('partials.configuration-back-link', ['showConfigurationBack' => $showConfigurationBack ?? false])
-<h1 class="page-title">Doctors</h1>
+<h1 class="page-title">{{ __('doctors.title') }}</h1>
 
 @if (session('success'))
 <div class="alert alert-success">{{ session('success') }}</div>
@@ -94,32 +94,32 @@
 @endif
 
 <article class="card doctor-create-card">
-    <h2 style="font-size:1rem;margin:0 0 1rem;">Create doctor</h2>
+    <h2 style="font-size:1rem;margin:0 0 1rem;">{{ __('doctors.create_heading') }}</h2>
     <form method="POST" action="{{ route('doctors.store') }}" class="doctor-admin-form" id="doctor-create-form">
         @csrf
         @include('partials.configuration-return-hidden')
         <div class="form-group" style="margin:0;">
-            <label class="form-label">Code</label>
+            <label class="form-label">{{ __('doctors.fields.code') }}</label>
             <input class="form-input" type="text" name="code" value="{{ old('code') }}" placeholder="DRNAME" required style="text-transform:uppercase;">
         </div>
         <div class="form-group" style="margin:0;">
-            <label class="form-label">Name</label>
+            <label class="form-label">{{ __('doctors.fields.name') }}</label>
             <input class="form-input" type="text" name="name" value="{{ old('name') }}" placeholder="Dr Name" required>
         </div>
         <div class="form-group" style="margin:0;">
-            <label class="form-label">Commission type</label>
+            <label class="form-label">{{ __('doctors.commission_type') }}</label>
             <select class="form-input" name="commission_type" data-commission-type>
-                <option value="percentage" @selected(old('commission_type', 'percentage' )==='percentage' )>Percentage</option>
-                <option value="fixed" @selected(old('commission_type')==='fixed' )>Without commission (per treatment)</option>
+                <option value="percentage" @selected(old('commission_type', 'percentage' )==='percentage' )>{{ __('doctors.commission_type_percentage') }}</option>
+                <option value="fixed" @selected(old('commission_type')==='fixed' )>{{ __('doctors.commission_type_fixed') }}</option>
             </select>
         </div>
         <div class="form-group" style="margin:0;" data-commission-pct-wrap>
-            <label class="form-label">Commission %</label>
+            <label class="form-label">{{ __('doctors.commission_percent') }}</label>
             <input class="form-input" type="number" step="0.01" min="0" max="100" name="commission_percentage"
                 value="{{ old('commission_percentage', '35') }}">
         </div>
         <div class="form-group" style="margin:0;">
-            <label class="form-label">Default lab</label>
+            <label class="form-label">{{ __('doctors.default_lab') }}</label>
             <select class="form-input" name="default_lab_id">
                 <option value="">—</option>
                 @foreach ($labs as $lab)
@@ -128,7 +128,7 @@
             </select>
         </div>
         <div class="doctor-admin-actions">
-            <button type="submit" class="btn btn-primary btn-sm">Create</button>
+            <button type="submit" class="btn btn-primary btn-sm">{{ __('doctors.create') }}</button>
         </div>
     </form>
 </article>
@@ -140,14 +140,14 @@
             <div>
                 <h2 class="doctor-admin-code">{{ $doctor->code }}</h2>
                 <div class="doctor-admin-meta">
-                    {{ $doctor->daily_work_rows_count }} report {{ Str::plural('entry', $doctor->daily_work_rows_count) }}
+                    {{ $doctor->daily_work_rows_count }} {{ __('common.table.report') }} {{ $doctor->daily_work_rows_count === 1 ? __('doctors.entry_one') : __('doctors.entry_many') }}
                     @if ($doctor->defaultLab)
                     · {{ $doctor->defaultLab->name }}
                     @endif
                 </div>
             </div>
             <span class="doctor-status-pill @if($doctor->is_active) is-active @endif">
-                {{ $doctor->is_active ? 'Active' : 'Inactive' }}
+                {{ $doctor->is_active ? __('common.status.active') : __('common.status.inactive') }}
             </span>
         </div>
 
@@ -157,26 +157,26 @@
             @method('PUT')
 
             <div class="form-group" style="margin:0;">
-                <label class="form-label">Name</label>
+                <label class="form-label">{{ __('doctors.fields.name') }}</label>
                 <input class="form-input" type="text" name="name" value="{{ old('name.'.$doctor->id, $doctor->name) }}" required>
             </div>
 
             <div class="form-group" style="margin:0;">
-                <label class="form-label">Commission type</label>
+                <label class="form-label">{{ __('doctors.commission_type') }}</label>
                 <select class="form-input" name="commission_type" data-commission-type>
-                    <option value="percentage" @selected($doctor->commission_type->value === 'percentage')>Percentage</option>
-                    <option value="fixed" @selected($doctor->commission_type->value === 'fixed')>Without commission (per treatment)</option>
+                    <option value="percentage" @selected($doctor->commission_type->value === 'percentage')>{{ __('doctors.commission_type_percentage') }}</option>
+                    <option value="fixed" @selected($doctor->commission_type->value === 'fixed')>{{ __('doctors.commission_type_fixed') }}</option>
                 </select>
             </div>
 
             <div class="form-group" style="margin:0;" data-commission-pct-wrap>
-                <label class="form-label">Commission %</label>
+                <label class="form-label">{{ __('doctors.commission_percent') }}</label>
                 <input class="form-input" type="number" step="0.01" min="0" max="100" name="commission_percentage"
                     value="{{ old('commission_percentage.'.$doctor->id, $doctor->commission_percentage) }}">
             </div>
 
             <div class="form-group" style="margin:0;">
-                <label class="form-label">Default lab</label>
+                <label class="form-label">{{ __('doctors.default_lab') }}</label>
                 <select class="form-input" name="default_lab_id">
                     <option value="">—</option>
                     @foreach ($labs as $lab)
@@ -186,31 +186,31 @@
             </div>
 
             <div class="form-group" style="margin:0;">
-                <label class="form-label">Status</label>
+                <label class="form-label">{{ __('doctors.fields.status') }}</label>
                 <select class="form-input" name="is_active">
-                    <option value="1" @selected($doctor->is_active)>Active</option>
-                    <option value="0" @selected(! $doctor->is_active)>Inactive</option>
+                    <option value="1" @selected($doctor->is_active)>{{ __('common.status.active') }}</option>
+                    <option value="0" @selected(! $doctor->is_active)>{{ __('common.status.inactive') }}</option>
                 </select>
             </div>
 
             <div class="doctor-admin-actions">
-                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                <button type="submit" class="btn btn-primary btn-sm">{{ __('common.actions.save') }}</button>
             </div>
         </form>
 
         <form method="POST" action="{{ route('doctors.destroy', $doctor) }}" style="margin-top:0.75rem;"
-            data-confirm-title="Delete"
-            data-confirm-ok="Delete"
+            data-confirm-title="{{ __('common.confirm.delete') }}"
+            data-confirm-ok="{{ __('common.actions.delete') }}"
             data-confirm-danger="1"
-            data-confirm="Soft delete {{ $doctor->code }}? The doctor record is kept for historical reports.">
+            data-confirm="{{ __('doctors.delete_confirm', ['code' => $doctor->code]) }}">
             @csrf
         @include('partials.configuration-return-hidden')
             @method('DELETE')
-            <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">Delete</button>
+            <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--danger);">{{ __('common.actions.delete') }}</button>
         </form>
     </article>
     @empty
-    <p style="color:var(--text-muted);font-size:0.9rem;">No doctors yet. Create your first doctor above.</p>
+    <p style="color:var(--text-muted);font-size:0.9rem;">{{ __('doctors.empty') }}</p>
     @endforelse
 </div>
 @endsection

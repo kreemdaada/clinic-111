@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Practice Overview')
+@section('title', __('reports.practice_overview.title'))
 
 @push('styles')
 <style>
@@ -138,11 +138,13 @@
     }
 
     .pov-bar {
+        --bar-height: 4;
         width: 100%;
         max-width: 2.5rem;
         background: var(--primary);
         border-radius: 4px 4px 0 0;
         min-height: 4px;
+        height: calc(var(--bar-height) * 1px);
     }
 
     .pov-bar-labels {
@@ -216,40 +218,40 @@
 @section('content')
 <div class="pov-intro">
     <div>
-        <h1 class="page-title">Practice Overview</h1>
-        <p class="page-subtitle">Financial summary from imported accounting data — revenue, lab costs, and calculated result.</p>
+        <h1 class="page-title">{{ __('reports.practice_overview.title') }}</h1>
+        <p class="page-subtitle">{{ __('reports.practice_overview.subtitle') }}</p>
         @if ($overview->dataStandLabel)
             <p class="pov-data-stand">{{ $overview->dataStandLabel }}</p>
         @endif
         @if ($overview->needsReviewReportCount > 0)
             <p class="pov-data-stand" style="color:var(--warning);">
-                {{ $overview->needsReviewReportCount }} report(s) awaiting review are excluded from these figures.
-                <a href="{{ route('imports.index') }}">Review in Import</a>
+                {{ __('reports.practice_overview.needs_review', ['count' => $overview->needsReviewReportCount]) }}
+                <a href="{{ route('imports.index') }}">{{ __('reports.practice_overview.review_in_import') }}</a>
             </p>
         @endif
     </div>
     <form method="GET" action="{{ route('clinic.financial-overview') }}" class="pov-filter">
-        <label for="month">Period</label>
+        <label for="month">{{ __('common.filter.period') }}</label>
         <input class="form-input" type="month" id="month" name="month" value="{{ $overview->selectedMonth }}" style="width:auto;">
-        <button type="submit" class="btn btn-secondary btn-sm">Apply</button>
+        <button type="submit" class="btn btn-secondary btn-sm">{{ __('common.filter.apply') }}</button>
     </form>
 </div>
 
 @if (! $overview->hasData)
     <div class="pov-empty">
-        <p>No accounting data for {{ $overview->selectedMonth }}. Import a daily report to see financial metrics.</p>
-        <a href="{{ route('imports.index') }}" class="btn btn-primary">Go to import</a>
+        <p>{{ __('reports.practice_overview.empty', ['month' => $overview->selectedMonth]) }}</p>
+        <a href="{{ route('imports.index') }}" class="btn btn-primary">{{ __('reports.practice_overview.go_to_import') }}</a>
     </div>
 @else
-    <div class="pov-kpis" role="group" aria-label="Key metrics">
+    <div class="pov-kpis" role="group" aria-label="{{ __('reports.practice_overview.key_metrics') }}">
         @php
             $kpis = [
-                ['label' => 'Total revenue', 'kpi' => $overview->revenue],
-                ['label' => 'Lab costs', 'kpi' => $overview->labCost],
-                ['label' => 'OPG-Normal value', 'kpi' => $overview->opgNormalValue],
-                ['label' => 'OPG-3D value', 'kpi' => $overview->opg3dValue],
-                ['label' => 'Nurse commission', 'kpi' => $overview->nurseCommission],
-                ['label' => 'Calculated result', 'kpi' => $overview->calculatedResult, 'highlight' => true],
+                ['label' => __('reports.practice_overview.kpis.total_revenue'), 'kpi' => $overview->revenue],
+                ['label' => __('reports.practice_overview.kpis.lab_costs'), 'kpi' => $overview->labCost],
+                ['label' => __('reports.practice_overview.kpis.opg_normal'), 'kpi' => $overview->opgNormalValue],
+                ['label' => __('reports.practice_overview.kpis.opg_3d'), 'kpi' => $overview->opg3dValue],
+                ['label' => __('reports.practice_overview.kpis.nurse_commission'), 'kpi' => $overview->nurseCommission],
+                ['label' => __('reports.practice_overview.kpis.calculated_result'), 'kpi' => $overview->calculatedResult, 'highlight' => true],
             ];
         @endphp
         @foreach ($kpis as $item)
@@ -263,7 +265,7 @@
                     'is-up' => $item['kpi']->comparisonDirection === 'up',
                     'is-down' => $item['kpi']->comparisonDirection === 'down',
                 ])>
-                    vs previous month: {{ $item['kpi']->comparisonLabel }}
+                    {{ __('reports.practice_overview.vs_previous_month', ['label' => $item['kpi']->comparisonLabel]) }}
                 </span>
             </article>
         @endforeach
@@ -271,12 +273,12 @@
 
     <div class="pov-grid">
         <section class="pov-panel" aria-labelledby="pov-trend-heading">
-            <h2 id="pov-trend-heading">Revenue trend (6 months)</h2>
-            <div class="pov-chart" role="img" aria-label="Revenue trend chart">
+            <h2 id="pov-trend-heading">{{ __('reports.practice_overview.revenue_trend') }}</h2>
+            <div class="pov-chart" role="img" aria-label="{{ __('reports.practice_overview.revenue_trend_chart') }}">
                 @foreach ($overview->revenueTrend as $point)
                     <div class="pov-bar-wrap">
                         <span class="pov-bar-value">{{ $currencyFormatter->format($point->revenue, $overview->currency) }}</span>
-                        <div class="pov-bar" style="height: {{ max(4, $point->barPercent) }}%;"></div>
+                        <div class="pov-bar" style="--bar-height: {{ max(4, $point->barPercent) }}"></div>
                     </div>
                 @endforeach
             </div>
@@ -288,15 +290,15 @@
         </section>
 
         <section class="pov-panel" aria-labelledby="pov-treatments-heading">
-            <h2 id="pov-treatments-heading">Top treatments by allocated revenue</h2>
+            <h2 id="pov-treatments-heading">{{ __('reports.practice_overview.top_treatments') }}</h2>
             @if (count($overview->topTreatments) === 0)
-                <p style="font-size:0.875rem;color:var(--text-muted);">No allocated treatment revenue for this period.</p>
+                <p style="font-size:0.875rem;color:var(--text-muted);">{{ __('reports.practice_overview.no_treatment_revenue') }}</p>
             @else
                 <table class="pov-table">
                     <thead>
                         <tr>
-                            <th scope="col">Treatment</th>
-                            <th scope="col">Allocated revenue</th>
+                            <th scope="col">{{ __('reports.practice_overview.table.treatment') }}</th>
+                            <th scope="col">{{ __('reports.practice_overview.table.allocated_revenue') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -316,10 +318,7 @@
     </div>
 
     <p class="pov-note">
-        <strong>Calculated result</strong> = total collected revenue minus lab costs (JOB) minus nurse commission.
-        Doctor commissions, overhead, taxes, and other operating costs are not included.
-        OPG-Normal and OPG-3D values are informative treatment list prices from nurse commission snapshots, not collected revenue.
-        Treatment allocated revenue uses quantity-weighted allocation from row-level payments when multiple treatments appear on one line — not payment-level totals per treatment.
+        {!! __('reports.practice_overview.note') !!}
     </p>
 @endif
 @endsection

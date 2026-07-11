@@ -1,0 +1,30 @@
+<?php
+
+return [
+    'title' => 'Treatments',
+    'search_placeholder' => 'Search by treatment code or name',
+    'create' => 'Create treatment',
+    'create_heading' => 'Create treatment',
+    'edit_heading' => 'Edit treatment',
+    'empty' => 'No treatments match your filters.',
+    'description' => 'Description',
+    'treatment_price' => 'Treatment price',
+    'treatment_price_hint' => 'Price charged for this treatment.',
+    'price_placeholder' => '0.00',
+    'select_currency' => 'Select currency',
+    'nurse_commission_required' => 'Nurse commission required',
+    'external_lab_cost' => 'External lab cost',
+    'nurse_commission_required_yes' => 'Required',
+    'nurse_commission_required_no' => 'Not required',
+    'item_one' => 'item',
+    'item_many' => 'items',
+    'delete_confirm_title' => 'Delete',
+    'delete_confirm' => 'Soft delete :code? Historical work items are preserved.',
+    'delete_confirm_generic' => 'Soft delete this treatment? Historical work items are preserved.',
+    'table' => [
+        'treatment_price' => 'Treatment price',
+        'nurse_commission' => 'Nurse commission',
+        'lab_cost' => 'Lab cost',
+        'usage' => 'Usage',
+    ],
+];

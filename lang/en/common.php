@@ -4,11 +4,38 @@ return [
     'actions' => [
         'save' => 'Save',
         'back' => 'Back',
+        'create' => 'Create',
+        'edit' => 'Edit',
+        'delete' => 'Delete',
+        'cancel' => 'Cancel',
+        'activate' => 'Activate',
+        'deactivate' => 'Deactivate',
+        'apply' => 'Apply',
     ],
+    'status' => [
+        'active' => 'Active',
+        'inactive' => 'Inactive',
+        'all' => 'All',
+    ],
+    'filter' => [
+        'search' => 'Search',
+        'status' => 'Status',
+        'filter' => 'Filter',
+        'reset' => 'Reset',
+        'period' => 'Period',
+    ],
+    'table' => [
+        'code' => 'Code',
+        'name' => 'Name',
+        'report' => 'report',
+    ],
+    'yes' => 'Yes',
+    'no' => 'No',
     'confirm' => [
         'title' => 'Confirm',
         'message' => 'Are you sure?',
         'ok' => 'Confirm',
         'cancel' => 'Cancel',
+        'delete' => 'Delete',
     ],
 ];

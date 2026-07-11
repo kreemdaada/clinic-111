@@ -31,8 +31,8 @@ class AdminHelperTextRemovalTest extends TestCase
         $admin = User::query()->where('email', 'admin@clinic.test')->firstOrFail();
 
         $pages = [
-            ['route' => 'doctors.index', 'title' => 'Doctors', 'marker' => 'Commission type'],
-            ['route' => 'treatments.index', 'title' => 'Treatments', 'marker' => 'Lab cost'],
+            ['route' => 'doctors.index', 'title' => __('doctors.title'), 'marker' => __('doctors.commission_type')],
+            ['route' => 'treatments.index', 'title' => __('treatments.title'), 'marker' => __('treatments.table.lab_cost')],
             ['route' => 'lab-prices.index', 'title' => 'Lab prices', 'marker' => 'Unit cost'],
             ['route' => 'doctor-fixed-fees.index', 'title' => 'Doctors without commission', 'marker' => 'Amount'],
         ];
