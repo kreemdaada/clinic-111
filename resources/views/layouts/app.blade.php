@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ $textDirection ?? 'ltr' }}">
 
 <head>
     <meta charset="utf-8">
@@ -22,6 +22,10 @@
             line-height: 1.5;
             min-height: 100vh;
             -webkit-font-smoothing: antialiased;
+        }
+
+        html[dir="rtl"] body {
+            direction: rtl;
         }
 
         :root {
@@ -601,6 +605,7 @@
             @if (auth()->user()->isAdmin())
             <a href="{{ route('configuration.dashboard') }}" @class(['active'=> request()->routeIs('configuration.*') || request()->routeIs('clinics.*') || request()->routeIs('doctors.*') || request()->routeIs('labs.*') || request()->routeIs('treatments.*') || request()->routeIs('lab-prices.*') || request()->routeIs('doctor-fixed-fees.*') || request()->routeIs('admin.users.*')])>Configuration</a>
             @endif
+            <a href="{{ route('settings.language.edit') }}" @class(['active'=> request()->routeIs('settings.*')])>{{ __('settings.language.title') }}</a>
             <span class="topbar-user">{{ auth()->user()->email }} ({{ auth()->user()->role->value }})</span>
             <form method="POST" action="{{ route('logout') }}" style="display:inline;">
                 @csrf
