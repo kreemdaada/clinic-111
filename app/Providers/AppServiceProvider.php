@@ -66,6 +66,14 @@ class AppServiceProvider extends ServiceProvider
             });
         });
 
+        RateLimiter::for('forgot-password', function (Request $request) {
+            $email = strtolower(trim((string) $request->input('email', '')));
+
+            return Limit::perMinute(
+                (int) config('auth_security.password_reset.max_attempts', 5)
+            )->by($email.'|'.$request->ip());
+        });
+
         View::composer([
             'layouts.app',
             'logs.*',

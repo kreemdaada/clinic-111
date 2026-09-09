@@ -289,6 +289,27 @@ class AuditLogService
         );
     }
 
+    public function logPasswordResetRequested(string $email): AuditLog
+    {
+        $normalizedEmail = strtolower(trim($email));
+        $user = User::query()->where('email', $normalizedEmail)->first();
+
+        if ($user === null) {
+            return $this->logPlatform(
+                AuditAction::PasswordResetRequested,
+                ['email' => $normalizedEmail],
+            );
+        }
+
+        return $this->log(
+            AuditAction::PasswordResetRequested,
+            $user,
+            null,
+            ['email' => $normalizedEmail],
+            (int) $user->clinic_id,
+        );
+    }
+
     public function logLoginSucceeded(User $user): AuditLog
     {
         return $this->log(

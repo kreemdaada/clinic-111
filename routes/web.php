@@ -18,6 +18,7 @@ use App\Http\Controllers\Web\LogController;
 use App\Http\Controllers\Web\MonthlyIncomeController;
 use App\Http\Controllers\Web\NurseAdminController;
 use App\Http\Controllers\Web\NurseCommissionRateAdminController;
+use App\Http\Controllers\Web\PasswordResetController;
 use App\Http\Controllers\Web\ReportLockController;
 use App\Http\Controllers\Web\TreatmentAdminController;
 use App\Http\Controllers\Web\UserAdminController;
@@ -36,6 +37,15 @@ Route::put('/locale', [UserLocaleController::class, 'update'])->name('locale.upd
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
+
+    Route::get('/forgot-password', [PasswordResetController::class, 'create'])->name('password.request');
+    Route::post('/forgot-password', [PasswordResetController::class, 'store'])
+        ->middleware('throttle:forgot-password')
+        ->name('password.email');
+    Route::get('/reset-password/{token}', [PasswordResetController::class, 'edit'])->name('password.reset');
+    Route::post('/reset-password', [PasswordResetController::class, 'update'])
+        ->middleware('throttle:forgot-password')
+        ->name('password.update');
 
     Route::post('/register-clinic', [ClinicOnboardingController::class, 'store'])->name('register-clinic.store')
         ->middleware('throttle:register-clinic');

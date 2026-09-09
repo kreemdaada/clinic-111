@@ -126,8 +126,9 @@ Authentication, abuse protection, and platform audit context are hardened before
 | Security headers | HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, CSP via `SecurityHeadersMiddleware` |
 | Platform audit context | Unknown auth events use `clinic_id = null`, not `CLINIC_111` |
 | Security audit | `login_succeeded`, `login_failed`, `login_lockout`, `logout`, `clinic_registered`, `email_verification_sent`, `email_verified`, `registration_abuse` |
+| Self-service password reset | **Web** (ADR-040) — Laravel Password Broker; admin reset unchanged. Public API forgot/reset out of scope. |
 
-Out of scope for Milestone 13A/13B: full tenant authorization review (Milestone 13B), 2FA, OAuth.
+Out of scope for Milestone 13A/13B: full tenant authorization review (Milestone 13B), 2FA, OAuth. Self-service forgot password is implemented on branch `feature/self-service-password-reset` (ADR-040).
 
 ---
 
@@ -180,6 +181,10 @@ Patient name, MRN, and file number are **never stored or exposed** in API respon
 ---
 
 ## What Changed
+
+**Updated — 2026-09-09**
+
+- Self-service password reset documented as planned (ADR-040 Proposed); admin reset unchanged; implementation not started
 
 **Updated — 2026-06-28**
 

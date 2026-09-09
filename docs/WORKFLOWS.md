@@ -227,7 +227,30 @@ Same as before — aggregates `payments`, `lab_jobs`, and `work_items` per docto
 
 ## 6. Authentication
 
-Unchanged — Sanctum bearer tokens, rate-limited login.
+Sanctum bearer tokens for API; session login for web.
+
+**Self-service password reset (ADR-040, web only):**
+
+```mermaid
+sequenceDiagram
+    actor Guest
+    participant Login as /login
+    participant Forgot as /forgot-password
+    participant Mail as Resend
+    participant Reset as /reset-password
+    participant Audit as audit_logs
+
+    Guest->>Login: Forgot password?
+    Guest->>Forgot: Submit email
+    Forgot->>Mail: Reset link if active user
+    Forgot->>Audit: password_reset_requested
+    Forgot-->>Guest: Generic success message
+    Guest->>Reset: New password via token
+    Reset->>Audit: password_reset
+    Reset-->>Guest: Redirect to login
+```
+
+Admin password reset via `/admin/users` is unchanged.
 
 ---
 

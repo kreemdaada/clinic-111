@@ -380,6 +380,49 @@ Test Cases
 
 ---
 
+## Milestone — Self-Service Password Reset
+
+### Self-Service Password Reset (Forgot Password)
+
+Status
+
+TODO (ADR-040 Proposed on branch `feature/self-service-password-reset`; web forgot/reset implemented pending merge)
+
+Depends on
+
+* ADR-040
+* ADR-038 (Resend mail in production)
+
+Goal
+
+Simple web forgot/reset: login link → email → reset link → new password → login.
+
+In scope
+
+* Laravel Password Broker + existing `password_reset_tokens`
+* Generic success message (no email enumeration)
+* No mail for inactive users
+* Rate limit on forgot POST
+* Audit request + completed reset
+* Revoke Sanctum tokens after reset
+* i18n en / de / ar
+
+Out of scope
+
+* Public API forgot/reset
+* CAPTCHA, 2FA, OAuth
+* Logged-in change-password page
+* Admin reset changes
+
+Acceptance (when implemented)
+
+* Guest can reset and sign in again
+* Unknown/inactive emails stay generic
+* Admin reset unchanged
+* Tests green; no accounting changes
+
+---
+
 # Version 3 Stable
 
 Requirements
@@ -389,5 +432,6 @@ Requirements
 * Production Ready
 * Documentation Complete
 * 200+ Automated Tests
+* Self-service password reset on web login (ADR-040) — when that milestone is DONE
 
 Version 3 will be considered complete only when all milestones are marked as DONE.

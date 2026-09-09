@@ -56,8 +56,11 @@ enum AuditAction: string
     /** A user account was deactivated. */
     case UserDeactivated = 'user_deactivated';
 
-    /** A user password was reset by an admin. */
+    /** A user password was reset by an admin or via self-service. */
     case PasswordReset = 'password_reset';
+
+    /** A guest requested a self-service password reset email. */
+    case PasswordResetRequested = 'password_reset_requested';
 
     /** A laboratory master record was created. */
     case LabCreated = 'lab_created';

@@ -3612,6 +3612,105 @@ Reserved for the **architecture analysis** (implementation planning):
 
 ---
 
+## ADR-040
+
+**Title:** Self-Service Password Reset (Forgot Password)
+
+**Status:** Proposed
+
+**Date:** 2026-09-09
+
+**Milestone:** Self-Service Password Reset
+
+**Branch:** `feature/self-service-password-reset`
+
+**Context:**
+
+Users can register and sign in, but there is **no “forgot password” path** on `/login`. Today only a clinic admin can reset a password (`UserManagementService::resetPassword()`).
+
+Already available and reusable:
+
+* Table `password_reset_tokens` and Laravel password broker (`config/auth.php`)
+* Password policy `Password::defaults()` (ADR-032)
+* Production mail via Resend (ADR-038)
+* Enumeration-safe auth messaging (ADR-033)
+
+**Decision:**
+
+Add a **simple web-only forgot/reset flow** using Laravel’s standard Password Broker. Keep behaviour close to Laravel defaults. Do not invent a custom token system.
+
+**User flow**
+
+1. Login page → “Forgot password?”
+2. Enter email → always show the same success message
+3. If an **active** user exists → send reset link by email (Resend in production)
+4. User opens link → sets a new password (policy from ADR-032)
+5. Redirect to login (no auto-login)
+
+**Rules**
+
+* **Web only** in v1 — no public API forgot/reset
+* **Admin reset stays as it is** — separate feature
+* **Same generic response** for unknown email, inactive user, or mail sent — no enumeration
+* **Inactive users** never receive a reset email
+* **Throttle** forgot-password POST with a simple named rate limiter (email + IP) in `config/auth_security.php`; also keep broker throttle
+* **On successful reset:** save new password, revoke Sanctum tokens (same as admin reset), redirect to login
+* **Audit:** `password_reset_requested` when the form is submitted; `password_reset` when the password is changed (never log tokens or passwords)
+* **i18n:** en / de / ar via `auth.*` / `passwords.*`
+
+**Out of scope**
+
+* API forgot/reset
+* CAPTCHA on the forgot form
+* Change-password page for logged-in users
+* 2FA / OAuth
+* Custom reset-token tables or signed-URL schemes beyond Laravel’s broker
+
+**Alternatives Considered:**
+
+1. **Admin-only forever** — Rejected; SaaS owners need self-recovery.
+2. **Custom token design** — Rejected; broker already exists.
+3. **Web + API in v1** — Deferred; web closes the login gap first.
+
+**Consequences:**
+
+* Positive: standard Laravel flow, small surface, reuses mail and token table
+* Negative: mail delivery issues look like “no account” to the user — monitor Resend
+
+**Affected Components (when coding):**
+
+* Guest routes + controllers + Blade views (forgot + reset)
+* Login link
+* Rate limiter in `config/auth_security.php`
+* Audit actions/helpers
+* Feature tests + i18n keys
+* Docs updates (`WORKFLOWS.md`, `SERVICES.md`, `API.md` out-of-scope note)
+
+**Related Documentation:**
+
+* ADR-032, ADR-033, ADR-038
+* `docs/ROADMAP.md` (Self-Service Password Reset milestone)
+* `docs/DEVELOPMENT_GUIDE.md`
+
+**Implementation:**
+
+Application code lives on branch `feature/self-service-password-reset`:
+
+* `PasswordResetController` + guest routes `/forgot-password`, `/reset-password/{token}`
+* Laravel `Password::sendResetLink` / `Password::reset`
+* Audit: `password_reset_requested`, `password_reset`
+* Rate limiter `forgot-password`
+* Views + i18n en/de/ar
+* Feature tests: `tests/Feature/PasswordResetTest.php`
+
+**Status** remains **Proposed** until the feature PR is merged; then mark **Accepted**.
+
+**Notes:**
+
+* Former future placeholders “ADR-040 Subscription” / “ADR-041 Public SaaS” are renumbered to **ADR-041** / **ADR-042**.
+
+---
+
 # ADR Index
 
 | ADR     | Title                                  | Status   |
@@ -3655,6 +3754,7 @@ Reserved for the **architecture analysis** (implementation planning):
 | ADR-037 | Production Deployment Architecture   | Accepted |
 | ADR-038 | Use Resend for Production Transactional Email | Accepted |
 | ADR-039 | X-Ray Treatments and Nurse Commission Accounting | Proposed |
+| ADR-040 | Self-Service Password Reset (Forgot Password) | Proposed |
 
 ---
 
@@ -3662,9 +3762,9 @@ Reserved for the **architecture analysis** (implementation planning):
 
 The following architectural topics are expected to receive future ADRs.
 
-**ADR-040** — Subscription & Licensing (Proposed)
+**ADR-041** — Subscription & Licensing (Proposed)
 
-**ADR-041** — Public SaaS Platform (Proposed)
+**ADR-042** — Public SaaS Platform (Proposed)
 
 ---
 
