@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', __('auth.sign_in'))
+@section('title', __('auth.forgot_password_title'))
 
 @push('styles')
 <style>
@@ -45,8 +45,12 @@
 @section('content')
 <div class="login-wrap">
     <div class="card login-card">
-        <h1>{{ __('auth.sign_in_title') }}</h1>
-        <p class="login-lead">Manage daily reports, imports, and clinic configuration.</p>
+        <h1>{{ __('auth.forgot_password_title') }}</h1>
+        <p class="login-lead">{{ __('auth.forgot_password_lead') }}</p>
+
+        @if (session('status'))
+            <div class="alert alert-success">{{ session('status') }}</div>
+        @endif
 
         @if ($errors->any())
             <div class="alert alert-error">
@@ -58,26 +62,17 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('login') }}">
+        <form method="POST" action="{{ route('password.email') }}">
             @csrf
             <div class="form-group">
                 <label class="form-label" for="email">{{ __('auth.email') }}</label>
                 <input class="form-input" type="email" id="email" name="email" value="{{ old('email') }}" required autofocus>
             </div>
-            <div class="form-group">
-                <label class="form-label" for="password">{{ __('auth.password') }}</label>
-                <input class="form-input" type="password" id="password" name="password" required>
-            </div>
-            <p style="margin:-0.35rem 0 0.85rem;font-size:0.85rem;">
-                <a href="{{ route('password.request') }}">{{ __('auth.forgot_password') }}</a>
-            </p>
-            <button type="submit" class="btn btn-primary btn-block">{{ __('auth.sign_in') }}</button>
+            <button type="submit" class="btn btn-primary btn-block">{{ __('auth.send_reset_link') }}</button>
         </form>
 
         <p class="login-footer">
-            <a href="{{ route('register-clinic.create') }}">{{ __('auth.register_clinic') }}</a>
-            ·
-            <a href="{{ route('landing') }}">{{ __('auth.back_to_homepage') }}</a>
+            <a href="{{ route('login') }}">{{ __('auth.back_to_sign_in') }}</a>
         </p>
     </div>
 </div>

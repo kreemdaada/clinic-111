@@ -33,6 +33,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Forgot Password Throttle
+    |--------------------------------------------------------------------------
+    |
+    | Public forgot/reset password POSTs are limited per email + IP (ADR-040).
+    |
+    */
+
+    'password_reset' => [
+        'max_attempts' => (int) env('AUTH_PASSWORD_RESET_MAX_ATTEMPTS', 5),
+        'decay_seconds' => (int) env('AUTH_PASSWORD_RESET_DECAY_SECONDS', 60),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Registration CAPTCHA
     |--------------------------------------------------------------------------
     |

@@ -690,6 +690,7 @@ Used by `AuditLogService::logPlatform()` for unknown-email login failures, locko
 | CAPTCHA contract | `app/Contracts/Security/CaptchaVerifier.php` |
 | Fake CAPTCHA driver | `app/Services/Security/FakeCaptchaVerifier.php` |
 | Email verification controller | `app/Http/Controllers/Web/EmailVerificationController.php` |
+| Password reset controller (ADR-040) | `app/Http/Controllers/Web/PasswordResetController.php` |
 | Audit context helper | `app/Support/AuditContext.php` |
 
 ---

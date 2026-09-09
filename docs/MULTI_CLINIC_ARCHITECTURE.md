@@ -464,6 +464,7 @@ Tenant security requires:
 * cross-clinic leakage tests
 * CAPTCHA on public registration (config-driven)
 * production security headers
+* self-service password reset for guests — **planned** (ADR-040; web-only v1; admin reset already exists)
 
 A user from Clinic A must never access Clinic B data.
 
@@ -482,6 +483,8 @@ This must be enforced in:
 **Milestone 13B (implemented):** Full tenant authorization review — `TenantResourceGuard`, cross-clinic 404 enforcement, clinic-scoped FK validation, user admin `{managedUser}` route fix.
 
 **Milestone 14 (implemented):** Multi-currency foundation — currency catalog, `Money` value object, centralized formatting, clinic currency validation; accounting behaviour unchanged (ADR-034).
+
+**Self-service password reset (ADR-040):** Web forgot/reset via Laravel Password Broker and Resend (ADR-038). Admin reset remains available. Public API forgot/reset is out of scope for v1.
 
 **PostgreSQL production (ADR-035):** One shared PostgreSQL database in production; tenant isolation remains via `clinic_id`. Local dev and tests stay on SQLite. Data migration from SQLite uses `app:migrate-sqlite-to-pgsql` without changing tenant boundaries.
 

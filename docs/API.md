@@ -27,6 +27,9 @@ For drag-and-drop Excel import without curl, use the web interface:
 | Route | Method | Role |
 |---|---|---|
 | `/login` | GET/POST | guest |
+| `/forgot-password` | GET/POST | guest (web self-service reset, ADR-040) |
+| `/reset-password/{token}` | GET | guest |
+| `/reset-password` | POST | guest |
 | `/register-clinic` | GET/POST | guest (POST only) |
 | `/imports` | GET/POST | admin, accountant |
 | `/imports/{id}` | GET | admin, accountant, viewer |
