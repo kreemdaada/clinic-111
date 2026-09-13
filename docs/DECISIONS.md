@@ -841,7 +841,7 @@ Milestone 04 — Doctor Fixed Fee Administration
 
 ### Context
 
-Fixed per-procedure fees for doctors with `commission_type = fixed` (e.g. Dr Wa: IMPL, BG, SINUS) were seeded in `DoctorFixedFeeSeeder` only. Milestone 04 requires full UI/API administration without changing `WaelFixedFeeCalculator`, `MonthlyIncomeCalculationService`, or other accounting engine services.
+Fixed per-procedure fees for doctors with `commission_type = fixed` (e.g. Dr Wa: IMPL, BG, SINUS) were seeded in `DoctorFixedFeeSeeder` only. Milestone 04 requires full UI/API administration without changing `FixedFeeIncomeCalculator`, `MonthlyIncomeCalculationService`, or other accounting engine services.
 
 ### Decision
 
@@ -2859,12 +2859,12 @@ This overview is operational reporting on imported DentalFinance data — not ta
 
 **Context:**
 
-DentalFinance runs Laravel 13 with Blade, PostgreSQL in production (ADR-035), database-backed cache/session/queue, synchronous Excel imports, and `/up` health routing. Production target is `dentalfinance.eu` on a single IONOS VPS L+ (Ubuntu 24.04 LTS) without Plesk, Kubernetes, or managed PostgreSQL. The codebase had no Docker, Compose, CI, or deployment automation prior to this milestone.
+DentalFinance runs Laravel 13 with Blade, PostgreSQL in production (ADR-035), database-backed cache/session/queue, synchronous Excel imports, and `/up` health routing. Production runs on a single VPS with Docker Compose (no Plesk, Kubernetes, or managed PostgreSQL in v1). The codebase had no Docker, Compose, CI, or deployment automation prior to this milestone.
 
 **Decision:**
 
-* **Domain:** `dentalfinance.eu` (canonical); `www` redirects to apex.
-* **Host:** single IONOS VPS L+, Ubuntu 24.04 LTS, Docker Compose.
+* **Public site:** canonical production domain with `www` → apex redirect.
+* **Host:** single VPS, Ubuntu LTS, Docker Compose.
 * **Application image:** multi-stage build, FrankenPHP 1.9 + PHP 8.3 (classic Laravel request cycle, not Octane worker mode).
 * **Same image** for `app`, `worker`, and `scheduler` services.
 * **PostgreSQL 16** in internal Docker network — no public DB port.
@@ -2872,16 +2872,16 @@ DentalFinance runs Laravel 13 with Blade, PostgreSQL in production (ADR-035), da
 * **HTTPS:** automatic certificates via Caddy (FrankenPHP); persistent Caddy volumes.
 * **Registry:** GitHub Container Registry; image tags = full Git commit SHA (optional `latest`, never deploy-only-latest).
 * **CI:** GitHub Actions — tests + Pint on PR/push; production deploy on `main` with concurrency lock.
-* **Secrets:** application secrets only on server (`/opt/dentalfinance/app.env`); GitHub stores deploy SSH secrets only.
-* **Deploy flow:** backup DB → `migrate --force` → rolling container update → `optimize` → internal Laravel healthcheck at `http://127.0.0.1:8080/up` (container-only listener) → application rollback on failure (previous image tag, with separate rollback success/failure reporting).
+* **Secrets:** application secrets only in server-side `app.env`; GitHub stores deploy SSH and remote path secrets only.
+* **Deploy flow:** backup DB → `migrate --force` → rolling container update → `optimize` → internal Laravel healthcheck on localhost `:8080/up` (container-only listener) → application rollback on failure (previous image tag, with separate rollback success/failure reporting).
 * **No automatic database rollback** after failed migrations.
-* **SMTP:** Brevo relay (`smtp-relay.brevo.com:587`); `system@dentalfinance.eu` as From; credentials server-side only.
+* **SMTP (superseded by ADR-038 for provider):** transactional From address uses the production domain; credentials server-side only.
 * **Logging:** Laravel to `stderr`; Docker log rotation.
 * **No** demo seeders, SQLite production file, or `.env` baked into images.
 
 **Alternatives Considered:**
 
-1. IONOS Shared Hosting — rejected (no worker/scheduler/Docker control).
+1. Shared hosting — rejected (no worker/scheduler/Docker control).
 2. Plesk — rejected (extra dependency).
 3. Kubernetes — rejected (overengineering for v1).
 4. Separate app/DB servers — deferred until load/HA requires it.
@@ -2896,7 +2896,7 @@ DentalFinance runs Laravel 13 with Blade, PostgreSQL in production (ADR-035), da
 
 **Affected Components:**
 
-* `Dockerfile`, `compose.production.yml`, `.dockerignore`, `deploy/*`, `.github/workflows/*`, `docs/PRODUCTION_DEPLOYMENT.md`.
+* `Dockerfile`, `compose.production.yml`, `.dockerignore`, `deploy/*`, `.github/workflows/*`, local-only production ops docs (not published in this repository).
 
 **Related Documentation:**
 
@@ -2906,10 +2906,10 @@ DentalFinance runs Laravel 13 with Blade, PostgreSQL in production (ADR-035), da
 
 Revision 2026-06-26 on branch `feature/production-deployment` (status remains **Proposed** until GitHub Actions confirms a successful production Docker build):
 
-* **Safe rsync:** CI/CD syncs `compose.production.yml` and `deploy/` separately; `--delete` only on `/opt/dentalfinance/deploy/`. Protected server paths: `app.env`, `.deploy-state`, `.deploy.lock`, `backups/`.
+* **Safe rsync:** CI/CD syncs `compose.production.yml` and `deploy/` separately; `--delete` only on the remote `deploy/` directory. Protected server paths: `app.env`, `.deploy-state`, `.deploy.lock`, `backups/`. Remote app root comes from GitHub secret `DEPLOY_APP_PATH`.
 * **GHCR tags:** lowercase image base derived in Bash (`tr '[:upper:]' '[:lower:]'`) and emitted via `$GITHUB_OUTPUT` for SHA and optional `latest` tags — no `${{ env.IMAGE_NAME,, }}` syntax.
-* **Internal healthcheck:** Caddy listens on `127.0.0.1:8080` (not published); app/worker health uses `http://127.0.0.1:8080/up` so Laravel boots — not merely HTTPS redirect.
-* **Compose command:** all scripts use `docker compose --env-file /opt/dentalfinance/app.env -f /opt/dentalfinance/compose.production.yml` via `deploy/scripts/lib/deploy-common.sh` — never `source app.env`.
+* **Internal healthcheck:** Caddy listens on `127.0.0.1:8080` (not published); app health uses `http://127.0.0.1:8080/up` so Laravel boots — not merely HTTPS redirect.
+* **Compose command:** all scripts use `docker compose --env-file "${APP_ENV_FILE}" -f …/compose.production.yml` via `deploy/scripts/lib/deploy-common.sh` — never `source app.env`.
 * **DB credentials:** operator sets `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` only; PostgreSQL container maps `POSTGRES_*` from those values.
 * **Manual backup/restore:** scripts resolve `APP_IMAGE` from env or `.deploy-state`; restore creates safety backup, maintenance mode, stops worker/scheduler, terminates DB connections, uses `pg_restore --clean --if-exists --no-owner --no-privileges --exit-on-error --single-transaction`.
 * **Rollback:** separate messages for rollback success vs rollback failure; no automatic database rollback.
@@ -2930,6 +2930,7 @@ Remaining risks: single VPS SPOF; Docker build must be confirmed in GitHub Actio
 **Notes:**
 
 External off-site backup copy is an operational requirement — local VPS backups alone are insufficient.
+Detailed hostnames, SSH access, and absolute server paths stay in local-only ops runbooks (gitignored).
 
 ---
 
@@ -2945,24 +2946,18 @@ External off-site backup copy is an operational requirement — local VPS backup
 
 **Context:**
 
-DentalFinance production email is configured via Laravel 13 (`symfony/mailer` v7.4.12) SMTP in `config/mail.php`, with secrets in server-side `/opt/dentalfinance/app.env` only (ADR-037).
+DentalFinance production email is configured via Laravel 13 (`symfony/mailer`) SMTP in `config/mail.php`, with secrets in server-side `app.env` only (ADR-037).
 
-During production launch preparation, **Brevo SMTP** (`smtp-relay.brevo.com:587`) connected successfully with STARTTLS and authentication, but outbound delivery was blocked with:
-
-```text
-502 5.7.0 Your SMTP account is not yet activated
-```
-
-Brevo required manual support activation before any production send — blocking go-live.
+During production launch preparation, the initially chosen SMTP relay connected successfully with STARTTLS and authentication, but outbound delivery was blocked pending provider account activation — blocking go-live.
 
 **Resend** was evaluated as an alternative transactional provider:
 
-* Domain `dentalfinance.eu` verified in Resend.
+* Production domain verified for sending.
 * SMTP test from the production server succeeded.
 * Resend is used **only for outbound transactional mail** (verification, password reset, system notifications).
-* **Inbound mail** remains at IONOS (MX on apex domain unchanged).
+* **Inbound mail** remains with the domain host (apex MX unchanged).
 
-This ADR records the mail-provider decision only. It **does not modify ADR-037**; ADR-037 deployment architecture (Docker, Compose, CI/CD, VPS) remains unchanged. The Brevo SMTP bullet in ADR-037 is superseded **only for mail provider choice** by this ADR.
+This ADR records the mail-provider decision only. It **does not modify ADR-037**; ADR-037 deployment architecture (Docker, Compose, CI/CD, VPS) remains unchanged. The earlier SMTP-provider bullet in ADR-037 is superseded **only for mail provider choice** by this ADR.
 
 **Decision:**
 
@@ -2972,43 +2967,39 @@ This ADR records the mail-provider decision only. It **does not modify ADR-037**
 * **Scheme:** `MAIL_SCHEME=smtp` (STARTTLS on port 587; Laravel 13 does not read `MAIL_ENCRYPTION`)
 * **Username:** `resend` (fixed Resend SMTP username)
 * **Password:** Resend API key — stored **only** in production `app.env`, never in git or Docker images
-* **EHLO domain:** `MAIL_EHLO_DOMAIN=dentalfinance.eu`
-* **From address:** `MAIL_FROM_ADDRESS=system@dentalfinance.eu`
+* **EHLO domain / From address:** production domain (`MAIL_EHLO_DOMAIN`, `MAIL_FROM_ADDRESS`) — values live in server `app.env` / `deploy/app.env.example`
 * **From name:** `MAIL_FROM_NAME=DentalFinance`
 * **Resend Sending:** enabled
 * **Resend Receiving:** disabled (inbound mail not handled by Resend)
-* **IONOS:** remains authoritative for inbound email to `@dentalfinance.eu`
+* **Inbound DNS:** apex MX stays with the domain host; Resend DNS is limited to sending/auth records configured by the operator
 
-**DNS (Resend / Amazon SES sending subdomain):**
+**DNS (operator-managed, details in local ops docs only):**
 
-| Type | Host / name | Value |
-|---|---|---|
-| TXT | `resend._domainkey` | Resend-provided DKIM record |
-| MX | `send` | `feedback-smtp.eu-west-1.amazonses.com`, priority 10 |
-| TXT | `send` | `v=spf1 include:amazonses.com ~all` |
+* Provider-supplied DKIM / SPF / bounce MX for the sending subdomain
+* Apex-domain **MX records stay with the inbound host**
 
-Apex-domain **MX records stay at IONOS** for inbound mail. Resend DNS applies to the sending subdomain configuration only.
+Exact hostnames and record values are **not** published in this repository.
 
 **Alternatives Considered:**
 
-1. **Brevo SMTP** — rejected for production launch: account activation gate blocked sends despite working SMTP handshake.
-2. **IONOS mailbox SMTP authentication** — rejected: not used for application transactional sending (ADR-037).
+1. **Previous SMTP relay** — rejected for production launch: account activation gate blocked sends despite working SMTP handshake.
+2. **Mailbox SMTP authentication at the domain host** — rejected: not used for application transactional sending (ADR-037).
 3. **Resend HTTP API only (no SMTP)** — rejected: existing Laravel SMTP configuration and ops tooling already validated on port 587.
 
 **Consequences:**
 
-* Positive: no Brevo support activation dependency; verified domain; successful production SMTP test; Resend dashboard logs aid delivery diagnostics.
-* Positive: clear separation — Resend outbound transactional, IONOS inbound.
+* Positive: no prior-provider activation dependency; verified domain; successful production SMTP test; Resend dashboard logs aid delivery diagnostics.
+* Positive: clear separation — Resend outbound transactional, domain host inbound.
 * Negative: API key rotation must be documented and performed on the server (`app.env` update + container recycle).
-* Operational: remove obsolete Brevo DNS records and Brevo credentials from production secrets when fully decommissioned.
+* Operational: remove obsolete prior-provider DNS records and credentials from production secrets when fully decommissioned.
 * Operational: monitor Resend quotas and delivery logs for verification/reset failures.
 
 **Affected Components:**
 
-* `/opt/dentalfinance/app.env` (production secrets)
+* Server-side `app.env` (production secrets)
 * `deploy/app.env.example`
-* `docs/PRODUCTION_DEPLOYMENT.md`
-* IONOS DNS (Resend sending records; apex MX unchanged)
+* Local-only production deployment docs
+* Domain DNS (Resend sending records; apex MX unchanged)
 
 **Related Documentation:**
 
@@ -3017,14 +3008,14 @@ Apex-domain **MX records stay at IONOS** for inbound mail. Resend DNS applies to
 
 **Implementation:**
 
-* `deploy/app.env.example` and `docs/PRODUCTION_DEPLOYMENT.md` updated to Resend SMTP settings.
+* `deploy/app.env.example` and local production docs updated to Resend SMTP settings.
 * `tests/Unit/ProductionDeploymentArtifactsTest.php` asserts Resend production mail configuration.
 * Production server `app.env` configured with Resend API key (server-side only).
 * Resend domain verification and SMTP send test completed on production VPS.
 
 **Notes:**
 
-When rotating the Resend API key: update `MAIL_PASSWORD` in `/opt/dentalfinance/app.env`, then restart application containers (`docker compose … up -d`). Do not commit keys to git.
+When rotating the Resend API key: update `MAIL_PASSWORD` in server `app.env`, then restart application containers (`docker compose … up -d`). Do not commit keys to git.
 
 ---
 

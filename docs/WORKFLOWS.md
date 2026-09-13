@@ -404,7 +404,7 @@ sequenceDiagram
 - Fixed fees never physically deleted
 - Only doctors with `commission_type = fixed` may have rows
 - Only one active fee per doctor + treatment + overlapping validity period
-- `DoctorFixedFeeResolver` used by editor catalog; `WaelFixedFeeCalculator` and monthly income logic unchanged
+- `DoctorFixedFeeResolver` used by editor catalog; `FixedFeeIncomeCalculator` and monthly income logic unchanged
 - Seed data in `DoctorFixedFeeSeeder` is initial data only, not runtime logic
 
 ---

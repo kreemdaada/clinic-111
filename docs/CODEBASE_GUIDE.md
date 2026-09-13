@@ -630,7 +630,7 @@ Wechselkurse: `config/accounting.php` (`usd_exchange_rate`, `currency_to_aed_rat
 | `TreatmentParserService` | `treatment_text` → WorkItems |
 | `LabJobCalculationService` | WorkItems → LabJobs |
 | `MonthlyIncomeCalculationService` | Monats-Income pro Arzt |
-| `WaelFixedFeeCalculator` | Festhonorar Dr. Wa (IMPL, BG, SINUS) |
+| `FixedFeeIncomeCalculator` | Festhonorar für Fixed-Fee-Ärzte (IMPL, BG, SINUS) |
 | `ClinicFinancialOverviewService` | Practice Overview |
 | `IncomeReconciliationService` | Plausibilität vor Export |
 
@@ -815,7 +815,7 @@ Bei jedem Bug in dieser Reihenfolge prüfen:
 | 7 | `app/Services/Accounting/PaymentCalculationService.php` | Zahlungslogik | `ClinicCurrencySupport.php` |
 | 8 | `app/Services/Accounting/TreatmentParserService.php` | Treatment-Parsing | `docs/TREATMENT_RULES.md` |
 | 9 | `app/Services/Accounting/LabJobCalculationService.php` | Lab-Kosten | `LabPriceResolver.php` |
-| 10 | `app/Services/Accounting/MonthlyIncomeCalculationService.php` | Arzt-Income | `WaelFixedFeeCalculator.php` |
+| 10 | `app/Services/Accounting/MonthlyIncomeCalculationService.php` | Arzt-Income | `FixedFeeIncomeCalculator.php` |
 | 11 | `app/Services/Export/DoctorsIncomeExcelExportService.php` | Excel-Export | `DoctorIncomeExportProfileService.php` |
 | 12 | `app/Services/Analytics/ClinicFinancialOverviewService.php` | Practice Overview | `app/DTOs/Analytics/` |
 | 13 | `app/Models/DailyWorkRow.php` | Zentrale Accounting-Zeile | `Payment.php`, `WorkItem.php` |

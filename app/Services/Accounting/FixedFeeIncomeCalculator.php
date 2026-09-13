@@ -8,12 +8,12 @@ use App\Models\WorkItem;
 use App\Support\MoneyCalculator;
 
 /**
- * Dr Wa (Wael) fixed surgery fees — only IMPL, BG, and SINUS generate income.
+ * Fixed-fee doctor income lines — only IMPL, BG, and SINUS generate income for no-commission doctors.
  *
- * IMPL: always paid in AED (500 AED per unit).
+ * IMPL: always paid in AED (configured fee per unit).
  * BG / SINUS: USD fee × quantity — paid in USD when row has USD cash; otherwise converted to AED (fee × exchange rate).
  */
-class WaelFixedFeeCalculator
+class FixedFeeIncomeCalculator
 {
     /** @var array<int, string> */
     public const BILLABLE_CODES = ['IMPL', 'BG', 'SINUS'];

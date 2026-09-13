@@ -15,7 +15,7 @@ use App\Services\Accounting\LabBillingResolver;
 use App\Services\Accounting\LabPriceResolver;
 use App\Services\Accounting\PaymentCalculationService;
 use App\Services\Accounting\TreatmentParserService;
-use App\Services\Accounting\WaelFixedFeeCalculator;
+use App\Services\Accounting\FixedFeeIncomeCalculator;
 use App\Services\Accounting\WorkItemNurseAssignmentService;
 use App\Services\Audit\AuditLogService;
 use App\Services\Configuration\CurrentClinicResolver;
@@ -385,7 +385,7 @@ class DailyReportEditorService
                 $qty = (int) ($line['quantity'] ?? 0);
                 $fee = $doctor->doctorFixedFees->first(fn ($row) => $row->treatment?->code === $code);
 
-                if ($fee === null || $qty < 1 || ! in_array($code, WaelFixedFeeCalculator::BILLABLE_CODES, true)) {
+                if ($fee === null || $qty < 1 || ! in_array($code, FixedFeeIncomeCalculator::BILLABLE_CODES, true)) {
                     continue;
                 }
 

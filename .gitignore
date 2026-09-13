@@ -3,6 +3,9 @@
 .env
 .env.backup
 .env.production
+app.env
+**/app.env
+!deploy/app.env.example
 .phpactor.json
 .phpunit.result.cache
 /.codex

@@ -755,7 +755,7 @@ Accounting resolution (`LabPriceResolver`) is unchanged — reads active rows fr
 
 Admin management uses `/api/admin/doctor-fixed-fees` and web `/doctor-fixed-fees`.
 
-`DoctorFixedFeeResolver` reads active rows with date validity. Accounting calculation services (`WaelFixedFeeCalculator`, `MonthlyIncomeCalculationService`) are unchanged.
+`DoctorFixedFeeResolver` reads active rows with date validity. Accounting calculation services (`FixedFeeIncomeCalculator`, `MonthlyIncomeCalculationService`) are unchanged.
 
 ### GET /api/admin/doctor-fixed-fees
 

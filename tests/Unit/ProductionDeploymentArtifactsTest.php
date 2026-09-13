@@ -158,10 +158,12 @@ class ProductionDeploymentArtifactsTest extends TestCase
         $workflow = file_get_contents(base_path('.github/workflows/deploy-production.yml'));
 
         $this->assertIsString($workflow);
-        $this->assertStringContainsString('/opt/dentalfinance/compose.production.yml', $workflow);
-        $this->assertStringContainsString('/opt/dentalfinance/deploy/', $workflow);
+        $this->assertStringContainsString('secrets.DEPLOY_APP_PATH', $workflow);
+        $this->assertStringContainsString('${DEPLOY_APP_PATH}/compose.production.yml', $workflow);
+        $this->assertStringContainsString('${DEPLOY_APP_PATH}/deploy/', $workflow);
+        $this->assertStringContainsString('APP_ENV_FILE=${DEPLOY_APP_PATH}/app.env', $workflow);
         $this->assertStringNotContainsString('rsync -az --delete ./', $workflow);
-        $this->assertStringNotContainsString('/opt/dentalfinance/ --delete', $workflow);
+        $this->assertStringNotContainsString('/opt/dentalfinance', $workflow);
         $this->assertStringNotContainsString('IMAGE_NAME,,', $workflow);
         $this->assertStringContainsString('GITHUB_OUTPUT', $workflow);
         $this->assertStringContainsString('tr \'[:upper:]\' \'[:lower:]\'', $workflow);

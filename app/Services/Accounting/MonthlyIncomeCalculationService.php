@@ -36,7 +36,7 @@ class MonthlyIncomeCalculationService
      * @param  string  $defaultUsdExchangeRate  USD→AED rate for fixed-fee currency conversion.
      */
     public function __construct(
-        private readonly WaelFixedFeeCalculator $waelFixedFeeCalculator,
+        private readonly FixedFeeIncomeCalculator $fixedFeeIncomeCalculator,
         private readonly CurrentClinicResolver $currentClinicResolver,
         private readonly OpgTreatmentValueAggregator $opgTreatmentValueAggregator,
         private readonly string $defaultUsdExchangeRate = '3.65',
@@ -204,7 +204,7 @@ class MonthlyIncomeCalculationService
 
         $fixedFeesByTreatmentId = $doctor->doctorFixedFees->keyBy('treatment_id')->all();
 
-        return $this->waelFixedFeeCalculator->sumIncomeAed(
+        return $this->fixedFeeIncomeCalculator->sumIncomeAed(
             $workItems,
             $fixedFeesByTreatmentId,
             $this->defaultUsdExchangeRate,

@@ -100,34 +100,40 @@ jobs:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_APP_PATH: ${{ secrets.DEPLOY_APP_PATH }}
         run: |
+          : "${DEPLOY_APP_PATH:?Set GitHub secret DEPLOY_APP_PATH to the production app root}"
           rsync -az \
             -e "ssh -i ~/.ssh/deploy_key -p ${DEPLOY_PORT} -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -o TCPKeepAlive=yes" \
             compose.production.yml \
-            "${DEPLOY_USER}@${DEPLOY_HOST}:/opt/dentalfinance/compose.production.yml"
+            "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_APP_PATH}/compose.production.yml"
 
       - name: Sync deploy directory
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_APP_PATH: ${{ secrets.DEPLOY_APP_PATH }}
         run: |
+          : "${DEPLOY_APP_PATH:?Set GitHub secret DEPLOY_APP_PATH to the production app root}"
           rsync -az --delete \
             -e "ssh -i ~/.ssh/deploy_key -p ${DEPLOY_PORT} -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -o TCPKeepAlive=yes" \
             deploy/ \
-            "${DEPLOY_USER}@${DEPLOY_HOST}:/opt/dentalfinance/deploy/"
+            "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_APP_PATH}/deploy/"
 
       - name: Run remote deployment
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_APP_PATH: ${{ secrets.DEPLOY_APP_PATH }}
           GITHUB_SHA: ${{ github.sha }}
         run: |
+          : "${DEPLOY_APP_PATH:?Set GitHub secret DEPLOY_APP_PATH to the production app root}"
           ssh -i ~/.ssh/deploy_key -p "${DEPLOY_PORT}" -o StrictHostKeyChecking=yes \
             -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -o TCPKeepAlive=yes \
             "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "APP_ENV_FILE=/opt/dentalfinance/app.env /opt/dentalfinance/deploy/scripts/deploy.sh ${GITHUB_SHA}"
+            "APP_ENV_FILE=${DEPLOY_APP_PATH}/app.env ${DEPLOY_APP_PATH}/deploy/scripts/deploy.sh ${GITHUB_SHA}"
 
       - name: Deployment summary
         run: |

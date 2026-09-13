@@ -13,7 +13,7 @@ use App\Services\Accounting\IncomeReconciliationService;
 use App\Services\Accounting\LabJobCalculationService;
 use App\Services\Accounting\OpgTreatmentValueAggregator;
 use App\Services\Accounting\PaymentCalculationService;
-use App\Services\Accounting\WaelFixedFeeCalculator;
+use App\Services\Accounting\FixedFeeIncomeCalculator;
 use App\Services\Configuration\CurrentClinicResolver;
 use App\Support\Analytics\FinancialPeriod;
 use App\Support\ClinicCurrencySupport;
@@ -66,7 +66,7 @@ class DoctorsIncomeExcelExportService
     public function __construct(
         private readonly IncomeReconciliationService $incomeReconciliationService,
         private readonly DoctorIncomeExportProfileService $exportProfileService,
-        private readonly WaelFixedFeeCalculator $waelFixedFeeCalculator,
+        private readonly FixedFeeIncomeCalculator $fixedFeeIncomeCalculator,
         private readonly CurrentClinicResolver $currentClinicResolver,
         private readonly PaymentCalculationService $paymentCalculationService,
         private readonly DoctorIncomeExportProfileProvisioner $exportProfileProvisioner,
@@ -869,7 +869,7 @@ class DoctorsIncomeExcelExportService
                     continue;
                 }
 
-                $line = $this->waelFixedFeeCalculator->calculateLine(
+                $line = $this->fixedFeeIncomeCalculator->calculateLine(
                     $workRow,
                     $workItem,
                     $fixedFee,
