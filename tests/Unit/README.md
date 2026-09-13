@@ -19,7 +19,7 @@ php artisan test --testsuite=Unit
 | `PaymentCalculationServiceTest` | TOTAL = DHS + USD→AED + VISA |
 | `TreatmentParserServiceTest` | Regex/tooth-notation parsing (`ZIR x 2`, `MC CR 8765\|5678`, aliases) |
 | `TreatmentImportValidationServiceTest` | Import validation warnings + work_item persistence |
-| `LabJobCalculationServiceTest` | JOB = quantity × lab price (e.g. ZIR × 4 for Dr Riyad = 1600 AED) |
+| `LabJobCalculationServiceTest` | JOB = quantity × lab price (e.g. ZIR × 4 for Dr. Name2 = 1600 AED) |
 | `LabPriceResolverTest` | Doctor-specific vs default lab prices (incl. REMOV 100 AED) |
 | `LabPriceAdministrationWorkflowTest` | End-to-end lab price create, duplicate, validity, overlap, resolver |
 | `LabPriceManagementServiceTest` | Lab price CRUD, overlap guard, duplicate/activate |

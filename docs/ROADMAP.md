@@ -94,7 +94,7 @@ Rules
 
 After accidental dev DB loss: `php artisan db:seed` restores Clinic 111 demo users (`admin@clinic.test` / `password`).
 
-See also `docs/DEVELOPMENT_GUIDE.md` (Git Workflow section).
+See also `docs/ROADMAP.md` (Git workflow / milestones).
 
 ---
 

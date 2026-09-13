@@ -212,7 +212,7 @@ Runs automatically during import after work items are created.
 ```
 REMOV x 2  →  lab_job: 2 × 100 = 200 AED JOB
 CF x 3     →  work_item only, no lab_job
-ZIR x 4 Dr Riyad  →  lab_job: 4 × 400 = 1600 AED
+ZIR x 4 Dr. Name2  →  lab_job: 4 × 400 = 1600 AED
 ```
 
 ---

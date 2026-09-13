@@ -71,7 +71,7 @@ See [WORKFLOWS.md](./WORKFLOWS.md) for step-by-step details.
 
 - **Thin controllers** — validate, call service, return JSON.
 - **One service = one responsibility** — import, parse, calculate, and report are separate.
-- **Database-driven rules** — no `if doctor === 'Dr Jack'` in code; use `doctor_id`, `commission_type`, `lab_prices`.
+- **Database-driven rules** — no `if doctor === 'Dr. Name1'` in code; use `doctor_id`, `commission_type`, `lab_prices`.
 - **V2-ready** — manual entry will create the same `daily_work_rows`, `payments`, `work_items`, and `lab_jobs` without schema changes.
 - **Deterministic calculations** — all money uses `bcmath`; no floats, no AI parsing.
 
@@ -147,8 +147,8 @@ Import is blocked until required modules exist. Clinic 111 (fully seeded) is una
 After `php artisan migrate --seed`, the system includes:
 
 - **Clinic:** `CLINIC_111` (Clinic 111, AED, Asia/Dubai — ADR-026)
-- **Labs:** `MAIN_LAB`, `RIYADH_LAB`
-- **Doctors:** `JACK` (35%), `RIYAD` (35%, Riyad lab), `PURIYA` (25%), `WA` (fixed fees)
+- **Labs:** `MAIN_LAB`, `LAB_NAME2`
+- **Doctors:** `NAME1` (35%), `NAME2` (35%, Name2 lab), `NAME3` (25%), `NAME4` (fixed fees)
 - **Treatments with lab cost (JOB):** MC (105 AED), ZIR, IMPL-CR, IMPL-ZIR, POST, ABT, IMPL, REMOV (100 AED)
 - **Treatments without lab cost (work_item only):** CF, AF, RCT, RE-RCT, REPAIR, BG, SINUS, …
 - **Users:** admin, accountant, viewer (see README)
@@ -168,7 +168,7 @@ Patient name, MRN, and file number are **never stored or exposed** in API respon
 | Document | Contents |
 |---|---|
 | [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) | All tables, fields, relationships |
-| [BUSINESS_RULES.md](./BUSINESS_RULES.md) | All accounting formulas |
+| [WORKFLOWS.md](./WORKFLOWS.md) / [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md) | Accounting formulas overview (detailed business-rule playbook is local-only) |
 | [WORKFLOWS.md](./WORKFLOWS.md) | Import pipeline: extractor → parser → validation |
 | [TREATMENT_RULES.md](./TREATMENT_RULES.md) | Excel treatment text format for staff |
 | [SERVICES.md](./SERVICES.md) | Service class reference |

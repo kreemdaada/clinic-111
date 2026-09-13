@@ -46,8 +46,8 @@ Clinic 111
 
 * Currency: AED
 * Timezone: Asia/Dubai
-* Doctors: Dr Jack, Dr Riyad, Dr Puriya, Dr Wa
-* Labs: Main Lab, Riyadh Lab
+* Doctors: Dr. Name1, Dr. Name2, Dr. Name3, Dr. Name4
+* Labs: Main Lab, Name2 Lab
 * Accounting rule: percentage after lab cost
 
 Clinic 222

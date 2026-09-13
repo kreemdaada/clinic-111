@@ -2,7 +2,7 @@
 
 Kurzreferenz für alle relevanten Artisan-, Composer- und Git-Befehle in diesem Projekt.
 
-Siehe auch: [ROADMAP.md](./ROADMAP.md) (Test-DB-Trennung), [MULTI_CLINIC_ARCHITECTURE.md](./MULTI_CLINIC_ARCHITECTURE.md), [DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md), [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
+Siehe auch: [ROADMAP.md](./ROADMAP.md) (Test-DB-Trennung), [MULTI_CLINIC_ARCHITECTURE.md](./MULTI_CLINIC_ARCHITECTURE.md), [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md).
 
 ---
 

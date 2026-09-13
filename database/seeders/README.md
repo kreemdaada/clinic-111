@@ -13,12 +13,12 @@ Order is defined in `DatabaseSeeder` — labs and doctors must exist before pric
 | Seeder | Purpose |
 |---|---|
 | `ClinicSeeder` | `CLINIC_111` — default tenant (ADR-026) |
-| `LabSeeder` | `MAIN_LAB`, `RIYADH_LAB` |
-| `DoctorSeeder` | JACK, RIYAD, PURIYA, WA with commission settings |
+| `LabSeeder` | `MAIN_LAB`, `LAB_NAME2` |
+| `DoctorSeeder` | NAME1, NAME2, NAME3, NAME4 with commission settings |
 | `TreatmentSeeder` | Treatment catalog; `has_lab_cost` flag drives lab_jobs |
-| `LabPriceSeeder` | Default lab unit costs + Dr Riyad overrides |
-| `DoctorLabBillingSeeder` | Per-doctor JOB rules (Puriya: MC/ZIR/POST/REMOV; Wa: none) |
-| `DoctorFixedFeeSeeder` | Dr Wa: IMPL 500 AED, BG 200 USD, SINUS 300 USD |
+| `LabPriceSeeder` | Default lab unit costs + Dr. Name2 overrides |
+| `DoctorLabBillingSeeder` | Per-doctor JOB rules (Name3: MC/ZIR/POST/REMOV; Name4: none) |
+| `DoctorFixedFeeSeeder` | Dr. Name4: IMPL 500 AED, BG 200 USD, SINUS 300 USD |
 | `DoctorIncomeExportProfileSeeder` | Original Income Excel sheet/column layout per doctor |
 | `UserSeeder` | admin, accountant, viewer test users |
 
@@ -32,7 +32,7 @@ All valid parsed treatments create `work_items`. `lab_jobs` require `has_lab_cos
 
 ## Lab price highlights
 
-| Code | Default | Dr Riyad |
+| Code | Default | Dr. Name2 |
 |---|---|---|
 | MC | 105 AED | — |
 | ZIR | 360 AED | 400 AED |
