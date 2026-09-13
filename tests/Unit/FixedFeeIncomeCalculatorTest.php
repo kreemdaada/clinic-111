@@ -7,8 +7,8 @@ use App\Models\Doctor;
 use App\Models\DoctorFixedFee;
 use App\Models\Treatment;
 use App\Models\WorkItem;
-use App\Services\Accounting\TreatmentParserService;
 use App\Services\Accounting\FixedFeeIncomeCalculator;
+use App\Services\Accounting\TreatmentParserService;
 use Tests\TestCase;
 
 class FixedFeeIncomeCalculatorTest extends TestCase
