@@ -7,13 +7,13 @@ use App\Models\Doctor;
 use App\Models\DoctorFixedFee;
 use App\Models\Treatment;
 use App\Models\WorkItem;
+use App\Services\Accounting\FixedFeeIncomeCalculator;
 use App\Services\Accounting\TreatmentParserService;
-use App\Services\Accounting\WaelFixedFeeCalculator;
 use Tests\TestCase;
 
-class WaelFixedFeeCalculatorTest extends TestCase
+class FixedFeeIncomeCalculatorTest extends TestCase
 {
-    private WaelFixedFeeCalculator $calculator;
+    private FixedFeeIncomeCalculator $calculator;
 
     protected function setUp(): void
     {
@@ -21,7 +21,7 @@ class WaelFixedFeeCalculatorTest extends TestCase
 
         $this->seedAccountingData();
         $this->authenticateAdmin();
-        $this->calculator = app(WaelFixedFeeCalculator::class);
+        $this->calculator = app(FixedFeeIncomeCalculator::class);
     }
 
     public function test_impl_is_always_paid_in_aed(): void

@@ -7,9 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Fixed fee per treatment for doctors with `CommissionType::Fixed` (Dr Wa: IMPL, BG, SINUS only).
+ * Fixed fee per treatment for doctors with `CommissionType::Fixed` (e.g. IMPL, BG, SINUS only).
  *
- * Table: `doctor_fixed_fees`. BG/SINUS USD fees may pay out in USD or AED — see {@see WaelFixedFeeCalculator}.
+ * Table: `doctor_fixed_fees`. BG/SINUS USD fees may pay out in USD or AED — see {@see FixedFeeIncomeCalculator}.
  */
 class DoctorFixedFee extends Model
 {
