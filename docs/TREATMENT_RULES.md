@@ -103,4 +103,4 @@ CF, AF, SxP, RCT, RE-RCT, REPAIR, EXO, …
 2. Open **Extraction log** for the imported month
 3. Compare **JOB** and **Income columns** with the Original Income file
 
-See also: `docs/BUSINESS_RULES.md`, `docs/WORKFLOWS.md` (extractor → parser → validation pipeline).
+See also: `docs/WORKFLOWS.md` (extractor → parser → validation pipeline).

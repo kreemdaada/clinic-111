@@ -75,7 +75,7 @@ pg_dump clinic_accounting > backup.sql
 | `id` | bigint PK | |
 | `clinic_id` | FK → clinics | Required; scoped to owning clinic (Milestone 07) |
 | `name` | string | Display name |
-| `code` | string unique | e.g. `MAIN_LAB`, `RIYADH_LAB` |
+| `code` | string unique | e.g. `MAIN_LAB`, `LAB_NAME2` |
 | `is_active` | boolean | Inactive labs are skipped |
 | `created_at`, `updated_at` | timestamps | |
 
@@ -90,7 +90,7 @@ pg_dump clinic_accounting > backup.sql
 | id | name | code | is_active |
 |---|---|---|---|
 | 1 | Main Lab | MAIN_LAB | true |
-| 2 | Riyadh Lab | RIYADH_LAB | true |
+| 2 | Name2 Lab | LAB_NAME2 | true |
 
 **Admin rules (Milestone 01):**
 
@@ -110,7 +110,7 @@ pg_dump clinic_accounting > backup.sql
 | `id` | bigint PK | |
 | `clinic_id` | FK → clinics | Required; scoped to owning clinic (Milestone 07) |
 | `name` | string | Display name |
-| `code` | string unique | e.g. `JACK`, `RIYAD`, `PURIYA`, `WA` |
+| `code` | string unique | e.g. `NAME1`, `NAME2`, `NAME3`, `NAME4` |
 | `commission_type` | string | `percentage` or `fixed` |
 | `commission_percentage` | decimal(5,2) nullable | Used only for percentage doctors |
 | `default_lab_id` | FK → labs nullable | Doctor's preferred lab |
@@ -135,15 +135,15 @@ pg_dump clinic_accounting > backup.sql
 
 | code | name | commission_type | commission_percentage | default_lab |
 |---|---|---|---|---|
-| JACK | Dr Jack | percentage | 35.00 | MAIN_LAB |
-| RIYAD | Dr Riyad | percentage | 35.00 | RIYADH_LAB |
-| PURIYA | Dr Puriya | percentage | 25.00 | MAIN_LAB |
-| WA | Dr Wa | fixed | null | MAIN_LAB |
+| NAME1 | Dr. Name1 | percentage | 35.00 | MAIN_LAB |
+| NAME2 | Dr. Name2 | percentage | 35.00 | LAB_NAME2 |
+| NAME3 | Dr. Name3 | percentage | 25.00 | MAIN_LAB |
+| NAME4 | Dr. Name4 | fixed | null | MAIN_LAB |
 
 **Commission rules:**
 
-- **Percentage doctors (Jack, Riyad, Puriya):** lab cost deducted from collected total before commission (`NET_TOTAL × %`)
-- **Fixed doctor (Wa):** income from completed procedures only (IMPL, BG, SINUS)
+- **Percentage doctors (Name1, Name2, Name3):** lab cost deducted from collected total before commission (`NET_TOTAL × %`)
+- **Fixed doctor (Name4):** income from completed procedures only (IMPL, BG, SINUS)
 
 ---
 
@@ -334,9 +334,9 @@ Nullable treatment price fields allow existing treatments without immediate pric
 |---|---|---|---|
 | MC | MAIN_LAB | null | 105.00 |
 | ZIR | MAIN_LAB | null | 360.00 |
-| ZIR | RIYADH_LAB | RIYAD | 400.00 |
+| ZIR | LAB_NAME2 | NAME2 | 400.00 |
 | IMPL-ZIR | MAIN_LAB | null | 460.00 |
-| IMPL-ZIR | RIYADH_LAB | RIYAD | 500.00 |
+| IMPL-ZIR | LAB_NAME2 | NAME2 | 500.00 |
 
 ---
 
@@ -372,7 +372,7 @@ Nullable treatment price fields allow existing treatments without immediate pric
 
 **Indexes:** `doctor_id`, `treatment_id` (FK indexes)
 
-**Example data (Dr Wa):**
+**Example data (Dr. Name4):**
 
 | treatment | fee_amount | currency |
 |---|---|---|
@@ -400,9 +400,9 @@ Nullable treatment price fields allow existing treatments without immediate pric
 
 | doctor | bill_lab_job |
 |---|---|
-| JACK, RIYAD | All `has_lab_cost` treatments |
-| PURIYA | MC, ZIR, POST, REMOV only |
-| WA | No rows — no lab jobs |
+| NAME1, NAME2 | All `has_lab_cost` treatments |
+| NAME3 | MC, ZIR, POST, REMOV only |
+| NAME4 | No rows — no lab jobs |
 
 ---
 
@@ -709,7 +709,7 @@ nurses ── nurse_commission_rates ── treatments
 **Updated — 2026-06-19**
 
 - MC lab price: 105 AED
-- Doctor code `RIYADH` → `RIYAD`, name Dr Riyad
+- Doctor code `NAME2` → `NAME2`, name Dr. Name2
 - Commission rules clarified per doctor type
 
 **Initial documentation — 2026-06-19**

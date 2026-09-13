@@ -222,7 +222,7 @@ curl -X POST /api/daily-reports/import \
     "daily_work_rows": [
       {
         "id": 1,
-        "doctor": { "id": 2, "code": "RIYAD", "name": "Dr Riyad" },
+        "doctor": { "id": 2, "code": "NAME2", "name": "Dr. Name2" },
         "work_date": "2026-01-15",
         "excel_row_number": 25,
         "treatment_text": "ZIR x 4 + POST x 2",
@@ -303,7 +303,7 @@ curl -X POST /api/daily-reports/import \
     "warnings": [
       {
         "excel_row": 25,
-        "doctor": "Dr Riyad",
+        "doctor": "Dr. Name2",
         "treatment_text": "zircon 2",
         "message": "Invalid format. Use ZIR x 2"
       }
@@ -365,7 +365,7 @@ GET /api/monthly-income?month=2026-01
   "data": [
     {
       "doctor_id": 1,
-      "doctor_name": "Dr Jack",
+      "doctor_name": "Dr. Name1",
       "month": "2026-01",
       "total_dhs": "25000.00",
       "total_usd_to_aed": "5000.00",
@@ -402,8 +402,8 @@ GET /api/monthly-income?month=2026-01
   "data": [
     {
       "id": 1,
-      "name": "Dr Jack",
-      "code": "JACK",
+      "name": "Dr. Name1",
+      "code": "NAME1",
       "commission_type": "percentage",
       "commission_percentage": "35.00",
       "default_lab": {

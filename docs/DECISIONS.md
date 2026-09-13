@@ -238,7 +238,7 @@ Doctors, rates, and lab assignments change over time. Hardcoded doctor names in 
 
 ### Decision
 
-All doctor commission logic reads from `doctors.commission_type`, `doctors.commission_percentage`, and `doctor_fixed_fees`. No `if ($doctor->name === 'Dr Jack')` anywhere in services.
+All doctor commission logic reads from `doctors.commission_type`, `doctors.commission_percentage`, and `doctor_fixed_fees`. No `if ($doctor->name === 'Dr. Name1')` anywhere in services.
 
 ---
 
@@ -262,7 +262,7 @@ V1 MVP
 
 ### Context
 
-Dr Riyad has different lab prices and a different default lab. Other doctors share default prices.
+Dr. Name2 has different lab prices and a different default lab. Other doctors share default prices.
 
 ### Decision
 
@@ -841,7 +841,7 @@ Milestone 04 — Doctor Fixed Fee Administration
 
 ### Context
 
-Fixed per-procedure fees for doctors with `commission_type = fixed` (e.g. Dr Wa: IMPL, BG, SINUS) were seeded in `DoctorFixedFeeSeeder` only. Milestone 04 requires full UI/API administration without changing `FixedFeeIncomeCalculator`, `MonthlyIncomeCalculationService`, or other accounting engine services.
+Fixed per-procedure fees for doctors with `commission_type = fixed` (e.g. Dr. Name4: IMPL, BG, SINUS) were seeded in `DoctorFixedFeeSeeder` only. Milestone 04 requires full UI/API administration without changing `FixedFeeIncomeCalculator`, `MonthlyIncomeCalculationService`, or other accounting engine services.
 
 ### Decision
 
@@ -963,7 +963,7 @@ Rejected because runtime administration would become impossible.
 * SERVICES.md
 * WORKFLOWS.md
 * DATABASE_SCHEMA.md
-* DEVELOPMENT_GUIDE.md
+* Local development playbook (not published)
 
 ---
 
@@ -1155,7 +1155,7 @@ Reason:
 * SERVICES.md
 * WORKFLOWS.md
 * API.md
-* DEVELOPMENT_GUIDE.md
+* Local development playbook (not published)
 * MULTI_CLINIC_ARCHITECTURE.md
 * ARCHITECTURE_PRINCIPLES.md
 
@@ -1320,7 +1320,7 @@ Provides a single, explicit source of the current clinic while keeping business 
 * PROJECT_OVERVIEW.md
 * SERVICES.md
 * WORKFLOWS.md
-* DEVELOPMENT_GUIDE.md
+* Local development playbook (not published)
 * MULTI_CLINIC_ARCHITECTURE.md
 
 ### Notes
@@ -1491,7 +1491,7 @@ Advantages:
 * PROJECT_OVERVIEW.md
 * SERVICES.md
 * WORKFLOWS.md
-* DEVELOPMENT_GUIDE.md
+* Local development playbook (not published)
 * MULTI_CLINIC_ARCHITECTURE.md
 
 ### Implementation (Milestone 09)
@@ -1807,7 +1807,7 @@ Financial ownership must remain permanent. Changing ownership after creation wou
 * DATABASE_SCHEMA.md
 * SERVICES.md
 * WORKFLOWS.md
-* DEVELOPMENT_GUIDE.md
+* Local development playbook (not published)
 * MULTI_CLINIC_ARCHITECTURE.md
 
 ### Implementation (Milestone 10)
@@ -1976,7 +1976,7 @@ Clinic 111 must not be copied as a template.
 * SERVICES.md
 * WORKFLOWS.md
 * API.md
-* DEVELOPMENT_GUIDE.md
+* Local development playbook (not published)
 * MULTI_CLINIC_ARCHITECTURE.md
 
 ### Implementation (Milestone 11)
@@ -2107,7 +2107,7 @@ Never auto-create doctors, treatments, or prices during onboarding.
 * SERVICES.md
 * WORKFLOWS.md
 * API.md
-* DEVELOPMENT_GUIDE.md
+* Local development playbook (not published)
 * MULTI_CLINIC_ARCHITECTURE.md
 
 ### Implementation (Milestone 12)
@@ -2235,7 +2235,7 @@ Treat platform authentication security as first-class infrastructure.
 * SERVICES.md
 * WORKFLOWS.md
 * API.md
-* DEVELOPMENT_GUIDE.md
+* Local development playbook (not published)
 
 ### Implementation
 
@@ -2465,7 +2465,7 @@ Implemented 2026-06-27 on branch `feature/tenant-authorization-review`:
 ### Related Documentation
 
 * PROJECT_OVERVIEW.md
-* DEVELOPMENT_GUIDE.md
+* Local development playbook (not published)
 * MULTI_CLINIC_ARCHITECTURE.md
 * SERVICES.md
 * API.md
@@ -2667,7 +2667,7 @@ Examples:
 * DATABASE_SCHEMA.md
 * SERVICES.md
 * WORKFLOWS.md
-* DEVELOPMENT_GUIDE.md
+* Local development playbook (not published)
 * MULTI_CLINIC_ARCHITECTURE.md
 
 ### Notes
@@ -2819,7 +2819,7 @@ The public landing page shows a practice overview mockup with KPIs, trends, and 
 
 **Related Documentation:**
 
-* `docs/BUSINESS_RULES.md`, `docs/SERVICES.md`, ADR-001, ADR-002, ADR-014, ADR-034, ADR-028, ADR-029.
+* `docs/PROJECT_OVERVIEW.md` / `docs/WORKFLOWS.md` (detailed business-rules playbook is local-only), `docs/SERVICES.md`, ADR-001, ADR-002, ADR-014, ADR-034, ADR-028, ADR-029.
 
 **Implementation:**
 
@@ -3357,7 +3357,7 @@ Mandatory rules (implementation uses existing guards):
 
 ### Accounting Integration
 
-**Current production formula** (`MonthlyIncomeCalculationService`, `docs/BUSINESS_RULES.md`):
+**Current production formula** (`MonthlyIncomeCalculationService`, `docs/PROJECT_OVERVIEW.md` / `docs/WORKFLOWS.md` (detailed business-rules playbook is local-only)):
 
 ```text
 TOTAL = SUM(payments.amount_aed)
@@ -3577,14 +3577,14 @@ Reserved for the **architecture analysis** (implementation planning):
 
 **Tests:** new Feature/Unit suites listed above
 
-**Documentation:** `docs/BUSINESS_RULES.md`, `docs/DATABASE_SCHEMA.md`, `docs/SERVICES.md` (on implementation)
+**Documentation:** `docs/PROJECT_OVERVIEW.md` / `docs/WORKFLOWS.md` (detailed business-rules playbook is local-only), `docs/DATABASE_SCHEMA.md`, `docs/SERVICES.md` (on implementation)
 
 ---
 
 ### Related Documentation
 
 * ADR-001 (TOTAL = payments), ADR-002 (JOB = lab cost), ADR-009 (approved read-only), ADR-010 (soft delete), ADR-014 (rounding), ADR-018 (work items), ADR-024 (doctor fixed fees pattern), ADR-028/029 (tenant isolation), ADR-031 (configuration dashboard), ADR-034 (multi-currency), ADR-036 (practice overview KPIs)
-* `docs/BUSINESS_RULES.md`, `docs/CODEBASE_GUIDE.md`, `app/Support/MoneyCalculator.php`, `app/Support/ClinicCurrencySupport.php`
+* `docs/PROJECT_OVERVIEW.md` / `docs/WORKFLOWS.md` (detailed business-rules playbook is local-only), `docs/CODEBASE_GUIDE.md`, `app/Support/MoneyCalculator.php`, `app/Support/ClinicCurrencySupport.php`
 
 ---
 
@@ -3681,7 +3681,7 @@ Add a **simple web-only forgot/reset flow** using Laravel’s standard Password 
 
 * ADR-032, ADR-033, ADR-038
 * `docs/ROADMAP.md` (Self-Service Password Reset milestone)
-* `docs/DEVELOPMENT_GUIDE.md`
+* local development playbook (not published)
 
 **Implementation:**
 

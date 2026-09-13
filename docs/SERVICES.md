@@ -171,7 +171,7 @@ resolve(Doctor $doctor, Treatment $treatment, Lab $lab, ?CarbonInterface $date)
 **Example:**
 
 ```
-Input:  ZIR × 4 for Dr Riyad
+Input:  ZIR × 4 for Dr. Name2
 Output: lab_job.total_cost_aed = 1600.00 (4 × 400)
 ```
 
@@ -283,7 +283,7 @@ import(UploadedFile $file, ?string $reportDate = null): DailyReport
 ```php
 [
     [
-        'doctor' => 'DR Jack',
+        'doctor' => 'Dr. Name1',
         'sheet_day' => 15,
         'raw_row_number' => 25,
         'patient_name' => '...',  // memory only — never persisted

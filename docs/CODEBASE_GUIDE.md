@@ -4,7 +4,7 @@ Dauerhafte Einarbeitungsdokumentation für Entwickler. Beschreibt die **tatsäch
 
 **Verwandte Dokumente:**
 
-- `docs/BUSINESS_RULES.md` — fachliche Buchhaltungsregeln
+- `docs/PROJECT_OVERVIEW.md` / `docs/WORKFLOWS.md` — fachliche Buchhaltungsregeln (Überblick; detailliertes Business-Rules-Playbook ist lokal)
 - `docs/DATABASE_SCHEMA.md` — detailliertes Schema
 - `docs/DECISIONS.md` — Architecture Decision Records (ADRs)
 - `docs/TREATMENT_RULES.md` — Treatment-Text-Format für Imports
@@ -820,11 +820,11 @@ Bei jedem Bug in dieser Reihenfolge prüfen:
 | 12 | `app/Services/Analytics/ClinicFinancialOverviewService.php` | Practice Overview | `app/DTOs/Analytics/` |
 | 13 | `app/Models/DailyWorkRow.php` | Zentrale Accounting-Zeile | `Payment.php`, `WorkItem.php` |
 | 14 | `config/accounting.php` | Kurse, Legacy-Code | `MoneyCalculator.php` |
-| 15 | `app/Support/ClinicCurrencySupport.php` | Währungsregeln | `docs/BUSINESS_RULES.md` |
+| 15 | `app/Support/ClinicCurrencySupport.php` | Währungsregeln | `docs/PROJECT_OVERVIEW.md` |
 | 16 | `resources/views/daily-reports/editor.blade.php` | Größte UI | Editor-Controller + Service |
 | 17 | `tests/Feature/CrossClinicAuthorizationTest.php` | Tenant-Sicherheit | `AccountingOwnershipTest.php` |
 | 18 | `app/Services/Configuration/ClinicOnboardingService.php` | Registrierung | `ClinicOnboardingController.php` |
-| 19 | `docs/BUSINESS_RULES.md` | Fachliche Regeln | `docs/DATABASE_SCHEMA.md` |
+| 19 | `docs/PROJECT_OVERVIEW.md` | Fachliche Regeln (Überblick) | `docs/DATABASE_SCHEMA.md` |
 | 20 | `docs/DECISIONS.md` | ADRs (026–038) | relevante ADR einzeln |
 
 ---
@@ -894,7 +894,7 @@ php artisan test --filter=ClinicFinancialOverview
 
 ### Tag 7 — Admin, Tests und Production
 
-**Dateien:** Admin-Controller/Services, `tests/Unit/ProductionDeploymentArtifactsTest.php`, `compose.production.yml`, `docs/BUSINESS_RULES.md`
+**Dateien:** Admin-Controller/Services, `tests/Unit/ProductionDeploymentArtifactsTest.php`, `compose.production.yml`, `docs/PROJECT_OVERVIEW.md`
 
 **Praktisch:**
 
